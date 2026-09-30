@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Toss
 
-## Getting Started
+**Laundry that calls its own pickup.**
 
-First, run the development server:
+Toss is a B2B2C platform for smart laundry baskets. An ESP32 + load-cell basket detects when it's full and automatically dispatches a pickup driver over Telegram. This repo is the web platform: a customer portal to track and pay, and a manager portal to run the whole city.
+
+## Stack
+
+- **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4
+- **AWS Amplify Gen 2** (planned): Cognito auth, AppSync + DynamoDB, Lambda
+- **Stripe** for invoices, **Anthropic Claude** for demand forecasting
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 and pick a demo role on the sign-in page.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+  app/
+    page.tsx            Landing page
+    login/              Demo sign-in (replaced by Cognito in Phase C)
+    app/                Customer portal: overview, order history, settings
+    admin/              Manager portal: live board, fleet, orders, analytics
+    api/insights/       AI insights endpoint (rule-based preview until Phase F)
+  components/           UI kit, charts, portal shell
+  lib/
+    types.ts            Domain model (mirrors the DynamoDB schema)
+    data.ts             Data access layer (mock now, Amplify Data later)
+    mock-data.ts        Deterministic 12-week sample dataset
+    analytics.ts        Aggregates shared by the charts and the AI endpoint
+  proxy.ts              Route guard (Next 16's replacement for middleware)
+```
 
-## Learn More
+## Roadmap
 
-To learn more about Next.js, take a look at the following resources:
+| Phase | Deliverable | Status |
+|---|---|---|
+| A | Frontend with mock data | ✅ Done |
+| B | Amplify backend, device ingest API, Google Sheet migration | Next |
+| C | Cognito auth + Telegram account linking | |
+| D | Stripe payments | |
+| E | Manager portal on live data | |
+| F | Claude-powered demand forecasts | |
+| G | Firmware v2 (device ID, auth, heartbeat) | |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Security notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Never commit secrets. `.env*` is git-ignored. Backend secrets go in Amplify's secret store.
+- Mock data uses placeholder Telegram IDs, not real ones.

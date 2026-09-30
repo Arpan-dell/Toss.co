@@ -10,17 +10,18 @@ import { requireRole } from "@/lib/session";
 export default async function CustomerOverview() {
   const session = await requireRole("CUSTOMER");
   const [orders, device, customer] = await Promise.all([
-    listOrdersForCustomer(session.customerId!),
-    getDeviceForCustomer(session.customerId!),
-    getCustomer(session.customerId!),
+    listOrdersForCustomer(session.userId),
+    getDeviceForCustomer(session.userId),
+    getCustomer(session.userId),
   ]);
 
   const active = orders.find((o) => o.status === "PENDING" || o.status === "ACCEPTED");
   const unpaid = orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID");
+  const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? "there";
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Overview">Hi, {customer?.name.split(" ")[0]} 👋</PageTitle>
+      <PageTitle kicker="Overview">Hi, {firstName} 👋</PageTitle>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Active pickup" className="lg:col-span-2" action={active && <OrderStatusBadge status={active.status} />}>
@@ -50,18 +51,27 @@ export default async function CustomerOverview() {
         <Card title="My basket" action={device && <OnlineBadge online={isDeviceOnline(device)} />}>
           {device ? (
             <div className="space-y-4">
-              <p className="text-4xl font-semibold tracking-tighter tabular-nums">
-                {device.lastWeightKg.toFixed(1)}
-                <span className="ml-1 text-lg text-muted">kg</span>
-              </p>
+              {device.lastWeightKg !== undefined && (
+                <p className="text-4xl font-semibold tracking-tighter tabular-nums">
+                  {device.lastWeightKg.toFixed(1)}
+                  <span className="ml-1 text-lg text-muted">kg</span>
+                </p>
+              )}
               <FillBar weightKg={device.lastWeightKg} targetKg={device.targetKg} />
               <p className="text-xs text-muted">
-                Last update {timeAgo(device.lastSeenAt, now())}. Change your target or tare the scale from the
-                Telegram bot.
+                {device.lastSeenAt ? `Last update ${timeAgo(device.lastSeenAt, now())}. ` : ""}Change your target or
+                tare the scale from the Telegram bot.
               </p>
             </div>
           ) : (
-            <EmptyState>No basket linked yet.</EmptyState>
+            <div className="space-y-3 py-4 text-center text-sm text-muted">
+              <p>No basket linked yet.</p>
+              {!customer?.telegramId && (
+                <Link href="/app/settings" className="text-accent transition-colors hover:text-accent-2">
+                  Link your Telegram account →
+                </Link>
+              )}
+            </div>
           )}
         </Card>
       </div>

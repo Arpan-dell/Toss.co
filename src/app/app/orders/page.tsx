@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Order history" };
 
 export default async function CustomerOrders() {
   const session = await requireRole("CUSTOMER");
-  const orders = await listOrdersForCustomer(session.customerId!);
+  const orders = await listOrdersForCustomer(session.userId);
   const totalKg = orders.reduce((s, o) => s + o.weightKg, 0);
   const totalPaid = orders.filter((o) => o.paymentStatus === "PAID").reduce((s, o) => s + o.amountDue, 0);
 

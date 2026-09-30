@@ -4,6 +4,7 @@ import type { Order } from "./types";
 // same numbers and sends ONLY these (no names, addresses or chat IDs) to Claude.
 
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const IST_OFFSET_MS = 330 * 60_000; // UTC+05:30, no daylight saving
 
 export interface Aggregates {
   totalOrders: number;
@@ -21,13 +22,15 @@ export function computeAggregates(orders: Order[]): Aggregates {
 
   for (const o of orders) {
     const created = new Date(o.createdAt);
-    const wd = byWeekday[created.getDay()];
+    // Bucket by India Standard Time regardless of the server's timezone (Vercel runs in UTC).
+    const local = new Date(created.getTime() + IST_OFFSET_MS);
+    const wd = byWeekday[local.getUTCDay()];
     wd.orders++;
     wd.kg += o.weightKg;
 
-    const weekStart = new Date(created);
-    weekStart.setHours(0, 0, 0, 0);
-    weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7)); // Monday
+    const weekStart = new Date(local);
+    weekStart.setUTCHours(0, 0, 0, 0);
+    weekStart.setUTCDate(weekStart.getUTCDate() - ((weekStart.getUTCDay() + 6) % 7)); // Monday
     const key = weekStart.toISOString().slice(0, 10);
     const w = weeks.get(key) ?? { orders: 0, kg: 0 };
     w.orders++;

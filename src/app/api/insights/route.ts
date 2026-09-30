@@ -18,6 +18,15 @@ export async function POST() {
   if (session?.role !== "MANAGER") return Response.json({ error: "Forbidden" }, { status: 403 });
 
   const agg = computeAggregates(await listOrders());
+  if (agg.totalOrders === 0) {
+    return Response.json({
+      source: "preview",
+      peakDays: [],
+      confidence: "low",
+      staffingSuggestion: "Collect a few weeks of orders first.",
+      narrative: "There are no orders yet, so there's nothing to forecast.",
+    } satisfies Insights);
+  }
   const avgKg = agg.totalKg / 7;
   const ranked = [...agg.byWeekday].sort((a, b) => b.kg - a.kg);
   const peaks = ranked.filter((d) => d.kg > avgKg * 1.2).map((d) => d.day);

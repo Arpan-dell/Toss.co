@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Badge, Card, FillBar, OnlineBadge, PageTitle } from "@/components/ui";
-import { isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, now } from "@/lib/data";
+import { Badge, Card, EmptyState, FillBar, OnlineBadge, PageTitle } from "@/components/ui";
+import { deviceLabel, isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, now } from "@/lib/data";
 import { orderLabel, timeAgo } from "@/lib/format";
 import type { DriverStatus } from "@/lib/types";
 
@@ -28,6 +28,7 @@ export default async function Fleet() {
       <PageTitle kicker="Devices & drivers">Fleet</PageTitle>
 
       <Card title={`Baskets (${devices.length})`}>
+        {devices.length === 0 && <EmptyState>No baskets yet. They appear here after their first order or heartbeat.</EmptyState>}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {devices.map((d) => {
             const online = isDeviceOnline(d);
@@ -35,7 +36,7 @@ export default async function Fleet() {
               <div key={d.deviceId} className="glow-card rounded-xl border border-border bg-white/[0.02] p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium">{d.area}</p>
+                    <p className="font-medium">{deviceLabel(d)}</p>
                     <p className="font-mono text-xs text-muted">{d.deviceId}</p>
                   </div>
                   <OnlineBadge online={online} />
@@ -44,7 +45,13 @@ export default async function Fleet() {
                   <FillBar weightKg={d.lastWeightKg} targetKg={d.targetKg} />
                 </div>
                 <p className="mt-3 text-xs text-muted">
-                  Seen {timeAgo(d.lastSeenAt, current)} · Wi-Fi {signalLabel(d.wifiRssi)} ({d.wifiRssi} dBm) · fw {d.firmwareVersion}
+                  {[
+                    d.lastSeenAt ? `Seen ${timeAgo(d.lastSeenAt, current)}` : "Never seen",
+                    d.wifiRssi !== undefined ? `Wi-Fi ${signalLabel(d.wifiRssi)} (${d.wifiRssi} dBm)` : undefined,
+                    d.firmwareVersion ? `fw ${d.firmwareVersion}` : "fw v1 (via Sheet bridge)",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
               </div>
             );
@@ -53,7 +60,10 @@ export default async function Fleet() {
       </Card>
 
       <Card title={`Drivers (${drivers.length})`}>
-        <div className="-mx-5 overflow-x-auto">
+        {drivers.length === 0 && (
+          <EmptyState>No drivers registered yet. Driver management arrives with the manager tools in Phase E.</EmptyState>
+        )}
+        <div className={`-mx-5 overflow-x-auto ${drivers.length === 0 ? "hidden" : ""}`}>
           <table className="w-full min-w-[520px] text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] tracking-[0.12em] text-muted uppercase">
@@ -65,8 +75,8 @@ export default async function Fleet() {
             </thead>
             <tbody>
               {drivers.map((drv) => {
-                const job = active.find((o) => o.driverId === drv.id && o.status === "ACCEPTED");
-                const today = all.filter((o) => o.driverId === drv.id && o.completedAt?.startsWith(todayKey)).length;
+                const job = active.find((o) => o.driverId === drv.telegramChatId && o.status === "ACCEPTED");
+                const today = all.filter((o) => o.driverId === drv.telegramChatId && o.completedAt?.startsWith(todayKey)).length;
                 const s = driverStatus[drv.status];
                 return (
                   <tr key={drv.id} className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.03]">

@@ -37,7 +37,6 @@
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules",
-    "amplify"
+    "node_modules"
   ]
 }

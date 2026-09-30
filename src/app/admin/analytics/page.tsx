@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AiInsights } from "@/components/ai-insights";
 import { ColumnChart, LineChart } from "@/components/charts";
-import { Card, PageTitle, StatTile } from "@/components/ui";
+import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { computeAggregates } from "@/lib/analytics";
 import { listOrders } from "@/lib/data";
 import { formatDate } from "@/lib/format";
@@ -35,10 +35,14 @@ export default async function Analytics() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Laundry by day of week (kg)">
-          <ColumnChart data={weekday} unit="kg" />
+          {agg.totalOrders > 0 ? <ColumnChart data={weekday} unit="kg" /> : <EmptyState>No orders yet.</EmptyState>}
         </Card>
         <Card title="Weekly laundry volume (kg, complete weeks)">
-          <LineChart data={weekly} unit="kg" />
+          {weekly.length >= 2 ? (
+            <LineChart data={weekly} unit="kg" />
+          ) : (
+            <EmptyState>Needs at least two complete weeks of orders.</EmptyState>
+          )}
         </Card>
       </div>
 

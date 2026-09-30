@@ -1,31 +1,28 @@
 import "server-only";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
+import { createClient } from "./supabase/server";
 import type { Role } from "./types";
 
-// DEMO AUTH (Phase A only). Replaced by Cognito via Amplify in Phase C, where the role
-// comes from the `cognito:groups` claim and customerId from the token `sub`.
-export const SESSION_COOKIE = "sl_demo_session";
-
+// Identity comes from the verified Supabase JWT. Managers have app_metadata.role = "manager",
+// which only the service role can set; everyone else is a customer.
 export interface Session {
+  userId: string;
+  email?: string;
   role: Role;
-  customerId?: string;
 }
 
-export function parseSession(raw: string | undefined): Session | null {
-  if (!raw) return null;
-  try {
-    const s = JSON.parse(raw) as Session;
-    return s.role === "CUSTOMER" || s.role === "MANAGER" ? s : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function getSession(): Promise<Session | null> {
-  const store = await cookies();
-  return parseSession(store.get(SESSION_COOKIE)?.value);
-}
+export const getSession = cache(async (): Promise<Session | null> => {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  return {
+    userId: claims.sub,
+    email: typeof claims.email === "string" ? claims.email : undefined,
+    role: claims.app_metadata?.role === "manager" ? "MANAGER" : "CUSTOMER",
+  };
+});
 
 // Authoritative check for server components; proxy.ts only does an optimistic redirect.
 export async function requireRole(role: Role): Promise<Session> {

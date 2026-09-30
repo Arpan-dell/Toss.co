@@ -10,7 +10,7 @@ const nav = [
 
 export default async function CustomerLayout({ children }: LayoutProps<"/app">) {
   const session = await requireRole("CUSTOMER");
-  const customer = await getCustomer(session.customerId!);
+  const customer = await getCustomer(session.userId);
   return (
     <PortalShell subtitle={customer?.name ?? ""} nav={nav}>
       {children}

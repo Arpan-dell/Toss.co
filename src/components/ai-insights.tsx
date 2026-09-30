@@ -55,7 +55,7 @@ export function AiInsights() {
         <div className="stagger rounded-xl border border-accent/30 bg-accent/[0.06] p-5 text-sm shadow-[0_0_40px_-12px_rgb(139_123_255/0.6)]">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-base font-medium">
-              Peak days: <span className="text-gradient">{state.data.peakDays.join(" & ")}</span>
+              Peak days: <span className="text-gradient">{state.data.peakDays.join(" & ") || "—"}</span>
             </p>
             <span className="rounded-full border border-border-strong px-2 py-0.5 text-xs text-secondary">
               {state.data.confidence} confidence

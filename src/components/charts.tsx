@@ -40,7 +40,7 @@ interface Datum {
 export function ColumnChart({ data, unit, height = 220 }: { data: Datum[]; unit: string; height?: number }) {
   const [hover, setHover] = useState<number | null>(null);
   const ticks = niceTicks(Math.max(...data.map((d) => d.value)));
-  const top = ticks[ticks.length - 1];
+  const top = Math.max(ticks[ticks.length - 1], 1); // avoid divide-by-zero when every value is 0
   const maxIdx = data.reduce((best, d, i) => (d.value > data[best].value ? i : best), 0);
 
   return (
@@ -109,7 +109,7 @@ export function LineChart({ data, unit, height = 220 }: { data: Datum[]; unit: s
   const [hover, setHover] = useState<number | null>(null);
   const pad = { l: 44, r: 16, t: 12, b: 24 };
   const ticks = niceTicks(Math.max(...data.map((d) => d.value)));
-  const top = ticks[ticks.length - 1];
+  const top = Math.max(ticks[ticks.length - 1], 1); // avoid divide-by-zero when every value is 0
   const w = Math.max(0, width - pad.l - pad.r);
   const h = height - pad.t - pad.b;
   const x = (i: number) => pad.l + (data.length > 1 ? (i / (data.length - 1)) * w : w / 2);

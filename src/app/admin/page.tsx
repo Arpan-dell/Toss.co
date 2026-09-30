@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Badge, Card, EmptyState, OrderStatusBadge, PageTitle, StatTile } from "@/components/ui";
-import { isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, now } from "@/lib/data";
+import { deviceLabel, isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, now } from "@/lib/data";
 import { formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Live board" };
@@ -20,8 +20,10 @@ export default async function LiveBoard() {
   const outstanding = all
     .filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID")
     .reduce((s, o) => s + o.amountDue, 0);
-  const driverName = (id?: string) => drivers.find((d) => d.id === id)?.name ?? "—";
-  const deviceArea = (id: string) => devices.find((d) => d.deviceId === id)?.area ?? "";
+  // Order.driverId is the driver's Telegram chat ID (from the Accept button callback).
+  const driverName = (chatId?: string) =>
+    chatId ? (drivers.find((d) => d.telegramChatId === chatId)?.name ?? `Driver …${chatId.slice(-4)}`) : "—";
+  const deviceArea = (id: string) => deviceLabel(devices.find((d) => d.deviceId === id));
 
   return (
     <div className="stagger space-y-6">

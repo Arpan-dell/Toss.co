@@ -98,7 +98,12 @@ export function OnlineBadge({ online }: { online: boolean }) {
   );
 }
 
-export function FillBar({ weightKg, targetKg }: { weightKg: number; targetKg: number }) {
+// Firmware v1 baskets only report weight when they place an order and never send a target,
+// so both values are optional.
+export function FillBar({ weightKg, targetKg }: { weightKg?: number; targetKg?: number }) {
+  if (weightKg === undefined) return <p className="text-xs text-muted">No live weight yet. Needs firmware v2.</p>;
+  if (!targetKg) return <p className="text-xs tabular-nums text-muted">Last reading {weightKg.toFixed(1)} kg</p>;
+
   const pct = Math.min(100, Math.round((weightKg / targetKg) * 100));
   return (
     <div>

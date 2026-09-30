@@ -39,6 +39,7 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
               key={f.label}
               href={href(f.status)}
               aria-current={f.status === status ? "page" : undefined}
+              data-ripple
               className={`rounded-full px-3.5 py-1 transition-colors ${f.status === status ? "bg-white/10 font-medium text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)]" : "text-muted hover:text-fg"}`}
             >
               {f.label}

@@ -24,7 +24,7 @@ export function OrderTable({ orders, showAddress = false, emptyText = "No orders
         </thead>
         <tbody>
           {orders.map((o) => (
-            <tr key={o.id} className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.03]">
+            <tr key={o.id} data-reveal="row" className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.03]">
               <td className="px-5 py-2.5 font-mono text-xs">{orderLabel(o)}</td>
               <td className="px-3 py-2.5 text-secondary">{formatDateTime(o.createdAt)}</td>
               {showAddress && <td className="max-w-[220px] truncate px-3 py-2.5 text-secondary">{o.address}</td>}

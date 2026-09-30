@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import type { Insights } from "@/app/api/insights/route";
+import { burstFromEvent } from "@/lib/fx";
 
 export function AiInsights() {
   const [state, setState] = useState<{ status: "idle" | "loading" | "error" } | { status: "done"; data: Insights }>({
     status: "idle",
   });
 
-  async function run() {
+  async function run(e: React.MouseEvent) {
+    burstFromEvent(e);
     setState({ status: "loading" });
     try {
       const res = await fetch("/api/insights", { method: "POST" });

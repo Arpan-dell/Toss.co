@@ -16,6 +16,7 @@ export function NavLinks({ items }: { items: { href: string; label: string }[] }
             key={item.href}
             href={item.href}
             aria-current={active ? "page" : undefined}
+            data-ripple
             className={`rounded-full px-3.5 py-1 whitespace-nowrap transition-colors duration-300 ${
               active
                 ? "bg-white/10 font-medium text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12),0_0_20px_-6px_rgb(139_123_255/0.8)]"

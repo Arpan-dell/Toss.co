@@ -1,5 +1,6 @@
 import type { OrderStatus, PaymentStatus } from "@/lib/types";
 import { CountUp } from "./count-up";
+import { Tilt } from "./tilt";
 
 export function Card({ title, action, children, className = "" }: {
   title?: string;
@@ -22,17 +23,19 @@ export function Card({ title, action, children, className = "" }: {
 
 export function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="glass glow-card group relative overflow-hidden rounded-2xl p-5">
-      <div
-        aria-hidden
-        className="absolute -top-12 -right-12 size-32 rounded-full bg-accent/20 blur-2xl transition-opacity duration-500 group-hover:opacity-100 opacity-50"
-      />
-      <p className="text-xs tracking-[0.14em] text-muted uppercase">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums text-fg">
-        <CountUp value={value} />
-      </p>
-      {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
-    </div>
+    <Tilt max={8}>
+      <div className="glass glow-card group relative overflow-hidden rounded-2xl p-5">
+        <div
+          aria-hidden
+          className="absolute -top-12 -right-12 size-32 rounded-full bg-accent/20 opacity-50 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+        />
+        <p className="text-xs tracking-[0.14em] text-muted uppercase">{label}</p>
+        <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums text-fg">
+          <CountUp value={value} />
+        </p>
+        {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+      </div>
+    </Tilt>
   );
 }
 

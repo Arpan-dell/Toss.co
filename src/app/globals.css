@@ -251,6 +251,142 @@ body {
   50% { transform: translateY(-12px); }
 }
 
+/* ---------- Scroll reveal (only hides once JS has booted: html.fx) ---------- */
+[data-reveal] {
+  transition:
+    opacity 0.9s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.fx [data-reveal]:not(.is-visible) { opacity: 0; }
+.fx [data-reveal="up"]:not(.is-visible) { transform: translateY(48px); filter: blur(8px); }
+.fx [data-reveal="left"]:not(.is-visible) { transform: translateX(-60px); filter: blur(6px); }
+.fx [data-reveal="right"]:not(.is-visible) { transform: translateX(60px); filter: blur(6px); }
+.fx [data-reveal="scale"]:not(.is-visible) { transform: scale(0.9) translateY(30px); filter: blur(10px); }
+.fx [data-reveal="word"]:not(.is-visible) { transform: translateY(110%); }
+.fx [data-reveal="row"]:not(.is-visible) { transform: translateY(14px); }
+[data-reveal="row"] { transition-duration: 0.6s; }
+
+/* Bars inside a revealed container grow one by one. */
+[data-reveal="bars"] .bar {
+  transform-origin: bottom;
+  transition: transform 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.fx [data-reveal="bars"]:not(.is-visible) .bar { transform: scaleY(0); }
+.fx [data-reveal="bars"]:not(.is-visible) { opacity: 1; }
+
+/* ---------- Scroll progress bar ---------- */
+.scroll-progress { display: none; }
+@supports (animation-timeline: scroll()) {
+  .scroll-progress {
+    display: block;
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 2px;
+    z-index: 60;
+    background: var(--gradient);
+    transform-origin: left;
+    box-shadow: 0 0 12px rgb(139 123 255 / 0.8);
+    animation: progress linear both;
+    animation-timeline: scroll(root);
+  }
+}
+@keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ---------- Sticky header that turns to glass on scroll ---------- */
+.site-header { transition: background 0.4s, border-color 0.4s, backdrop-filter 0.4s; border-bottom: 1px solid transparent; }
+html[data-scrolled] .site-header {
+  background: rgb(5 5 7 / 0.6);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-color: var(--border);
+}
+
+/* ---------- Cursor spotlight on cards ---------- */
+.glow-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgb(139 123 255 / 0.13), transparent 45%);
+  opacity: 0;
+  transition: opacity 0.4s;
+  pointer-events: none;
+}
+.glow-card:hover::after { opacity: 1; }
+
+/* ---------- Click ripple + button sheen ---------- */
+.btn-primary, .btn-ghost, [data-ripple] { position: relative; overflow: hidden; isolation: isolate; }
+.ripple {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgb(255 255 255 / 0.45), rgb(255 255 255 / 0) 70%);
+  transform: scale(0);
+  animation: ripple 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+  z-index: -1;
+}
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
+  transform: translateX(-120%);
+  pointer-events: none;
+}
+.btn-primary:hover::after { transition: transform 0.8s ease; transform: translateX(120%); }
+.btn-primary:hover { transform: translateY(-1px); }
+
+/* ---------- 3D tilt ---------- */
+.tilt {
+  transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.25s ease-out;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.tilt-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 0%), rgb(255 255 255 / 0.12), transparent 55%);
+  pointer-events: none;
+}
+
+/* ---------- Rotating gradient border ---------- */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.spin-border { position: relative; border-radius: 1.6rem; padding: 1px; }
+.spin-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(from var(--angle), transparent 0deg, #8b7bff 70deg, #22d3ee 140deg, transparent 200deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin-angle 5s linear infinite;
+  pointer-events: none;
+}
+@keyframes spin-angle { to { --angle: 360deg; } }
+
+.marquee:hover .marquee-track { animation-play-state: paused; }
+
+/* ---------- Gradient orb that follows the section ---------- */
+.orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -258,4 +394,6 @@ body {
     transition-duration: 0.001ms !important;
   }
   .draw-line { stroke-dashoffset: 0; }
+  .scroll-progress { display: none !important; }
+  .tilt { transform: none !important; }
 }

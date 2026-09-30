@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { CountUp } from "@/components/count-up";
+import { RevealText } from "@/components/reveal-text";
+import { Tilt } from "@/components/tilt";
 import { Logo } from "@/components/ui";
 
 const steps = [
-  { n: "01", title: "The basket weighs itself", body: "A load cell under the basket tracks your laundry around the clock. No app to open, no button to press." },
-  { n: "02", title: "It calls its own pickup", body: "The moment it hits your target weight, a driver gets the job on Telegram and accepts with one tap." },
-  { n: "03", title: "Track it. Pay for it. Done.", body: "Watch the pickup in real time, then pay the invoice in a single click." },
+  { n: "01", icon: "⚖️", title: "The basket weighs itself", body: "A load cell under the basket tracks your laundry around the clock. No app to open, no button to press." },
+  { n: "02", icon: "📲", title: "It calls its own pickup", body: "The moment it hits your target weight, a driver gets the job on Telegram and accepts with one tap." },
+  { n: "03", icon: "💳", title: "Track it. Pay for it. Done.", body: "Watch the pickup in real time, then pay the invoice in a single click." },
 ];
 
 const audiences = [
@@ -23,6 +25,10 @@ const ticker = [
   "🧺 Basket full · Hauz Khas · 6.3 kg",
 ];
 
+// Illustrative weekday demand shape for the dashboard preview (Mon..Sun).
+const previewBars = [42, 35, 40, 44, 55, 88, 100];
+const previewDays = ["M", "T", "W", "T", "F", "S", "S"];
+
 // Toasts slide in after the weight counter finishes, like the real dispatch sequence.
 const toast = (delaySec: number) => ({ animation: `fade-up 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) ${delaySec}s both` });
 
@@ -30,38 +36,97 @@ function HeroDevice() {
   return (
     <div className="float relative mx-auto w-full max-w-sm">
       <div aria-hidden className="absolute -inset-10 rounded-full bg-accent/25 blur-3xl" />
-      <div className="glass relative rounded-3xl p-6 shadow-2xl">
+      <Tilt max={12}>
+        <div className="spin-border shadow-2xl">
+          <div className="glass relative rounded-[1.55rem] bg-[#0b0b10]/80 p-6">
+            <div className="tilt-glare" aria-hidden />
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs tracking-[0.14em] text-muted uppercase">Basket · Connaught Place</p>
+                <p className="mt-1 font-mono text-[11px] text-muted">24:6F:28:A1:B2:01</p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-good-bg px-2.5 py-0.5 text-xs text-good ring-1 ring-good/25 ring-inset">
+                <span className="live-dot" aria-hidden /> Live
+              </span>
+            </div>
+
+            <p className="mt-8 text-6xl font-semibold tracking-tighter tabular-nums">
+              <CountUp value="5.3" duration={2200} />
+              <span className="ml-1 text-2xl text-muted">kg</span>
+            </p>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="fill-bar h-full w-full rounded-full" style={{ animationDuration: "2.2s" }} />
+            </div>
+            <p className="mt-1.5 text-xs text-muted">Target 5 kg reached</p>
+
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center gap-3 rounded-xl border border-border bg-white/[0.04] px-3 py-2.5 text-sm" style={toast(2.4)}>
+                <span aria-hidden>📦</span>
+                <span className="flex-1">Pickup #104 dispatched</span>
+                <span className="text-xs text-muted">now</span>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2.5 text-sm" style={toast(3.3)}>
+                <span aria-hidden>🚚</span>
+                <span className="flex-1">Vikram accepted, en route</span>
+                <span className="text-xs text-muted">+9 min</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Tilt>
+    </div>
+  );
+}
+
+function DashboardPreview() {
+  return (
+    <div data-reveal="right" className="relative">
+      <div aria-hidden className="orb -top-10 -right-10 size-64 bg-accent-2/25" />
+      <div className="glass glow-card relative rounded-3xl p-6 shadow-2xl">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs tracking-[0.14em] text-muted uppercase">Basket · Connaught Place</p>
-            <p className="mt-1 font-mono text-[11px] text-muted">24:6F:28:A1:B2:01</p>
-          </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-good-bg px-2.5 py-0.5 text-xs text-good ring-1 ring-good/25 ring-inset">
-            <span className="live-dot" aria-hidden /> Live
-          </span>
+          <p className="text-xs tracking-[0.14em] text-muted uppercase">Manager · Analytics</p>
+          <span className="rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-xs text-accent">✨ AI forecast</span>
         </div>
-
-        <p className="mt-8 text-6xl font-semibold tracking-tighter tabular-nums">
-          <CountUp value="5.3" duration={2200} />
-          <span className="ml-1 text-2xl text-muted">kg</span>
+        <div className="mt-6 grid grid-cols-3 gap-3">
+          {[
+            { label: "Pickups", value: "284" },
+            { label: "Laundry", value: "1,712 kg" },
+            { label: "Avg pickup", value: "2.2 h" },
+          ].map((s) => (
+            <div key={s.label} className="rounded-xl border border-border bg-white/[0.03] p-3">
+              <p className="text-[10px] tracking-[0.14em] text-muted uppercase">{s.label}</p>
+              <p className="mt-1 text-lg font-semibold tabular-nums">
+                <CountUp value={s.value} duration={1600} />
+              </p>
+            </div>
+          ))}
+        </div>
+        <div data-reveal="bars" className="mt-6 flex h-40 items-end gap-3 border-b border-border pb-px">
+          {previewBars.map((h, i) => (
+            <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+              <div
+                className="bar w-full max-w-7 rounded-t-md"
+                style={{
+                  height: `${h}%`,
+                  transitionDelay: `${200 + i * 90}ms`,
+                  background:
+                    i >= 5
+                      ? "linear-gradient(to top, rgb(34 211 238 / 0.5), #22d3ee)"
+                      : "linear-gradient(to top, rgb(144 133 233 / 0.45), #9085e9)",
+                  boxShadow: i >= 5 ? "0 0 24px -4px rgb(34 211 238 / 0.7)" : undefined,
+                }}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex gap-3">
+          {previewDays.map((d, i) => (
+            <span key={i} className="flex-1 text-center text-xs text-muted">{d}</span>
+          ))}
+        </div>
+        <p className="mt-4 rounded-xl border border-accent/25 bg-accent/[0.07] px-3 py-2.5 text-sm text-secondary">
+          Peak days: <span className="text-gradient font-medium">Sat &amp; Sun</span>. Add an extra driver on weekends.
         </p>
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
-          <div className="fill-bar h-full w-full rounded-full" style={{ animationDuration: "2.2s" }} />
-        </div>
-        <p className="mt-1.5 text-xs text-muted">Target 5 kg reached</p>
-
-        <div className="mt-6 space-y-2">
-          <div className="flex items-center gap-3 rounded-xl border border-border bg-white/[0.04] px-3 py-2.5 text-sm" style={toast(2.4)}>
-            <span aria-hidden>📦</span>
-            <span className="flex-1">Pickup #104 dispatched</span>
-            <span className="text-xs text-muted">now</span>
-          </div>
-          <div className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/10 px-3 py-2.5 text-sm" style={toast(3.3)}>
-            <span aria-hidden>🚚</span>
-            <span className="flex-1">Vikram accepted, en route</span>
-            <span className="text-xs text-muted">+9 min</span>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -70,20 +135,28 @@ function HeroDevice() {
 export default function Home() {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5">
-        <Logo />
-        <div className="flex items-center gap-3">
-          <span className="hidden items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-secondary sm:inline-flex">
-            <span className="live-dot text-good" aria-hidden /> Live in Delhi
-          </span>
-          <Link href="/login" className="btn-ghost rounded-full px-4 py-1.5 text-sm">
-            Sign in
-          </Link>
+      <header className="site-header sticky top-0 z-30">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4">
+          <Logo />
+          <nav className="hidden items-center gap-6 text-sm text-secondary md:flex">
+            <a href="#how" className="transition-colors hover:text-fg">How it works</a>
+            <a href="#dashboard" className="transition-colors hover:text-fg">Dashboard</a>
+            <a href="#who" className="transition-colors hover:text-fg">Who it&apos;s for</a>
+          </nav>
+          <div className="flex items-center gap-3">
+            <span className="hidden items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-secondary sm:inline-flex">
+              <span className="live-dot text-good" aria-hidden /> Live in Delhi
+            </span>
+            <Link href="/login" className="btn-ghost rounded-full px-4 py-1.5 text-sm">
+              Sign in
+            </Link>
+          </div>
         </div>
       </header>
 
       <main className="flex-1">
-        <section className="mx-auto grid max-w-6xl items-center gap-16 px-4 pt-12 pb-20 lg:grid-cols-[1.15fr_1fr] lg:pt-20">
+        {/* Hero */}
+        <section className="mx-auto grid max-w-6xl items-center gap-16 px-4 pt-10 pb-24 lg:grid-cols-[1.15fr_1fr] lg:pt-16">
           <div className="stagger">
             <span className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-white/[0.03] px-3 py-1 text-xs text-secondary">
               <span className="rounded-full px-1.5 py-px text-[10px] font-semibold text-white" style={{ background: "var(--gradient)" }}>
@@ -108,10 +181,16 @@ export default function Home() {
                 How it works
               </a>
             </div>
+            <div className="mt-10 flex items-center gap-6 text-xs text-muted">
+              <span className="flex items-center gap-2"><span className="text-good">✓</span> No app for drivers</span>
+              <span className="flex items-center gap-2"><span className="text-good">✓</span> Works on home Wi-Fi</span>
+              <span className="hidden items-center gap-2 sm:flex"><span className="text-good">✓</span> Pay in one tap</span>
+            </div>
           </div>
           <HeroDevice />
         </section>
 
+        {/* Ticker */}
         <div className="marquee overflow-hidden border-y border-border bg-white/[0.02] py-4" aria-hidden>
           <div className="marquee-track flex w-max gap-10 text-sm whitespace-nowrap text-secondary">
             {[...ticker, ...ticker].map((t, i) => (
@@ -123,28 +202,75 @@ export default function Home() {
           </div>
         </div>
 
-        <section id="how" className="mx-auto max-w-6xl scroll-mt-10 px-4 py-24">
-          <p className="text-xs tracking-[0.18em] text-accent uppercase">How it works</p>
-          <h2 className="mt-2 max-w-xl text-4xl font-semibold tracking-tight">From full basket to picked up, automatically.</h2>
-          <div className="stagger mt-12 grid gap-4 md:grid-cols-3">
-            {steps.map((s) => (
-              <div key={s.n} className="glass glow-card rounded-2xl p-6">
-                <span className="text-gradient font-mono text-sm font-semibold">{s.n}</span>
-                <h3 className="mt-6 text-lg font-medium">{s.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-secondary">{s.body}</p>
+        {/* How it works */}
+        <section id="how" className="mx-auto max-w-6xl scroll-mt-20 px-4 py-28">
+          <p data-reveal="up" className="text-xs tracking-[0.18em] text-accent uppercase">How it works</p>
+          <h2 className="mt-3 max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
+            <RevealText text="From full basket to picked up," /> <RevealText text="automatically." gradient />
+          </h2>
+          <div className="relative mt-14 grid gap-4 md:grid-cols-3">
+            <div aria-hidden className="absolute top-12 right-[16%] left-[16%] hidden h-px bg-gradient-to-r from-accent/0 via-accent/50 to-accent-2/0 md:block" />
+            {steps.map((s, i) => (
+              <div key={s.n} data-reveal="up" data-reveal-delay={i * 140}>
+                <div className="glass glow-card h-full rounded-2xl p-6">
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="grid size-12 place-items-center rounded-2xl text-xl shadow-[0_0_30px_-6px_rgb(139_123_255/0.8)]"
+                      style={{ background: "var(--gradient)" }}
+                      aria-hidden
+                    >
+                      {s.icon}
+                    </span>
+                    <span className="text-gradient font-mono text-sm font-semibold">{s.n}</span>
+                  </div>
+                  <h3 className="mt-6 text-lg font-medium">{s.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-secondary">{s.body}</p>
+                </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="mx-auto max-w-6xl px-4 pb-24">
-          <div className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12">
-            <div aria-hidden className="absolute -top-24 -right-24 size-72 rounded-full bg-accent-2/20 blur-3xl" />
-            <p className="text-xs tracking-[0.18em] text-accent uppercase">One platform, three sides</p>
-            <div className="mt-8 grid gap-8 md:grid-cols-3">
-              {audiences.map((a) => (
-                <div key={a.title}>
-                  <span aria-hidden className="grid size-11 place-items-center rounded-xl border border-border-strong bg-white/[0.04] text-xl">
+        {/* Dashboard preview */}
+        <section id="dashboard" className="relative mx-auto grid max-w-6xl scroll-mt-20 items-center gap-14 px-4 pb-28 lg:grid-cols-2">
+          <div data-reveal="left">
+            <p className="text-xs tracking-[0.18em] text-accent uppercase">For laundry businesses</p>
+            <h2 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
+              <RevealText text="Your whole city," /> <RevealText text="one screen." gradient />
+            </h2>
+            <p className="mt-5 max-w-md text-secondary">
+              See every basket filling up, every driver on the road and every unpaid invoice in real time. AI spots
+              your busiest days so you can staff ahead of demand.
+            </p>
+            <ul className="mt-8 space-y-3 text-sm">
+              {["Live board of every active pickup", "Basket fill levels and Wi-Fi health", "AI demand forecasts from real weight data"].map(
+                (f, i) => (
+                  <li key={f} data-reveal="left" data-reveal-delay={200 + i * 120} className="flex items-center gap-3">
+                    <span className="grid size-6 place-items-center rounded-full bg-accent/15 text-xs text-accent ring-1 ring-accent/30" aria-hidden>
+                      ✓
+                    </span>
+                    {f}
+                  </li>
+                ),
+              )}
+            </ul>
+          </div>
+          <DashboardPreview />
+        </section>
+
+        {/* Audiences */}
+        <section id="who" className="mx-auto max-w-6xl scroll-mt-20 px-4 pb-28">
+          <div data-reveal="scale" className="glass relative overflow-hidden rounded-3xl p-8 sm:p-12">
+            <div aria-hidden className="orb -top-24 -right-24 size-72 bg-accent-2/20" />
+            <div aria-hidden className="orb -bottom-32 -left-20 size-72 bg-accent/20" />
+            <p className="relative text-xs tracking-[0.18em] text-accent uppercase">One platform, three sides</p>
+            <div className="relative mt-8 grid gap-8 md:grid-cols-3">
+              {audiences.map((a, i) => (
+                <div key={a.title} data-reveal="up" data-reveal-delay={250 + i * 130} className="group">
+                  <span
+                    aria-hidden
+                    className="grid size-12 place-items-center rounded-xl border border-border-strong bg-white/[0.04] text-xl transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-6"
+                  >
                     {a.icon}
                   </span>
                   <h3 className="mt-4 font-medium">{a.title}</h3>
@@ -152,7 +278,19 @@ export default function Home() {
                 </div>
               ))}
             </div>
-            <Link href="/login" className="btn-primary mt-10 inline-block rounded-full px-6 py-3 text-sm font-medium">
+          </div>
+        </section>
+
+        {/* Final CTA */}
+        <section className="relative mx-auto max-w-6xl px-4 pb-32 text-center">
+          <div aria-hidden className="orb top-0 left-1/2 size-96 -translate-x-1/2 bg-accent/25" />
+          <h2 className="relative text-5xl font-semibold tracking-tighter sm:text-6xl">
+            <RevealText text="Stop scheduling laundry." />
+            <br />
+            <RevealText text="Just toss it in." gradient />
+          </h2>
+          <div data-reveal="up" data-reveal-delay={300} className="relative mt-10">
+            <Link href="/login" className="btn-primary inline-block rounded-full px-8 py-4 text-base font-medium">
               Get started →
             </Link>
           </div>

@@ -105,7 +105,7 @@ TOSS_INGEST_URL=... TOSS_BRIDGE_KEY=... npx tsx scripts/backfill-sheet.ts orders
 | Phase | Deliverable | Status |
 |---|---|---|
 | A | Frontend with mock data | ✅ Done |
-| B | Database, device ingest API, Google Sheet migration | 🟡 Site live on Vercel; database pending Supabase |
+| B | Database, device ingest API, Google Sheet migration | ✅ Live (Supabase + Vercel); Apps Script bridge to connect |
 | C | Supabase Auth + Telegram account linking, portals on live data | Next |
 | D | Stripe payments | |
 | E | Manager portal on live data | |

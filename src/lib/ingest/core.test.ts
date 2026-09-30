@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeOrder, parsePayload, type OrderEvent } from "./ingest-core";
+import { mergeOrder, parsePayload, type OrderEvent } from "./core";
 
 const ctx = { now: "2026-10-01T10:00:00.000Z", tenantId: "t1", pricePerKg: 80 };
 

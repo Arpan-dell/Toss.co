@@ -1,10 +1,10 @@
 /**
  * Toss bridge — forwards every basket payload that reaches the Google Sheet webhook
- * to the Toss cloud ingest endpoint, so DynamoDB fills up without reflashing the ESP32.
+ * to the Toss ingest endpoint, so the Toss database fills up without reflashing the ESP32.
  *
  * Setup (Apps Script editor → Project Settings → Script properties):
- *   TOSS_INGEST_URL = <deviceIngestUrl from amplify_outputs.json>
- *   TOSS_BRIDGE_KEY = <the DEVICE_BRIDGE_KEY secret you set in Amplify>
+ *   TOSS_INGEST_URL = https://<your-app>.vercel.app/api/ingest
+ *   TOSS_BRIDGE_KEY = <the DEVICE_BRIDGE_KEY value from your Vercel environment variables>
  *
  * Then, inside your existing doPost(e), right after you parse the JSON:
  *

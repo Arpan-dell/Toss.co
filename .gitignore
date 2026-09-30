@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -40,7 +41,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# amplify
-.amplify
-amplify_outputs*
-amplifyconfiguration*
+# supabase cli
+supabase/.temp
+supabase/.branches

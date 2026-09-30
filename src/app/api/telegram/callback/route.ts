@@ -1,17 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/session";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
-import { verifyTelegramLogin } from "@/lib/telegram";
+import { OIDC_COOKIE, exchangeCode, getTelegramOidcConfig, verifyIdToken } from "@/lib/telegram-oidc";
 
-// Telegram Login Widget redirects here (data-auth-url) with signed user fields in the query string.
-// We verify the signature, then link that Telegram ID to the signed-in Toss account and attach
-// every order and basket it already owns.
+// Telegram redirects here with ?code&state after the user approves. We check state against the
+// cookie, exchange the code (PKCE + client secret), verify the signed ID token, then link the
+// Telegram ID to the signed-in Toss account and attach every order and basket it already owns.
 export async function GET(request: NextRequest) {
   const back = (result: string) => {
     const url = request.nextUrl.clone();
     url.pathname = "/app/settings";
     url.search = `?telegram=${result}`;
-    return NextResponse.redirect(url);
+    const res = NextResponse.redirect(url);
+    res.cookies.set(OIDC_COOKIE, "", { path: "/api/telegram", maxAge: 0 });
+    return res;
   };
 
   const session = await getSession();
@@ -22,17 +24,35 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  if (!botToken || !isSupabaseConfigured()) return back("not-configured");
+  const cfg = getTelegramOidcConfig();
+  if (!cfg || !isSupabaseConfigured()) return back("not-configured");
 
-  const params = Object.fromEntries(request.nextUrl.searchParams.entries());
-  const verified = verifyTelegramLogin(params, botToken);
-  if (!verified.ok) return back(verified.error === "expired" ? "expired" : "invalid");
+  const params = request.nextUrl.searchParams;
+  if (params.get("error")) return back("cancelled");
 
-  const { error } = await supabaseAdmin().rpc("link_telegram", {
-    p_customer: session.userId,
-    p_telegram_id: verified.telegramId,
-  });
+  let saved: { state?: string; verifier?: string } = {};
+  try {
+    saved = JSON.parse(request.cookies.get(OIDC_COOKIE)?.value ?? "{}");
+  } catch {
+    saved = {};
+  }
+  const code = params.get("code");
+  if (!code || !saved.state || !saved.verifier || params.get("state") !== saved.state) return back("invalid");
+
+  let telegramId: string;
+  try {
+    const idToken = await exchangeCode(cfg, {
+      code,
+      verifier: saved.verifier,
+      redirectUri: `${request.nextUrl.origin}/api/telegram/callback`,
+    });
+    telegramId = (await verifyIdToken(idToken, cfg.clientId)).telegramId;
+  } catch (err) {
+    console.error("telegram login failed", err);
+    return back("invalid");
+  }
+
+  const { error } = await supabaseAdmin().rpc("link_telegram", { p_customer: session.userId, p_telegram_id: telegramId });
   if (error) {
     if (error.message.includes("telegram_already_linked")) return back("taken");
     console.error("link_telegram failed", error);

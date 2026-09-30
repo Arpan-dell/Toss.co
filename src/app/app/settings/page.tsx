@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import { TelegramLogin } from "@/components/telegram-login";
 import { Badge, Card, PageTitle } from "@/components/ui";
 import { deviceLabel, getCustomer, getDeviceForCustomer } from "@/lib/data";
 import { requireRole } from "@/lib/session";
+import { getTelegramOidcConfig } from "@/lib/telegram-oidc";
 
 export const metadata: Metadata = { title: "Settings" };
 
 const RESULTS: Record<string, { tone: "good" | "critical" | "warn"; text: string }> = {
   linked: { tone: "good", text: "Telegram linked. Orders from your basket now appear in your account." },
   taken: { tone: "critical", text: "That Telegram account is already linked to a different Toss account." },
-  expired: { tone: "warn", text: "The Telegram login took too long. Please try again." },
+  cancelled: { tone: "warn", text: "Telegram login was cancelled. Nothing was changed." },
   invalid: { tone: "critical", text: "We couldn't verify that Telegram login. Please try again." },
   "not-configured": { tone: "warn", text: "Telegram linking isn't set up on this server yet." },
   error: { tone: "critical", text: "Something went wrong while linking. Please try again." },
@@ -29,7 +29,7 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
     searchParams,
   ]);
   const result = typeof params.telegram === "string" ? RESULTS[params.telegram] : undefined;
-  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+  const telegramReady = getTelegramOidcConfig() !== null;
 
   return (
     <div className="stagger max-w-2xl space-y-6">
@@ -66,8 +66,17 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
             <p className="text-sm text-secondary">
               Use the same Telegram account you used to claim your basket. Your past and future orders will appear here.
             </p>
-            {botUsername ? (
-              <TelegramLogin botUsername={botUsername} />
+            {telegramReady ? (
+              // Plain link, not <Link>: this must be a full navigation to the redirecting API route.
+              <a
+                href="/api/telegram/start"
+                className="inline-flex items-center gap-2 rounded-full bg-[#2AABEE] px-5 py-2.5 text-sm font-medium text-white shadow-[0_8px_30px_-8px_rgb(42_171_238/0.7)] transition hover:brightness-110"
+              >
+                <svg aria-hidden viewBox="0 0 24 24" className="size-4 fill-current">
+                  <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" />
+                </svg>
+                Log in with Telegram
+              </a>
             ) : (
               <p className="text-xs text-muted">Telegram linking isn&apos;t set up on this server yet.</p>
             )}

@@ -137,7 +137,7 @@ export default function Home() {
     <div className="flex flex-1 flex-col">
       <header className="site-header sticky top-0 z-30">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4">
-          <Logo />
+          <Link href="/" aria-label="Toss home"><Logo className="h-12" /></Link>
           <nav className="hidden items-center gap-6 text-sm text-secondary md:flex">
             <a href="#how" className="transition-colors hover:text-fg">How it works</a>
             <a href="#dashboard" className="transition-colors hover:text-fg">Dashboard</a>
@@ -299,7 +299,7 @@ export default function Home() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6 text-xs text-muted">
-          <Logo />
+          <Logo variant="full" className="h-16" />
           <span>© 2026 Toss</span>
         </div>
       </footer>

@@ -10,7 +10,7 @@ export default function LoginPage() {
     <main className="grid flex-1 place-items-center px-4 py-12">
       <div className="stagger w-full max-w-sm">
         <Link href="/" className="mb-8 flex justify-center">
-          <Logo />
+          <Logo variant="full" className="h-28" />
         </Link>
         <div className="glass relative overflow-hidden rounded-3xl p-7 shadow-2xl">
           <div aria-hidden className="absolute -top-20 left-1/2 size-48 -translate-x-1/2 rounded-full bg-accent/30 blur-3xl" />

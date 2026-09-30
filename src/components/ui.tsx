@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { OrderStatus, PaymentStatus } from "@/lib/types";
 import { CountUp } from "./count-up";
 import { Tilt } from "./tilt";
@@ -131,19 +132,23 @@ export function PageTitle({ children, kicker }: { children: React.ReactNode; kic
   );
 }
 
-export function Logo() {
+// Brand artwork lives in public/brand (generated from the original logo for the dark theme).
+// "wordmark" = shirt + TOSS for headers; "full" adds the SMART LAUNDRY tagline.
+const LOGOS = {
+  wordmark: { src: "/brand/toss-wordmark.png", width: 588, height: 288 },
+  full: { src: "/brand/toss-logo.png", width: 588, height: 335 },
+};
+
+export function Logo({ variant = "wordmark", className = "h-11" }: { variant?: keyof typeof LOGOS; className?: string }) {
+  const l = LOGOS[variant];
   return (
-    <span className="flex items-center gap-2.5 font-semibold tracking-tight">
-      <span
-        aria-hidden
-        className="grid size-8 place-items-center rounded-xl text-sm shadow-[0_0_24px_-4px_rgb(139_123_255/0.8)]"
-        style={{ background: "var(--gradient)" }}
-      >
-        🧺
-      </span>
-      <span>
-        Toss<span className="text-gradient">.</span>
-      </span>
-    </span>
+    <Image
+      src={l.src}
+      width={l.width}
+      height={l.height}
+      alt="Toss"
+      priority
+      className={`w-auto drop-shadow-[0_0_18px_rgb(2_169_161/0.35)] ${className}`}
+    />
   );
 }

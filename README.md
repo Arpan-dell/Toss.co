@@ -45,7 +45,7 @@ src/
 supabase/migrations/      Database schema, RLS policies and seed
 bridge/apps-script/       Snippet that forwards Sheet webhook payloads to Toss
 scripts/backfill-sheet.ts One-time import of the Google Sheet history
-vercel.json               Mumbai region + daily keep-alive cron
+vercel.json               Singapore region (next to the database) + daily keep-alive cron
 ```
 
 ## Device ingest API

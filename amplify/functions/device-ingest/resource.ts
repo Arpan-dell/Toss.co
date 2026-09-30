@@ -4,7 +4,10 @@ export const deviceIngest = defineFunction({
   name: "device-ingest",
   entry: "./handler.ts",
   timeoutSeconds: 10,
-  memoryMB: 256,
+  // Free-tier friendly: arm64 is cheaper per GB-second and 128 MB is plenty for small JSON writes.
+  architecture: "arm64",
+  memoryMB: 128,
+  logging: { retention: "2 weeks" },
   // Lives in the data stack because it reads/writes the model tables directly.
   resourceGroupName: "data",
   environment: {

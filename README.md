@@ -28,11 +28,13 @@ npm run typecheck
 src/
   app/
     page.tsx              Landing page
-    login/                Demo sign-in (replaced by Supabase Auth in Phase C)
+    login/                Sign in / create account (Supabase Auth)
+    auth/confirm/         Email-link landing (confirms signup)
     app/                  Customer portal: overview, order history, settings
     admin/                Manager portal: live board, fleet, orders, analytics
     api/ingest/           Device ingest endpoint (basket → database)
     api/cron/keepalive/   Daily ping so the free Supabase project never pauses
+    api/telegram/callback/ Verifies Telegram Login Widget data and links the account
     api/insights/         AI insights endpoint (rule-based preview until Phase F)
   components/             UI kit, charts, portal shell, animation helpers
   lib/
@@ -45,6 +47,7 @@ src/
 supabase/migrations/      Database schema, RLS policies and seed
 bridge/apps-script/       Snippet that forwards Sheet webhook payloads to Toss
 scripts/backfill-sheet.ts One-time import of the Google Sheet history
+scripts/e2e-live.ts       Live end-to-end check of auth, RLS, Telegram linking and the portals
 vercel.json               Singapore region (next to the database) + daily keep-alive cron
 ```
 
@@ -94,6 +97,23 @@ npx tsx scripts/backfill-sheet.ts orders.csv            # dry run
 TOSS_INGEST_URL=... TOSS_BRIDGE_KEY=... npx tsx scripts/backfill-sheet.ts orders.csv --apply
 ```
 
+**5. Accounts and Telegram linking (Phase C)**
+
+1. Supabase → **Authentication → URL Configuration**: set **Site URL** to the Vercel URL, and add `https://<app>.vercel.app/**` and `http://localhost:3000/**` to **Redirect URLs**.
+2. Supabase's built-in email sender is only meant for testing. Either turn off **Confirm email** (Authentication → Sign In / Providers → Email), or add a free SMTP provider before inviting real customers.
+3. In Telegram, message **@BotFather**: `/setdomain` → choose the customer bot → send your site's domain. The Login Widget only loads on that domain.
+4. Make someone a manager (run in the Supabase SQL editor after they sign up):
+   ```sql
+   update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"manager"}' where email = 'you@example.com';
+   ```
+   They must sign out and in again to pick up the role.
+
+Verify everything against the live site (creates and deletes its own test data):
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=... TOSS_BRIDGE_KEY=... TELEGRAM_BOT_TOKEN=... npx tsx scripts/e2e-live.ts
+```
+
 ### Free-tier notes
 
 - Vercel Hobby is for non-commercial use. Once Toss takes real payments from real customers, move to Vercel Pro or a host that allows commercial use on its free tier.
@@ -106,7 +126,7 @@ TOSS_INGEST_URL=... TOSS_BRIDGE_KEY=... npx tsx scripts/backfill-sheet.ts orders
 |---|---|---|
 | A | Frontend with mock data | ✅ Done |
 | B | Database, device ingest API, Google Sheet migration | ✅ Live (Supabase + Vercel); Apps Script bridge to connect |
-| C | Supabase Auth + Telegram account linking, portals on live data | Next |
+| C | Supabase Auth + Telegram account linking, portals on live data | ✅ Live |
 | D | Stripe payments | |
 | E | Manager portal on live data | |
 | F | Claude-powered demand forecasts | |

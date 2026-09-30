@@ -2,6 +2,8 @@
 
 **Laundry that calls its own pickup.**
 
+**Live:** https://toss-code-x-a24a.vercel.app
+
 Toss is a B2B2C platform for smart laundry baskets. An ESP32 + load-cell basket detects when it's full and automatically dispatches a pickup driver over Telegram. This repo is the web platform: a customer portal to track and pay, and a manager portal to run the whole city.
 
 ## Stack ($0 to run)
@@ -103,7 +105,7 @@ TOSS_INGEST_URL=... TOSS_BRIDGE_KEY=... npx tsx scripts/backfill-sheet.ts orders
 | Phase | Deliverable | Status |
 |---|---|---|
 | A | Frontend with mock data | ✅ Done |
-| B | Database, device ingest API, Google Sheet migration | ✅ Code done, awaiting Supabase/Vercel accounts |
+| B | Database, device ingest API, Google Sheet migration | 🟡 Site live on Vercel; database pending Supabase |
 | C | Supabase Auth + Telegram account linking, portals on live data | Next |
 | D | Stripe payments | |
 | E | Manager portal on live data | |

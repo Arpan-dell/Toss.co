@@ -2,9 +2,12 @@
  * Live end-to-end check of auth, RLS, Telegram linking and the portals against the deployed site.
  * Creates a throwaway user and fake Telegram IDs, then deletes everything it created.
  *
- *   SUPABASE_SERVICE_ROLE_KEY=… TOSS_BRIDGE_KEY=… TELEGRAM_BOT_TOKEN=… npx tsx scripts/e2e-live.ts
+ *   SUPABASE_SERVICE_ROLE_KEY=… TOSS_BRIDGE_KEY=… npx tsx scripts/e2e-live.ts
+ *
+ * The real Telegram approval screen can't be automated, so linking is exercised through the same
+ * server-side link_telegram() the callback calls after verifying Telegram's signed ID token.
  */
-import { createHash, createHmac, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
@@ -13,7 +16,6 @@ const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xysopyyujfgwpwfrhme
 const PUB = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_y8cOXBSAyWGE30HnmLRgKw_Rma309zC";
 const SECRET = must("SUPABASE_SERVICE_ROLE_KEY");
 const BRIDGE = must("TOSS_BRIDGE_KEY");
-const BOT = must("TELEGRAM_BOT_TOKEN");
 
 const TG_MINE = "9999999997";
 const TG_OTHER = "9999999996";
@@ -62,13 +64,6 @@ async function ingest(telegramId: string, orderId: number) {
   return res.status;
 }
 
-function signedTelegram(id: string) {
-  const fields: Record<string, string> = { id, first_name: "E2E", auth_date: String(Math.floor(Date.now() / 1000)) };
-  const check = Object.keys(fields).sort().map((k) => `${k}=${fields[k]}`).join("\n");
-  const hash = createHmac("sha256", createHash("sha256").update(BOT).digest()).update(check).digest("hex");
-  return new URLSearchParams({ ...fields, hash }).toString();
-}
-
 async function main() {
   let userId = "";
   try {
@@ -99,10 +94,23 @@ async function main() {
     check("ingest: someone else's order", (await ingest(TG_OTHER, 700)) === 200);
 
     // --- Telegram linking ---
-    const bad = await get(`/api/telegram/callback?${signedTelegram(TG_MINE).replace(/hash=[0-9a-f]+/, "hash=" + "0".repeat(64))}`, cookie);
-    check("telegram: forged hash rejected", bad.location.includes("telegram=invalid"), bad.location);
-    const good = await get(`/api/telegram/callback?${signedTelegram(TG_MINE)}`, cookie);
-    check("telegram: valid login links", good.location.includes("telegram=linked"), good.location);
+    const start = await get("/api/telegram/start", cookie);
+    if (start.location.includes("telegram=not-configured")) {
+      console.log("SKIP  telegram: start/callback (TELEGRAM_CLIENT_ID/SECRET not set on the server yet)");
+    } else {
+      const auth = new globalThis.URL(start.location);
+      check(
+        "telegram: start redirects to Telegram with PKCE",
+        auth.origin === "https://oauth.telegram.org" && auth.searchParams.get("code_challenge_method") === "S256" && !!auth.searchParams.get("state"),
+        start.location,
+      );
+      const forged = await get("/api/telegram/callback?code=fake&state=forged", cookie);
+      check("telegram: callback without matching state rejected", forged.location.includes("telegram=invalid"), forged.location);
+      const cancelled = await get("/api/telegram/callback?error=access_denied", cookie);
+      check("telegram: cancelled login reported", cancelled.location.includes("telegram=cancelled"), cancelled.location);
+    }
+    const link = await admin.rpc("link_telegram", { p_customer: userId, p_telegram_id: TG_MINE });
+    check("telegram: link_telegram links the account", !link.error, link.error?.message);
     const linked = await admin.from("orders").select("customer_id").eq("id", `legacy-${TG_MINE}#700`).single();
     check("telegram: existing order attached to account", linked.data?.customer_id === userId);
 

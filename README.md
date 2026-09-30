@@ -34,7 +34,7 @@ src/
     admin/                Manager portal: live board, fleet, orders, analytics
     api/ingest/           Device ingest endpoint (basket → database)
     api/cron/keepalive/   Daily ping so the free Supabase project never pauses
-    api/telegram/callback/ Verifies Telegram Login Widget data and links the account
+    api/telegram/         Log in with Telegram (OIDC): start → Telegram → callback verifies the ID token, links account
     api/insights/         AI insights endpoint (rule-based preview until Phase F)
   components/             UI kit, charts, portal shell, animation helpers
   lib/
@@ -101,7 +101,7 @@ TOSS_INGEST_URL=... TOSS_BRIDGE_KEY=... npx tsx scripts/backfill-sheet.ts orders
 
 1. Supabase → **Authentication → URL Configuration**: set **Site URL** to the Vercel URL, and add `https://<app>.vercel.app/**` and `http://localhost:3000/**` to **Redirect URLs**.
 2. Supabase's built-in email sender is only meant for testing. Either turn off **Confirm email** (Authentication → Sign In / Providers → Email), or add a free SMTP provider before inviting real customers.
-3. In Telegram, message **@BotFather**: `/setdomain` → choose the customer bot → send your site's domain. The Login Widget only loads on that domain.
+3. **Log in with Telegram** ([docs](https://core.telegram.org/bots/telegram-login)): open the **@BotFather mini app** → customer bot → **Login Widget** → add Allowed URLs `https://<app>.vercel.app` and `https://<app>.vercel.app/api/telegram/callback`, then copy the **Client Secret** into Vercel as `TELEGRAM_CLIENT_SECRET`. `TELEGRAM_CLIENT_ID` is the bot's numeric ID.
 4. Make someone a manager (run in the Supabase SQL editor after they sign up):
    ```sql
    update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"manager"}' where email = 'you@example.com';
@@ -111,7 +111,7 @@ TOSS_INGEST_URL=... TOSS_BRIDGE_KEY=... npx tsx scripts/backfill-sheet.ts orders
 Verify everything against the live site (creates and deletes its own test data):
 
 ```bash
-SUPABASE_SERVICE_ROLE_KEY=... TOSS_BRIDGE_KEY=... TELEGRAM_BOT_TOKEN=... npx tsx scripts/e2e-live.ts
+SUPABASE_SERVICE_ROLE_KEY=... TOSS_BRIDGE_KEY=... npx tsx scripts/e2e-live.ts
 ```
 
 ### Free-tier notes
@@ -138,4 +138,4 @@ SUPABASE_SERVICE_ROLE_KEY=... TOSS_BRIDGE_KEY=... TELEGRAM_BOT_TOKEN=... npx tsx
 - The service-role key is only used server-side (`src/lib/supabase/admin.ts` imports `server-only`).
 - Row-level security: customers only see their own rows; managers are identified by `app_metadata.role = 'manager'`, which only the service role can set.
 - Device keys are stored only as SHA-256 hashes, and client roles can't read that column at all.
-- Mock data uses placeholder Telegram IDs, not real ones.
+- Test scripts use placeholder Telegram IDs, not real ones.

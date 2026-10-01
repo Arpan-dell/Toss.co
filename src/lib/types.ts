@@ -26,6 +26,33 @@ export interface Tenant {
   winbackPct: number; // …of this many percent off their next pickup
   closureRequestedAt?: string; // the manager asked Toss to remove the business
   closureReason?: string;
+  autopilot: {
+    enabled: boolean; // "Automate everything"
+    staffing: boolean;
+    winback: boolean;
+    nudges: boolean;
+    pricing: boolean;
+    maxDiscount: number;
+    priceMin?: number;
+    priceMax?: number;
+    priceStepPct: number;
+  };
+}
+
+export type AiActionStatus = "SUGGESTED" | "EXECUTED" | "DISMISSED" | "FAILED" | "EXPIRED";
+export interface AiAction {
+  id: number;
+  type: "driver_alert" | "set_max_jobs" | "winback_offer" | "payment_reminder" | "basket_nudge" | "price_change";
+  label: string;
+  reason: string;
+  impact: string;
+  priority: 1 | 2 | 3;
+  status: AiActionStatus;
+  auto: boolean;
+  result?: string;
+  message?: string;
+  createdAt: string;
+  decidedAt?: string;
 }
 
 // A discount waiting for a customer's next pickup (e.g. a win-back offer).

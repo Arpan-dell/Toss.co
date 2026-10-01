@@ -151,6 +151,22 @@ export const customerInvoice = (d: {
     }),
   );
 
+export const customerPaymentReminder = (p: { business: string; name?: string; orderNo: number; amount: number; note?: string }) =>
+  mail(
+    `Reminder: ${inr(p.amount)} due for your ${p.business} pickup`,
+    layout({
+      preheader: `Pickup #${p.orderNo}: ${inr(p.amount)} is due. Pay by UPI in a few taps.`,
+      heading: `Hi${p.name ? ` ${p.name.split(" ")[0]}` : ""}, a friendly reminder`,
+      paragraphs: [
+        `Your laundry pickup #${p.orderNo} from <b>${e(p.business)}</b> is done and <b>${inr(p.amount)}</b> is due.`,
+        ...(p.note ? [e(p.note)] : []),
+        "Open your Toss dashboard to pay with any UPI app. It takes a few seconds.",
+      ],
+      cta: { label: "Pay now", url: `${SITE}/app` },
+      tone: "warn",
+    }),
+  );
+
 // ---------- to a business manager ----------
 
 export const managerWelcome = (b: { name: string; joinCode: string; trialEndsAt?: string }) =>

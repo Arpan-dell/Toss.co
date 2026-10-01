@@ -1,7 +1,7 @@
 import type { Order } from "./types";
 
-// Deterministic aggregates. In Phase F the analyticsInsights Lambda computes these
-// same numbers and sends ONLY these (no names, addresses or chat IDs) to Claude.
+// Deterministic aggregates for the Analytics charts. Toss AI (src/lib/ai) builds its own richer
+// analysis and sends only aggregates (no names, addresses or chat IDs) to the language model.
 
 export const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const IST_OFFSET_MS = 330 * 60_000; // UTC+05:30, no daylight saving

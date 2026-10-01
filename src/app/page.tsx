@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CountUp } from "@/components/count-up";
-import { HowMotion } from "@/components/how-motion";
+import { HowScrolly } from "@/components/how-scrolly";
 import { RevealText } from "@/components/reveal-text";
 import { Tilt } from "@/components/tilt";
 import { Logo } from "@/components/ui";
@@ -204,10 +204,10 @@ export default function Home() {
             <RevealText text="From full basket to picked up," /> <RevealText text="automatically." gradient />
           </h2>
           <p data-reveal="up" className="mt-4 max-w-xl text-secondary">
-            Thirty seconds, start to finish: watch a full basket turn into a picked-up, paid-for order. Tap the stage to pause, or jump to any step.
+            Pick who you are and scroll: see exactly what Toss does for customers, drivers and laundry owners, step by step.
           </p>
-          <div data-reveal="up" className="mt-10">
-            <HowMotion />
+          <div className="mt-6">
+            <HowScrolly />
           </div>
         </section>
 

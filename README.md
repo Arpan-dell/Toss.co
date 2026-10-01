@@ -56,7 +56,7 @@ vercel.json               Singapore region (next to the database) + daily keep-a
 | Role | ID | What they do |
 |---|---|---|
 | **Owner** (Toss) | — | `/owner`: every business, approve subscription payments, suspend/reactivate, set plan price, trial and UPI ID |
-| **Manager** (a laundry) | Business ID `B-XXXXXX` | `/admin`: pickups, fleet, analytics; **Payments** (confirm UPI payments, mark cash, edit amounts); **Business** (name, price/kg, UPI ID); **Billing** (pay Toss) |
+| **Manager** (a laundry) | Business ID `B-XXXXXX` | `/admin` (updates live): pickups with an order detail page (assign driver, mark picked up, cancel); **Customers**; **Fleet** (add drivers by Telegram chat ID, label baskets); analytics; **Payments** (confirm UPI payments, mark cash, edit amounts); **Business** (name, price/kg, UPI ID); **Billing** (pay Toss) |
 | **Customer** | Customer ID `C-XXXXXX` | `/app`: enter a Business ID to join that laundry, track pickups, pay invoices by UPI |
 
 **Customer → business payments.** Invoices link straight to the business's UPI ID (QR on desktop, `upi://` deep link on phones). Money never passes through Toss and there are no fees. The customer submits the UPI reference (UTR), and the manager confirms it under **Payments**.
@@ -142,7 +142,7 @@ SUPABASE_SERVICE_ROLE_KEY=... TOSS_BRIDGE_KEY=... npx tsx scripts/e2e-live.ts
 | B | Database, device ingest API, Google Sheet migration | ✅ Live (Supabase + Vercel); Apps Script bridge to connect |
 | C | Supabase Auth + Telegram account linking, portals on live data | ✅ Live |
 | D | Multi-business marketplace: Business/Customer IDs, UPI payments, subscriptions | ✅ Live |
-| E | Manager portal on live data | |
+| E | Manager tools: customers, drivers, baskets, order overrides, live updates | ✅ Live |
 | F | Claude-powered demand forecasts | |
 | G | Firmware v2 (device ID, per-device key, heartbeat) | |
 

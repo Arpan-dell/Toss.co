@@ -213,9 +213,11 @@ async function main() {
     await mgrBDb.realtime.setAuth((await mgrBDb.auth.getSession()).data.session!.access_token);
     const stopA = await listen(mgrADb, a.tenant_id, "a");
     const stopB = await listen(mgrBDb, a.tenant_id, "b"); // B even asks for A's rows
-    await new Promise((r) => setTimeout(r, 1500));
+    // Realtime acknowledges a subscription slightly before it is listening; give it a moment.
+    await new Promise((r) => setTimeout(r, 4000));
     await ingest(TG_CUSTOMER, 701);
-    await new Promise((r) => setTimeout(r, 5000));
+    for (let w = 0; w < 20 && heard.a === 0; w++) await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 2000)); // also give B every chance to (wrongly) receive it
     await stopA();
     await stopB();
     check("live: manager A gets a realtime event for the new order", heard.a > 0, `events ${heard.a}`);

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "./supabase/server";
-import type { Customer, Device, Driver, Order, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
+import type { Customer, CustomerOffer, Device, Driver, Order, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
 
 // Data access layer. Every query runs as the signed-in user, so Postgres RLS decides what is
 // visible: customers see only their own rows, managers their own business, the owner everything.
@@ -34,6 +34,8 @@ function toOrder(r: Row): Order {
     paymentReportedAt: u(r.payment_reported_at),
     paymentConfirmedAt: u(r.payment_confirmed_at),
     amountDue: r.amount_due as number,
+    discountPct: u(r.discount_pct),
+    amountBeforeDiscount: u(r.amount_before_discount),
     createdAt: r.placed_at as string,
     acceptedAt: u(r.accepted_at),
     completedAt: u(r.completed_at),
@@ -70,7 +72,7 @@ function orThrow<T>(res: { data: T | null; error: { message: string } | null }):
 }
 
 const TENANT_COLUMNS =
-  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat";
+  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, winback_enabled, winback_days, winback_pct";
 
 function toTenant(r: Row): Tenant {
   return {
@@ -87,6 +89,9 @@ function toTenant(r: Row): Tenant {
     planStatus: r.plan_status as Tenant["planStatus"],
     trialEndsAt: u(r.trial_ends_at),
     paidUntil: u(r.paid_until),
+    winbackEnabled: r.winback_enabled !== false,
+    winbackDays: (r.winback_days as number) ?? 30,
+    winbackPct: (r.winback_pct as number) ?? 10,
   };
 }
 
@@ -98,7 +103,9 @@ export const getTenantById = cache(async (id: string | undefined): Promise<Tenan
   return r ? toTenant(r) : undefined;
 });
 
-const CUSTOMER_COLUMNS = "id, customer_code, tenant_id, email, name, phone, phone_verified, telegram_id";
+// No phone: customer numbers are private (managers can't read the column). A customer reads their
+// own through my_phone(); drivers get it server-side with the pickup.
+const CUSTOMER_COLUMNS = "id, customer_code, tenant_id, email, name, phone_verified, telegram_id";
 
 function toCustomer(r: Row): Customer {
   return {
@@ -107,7 +114,6 @@ function toCustomer(r: Row): Customer {
     tenantId: u(r.tenant_id),
     email: u(r.email),
     name: u(r.name),
-    phone: u(r.phone),
     phoneVerified: Boolean(r.phone_verified),
     telegramId: u(r.telegram_id),
   };
@@ -116,8 +122,41 @@ function toCustomer(r: Row): Customer {
 export const getCustomer = cache(async (id: string): Promise<Customer | undefined> => {
   const supabase = await db();
   const r = orThrow(await supabase.from("customers").select(CUSTOMER_COLUMNS).eq("id", id).maybeSingle()) as Row | null;
-  return r ? toCustomer(r) : undefined;
+  if (!r) return undefined;
+  const customer = toCustomer(r);
+  const { data: claims } = await supabase.auth.getClaims();
+  if (claims?.claims.sub === id) customer.phone = u(orThrow(await supabase.rpc("my_phone")));
+  return customer;
 });
+
+/** Win-back offers of the manager's business: how many were sent and how many brought an order. */
+export async function getOfferStats(tenantId: string): Promise<{ sent: number; redeemed: number }> {
+  const supabase = await db();
+  const [sent, redeemed] = await Promise.all([
+    supabase.from("customer_offers").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
+    supabase.from("customer_offers").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).not("redeemed_at", "is", null),
+  ]);
+  return { sent: sent.count ?? 0, redeemed: redeemed.count ?? 0 };
+}
+
+/** The signed-in customer's best unexpired discount waiting for their next pickup, if any. */
+export async function getOpenOffer(customerId: string, tenantId: string | undefined): Promise<CustomerOffer | undefined> {
+  if (!tenantId) return undefined;
+  const supabase = await db();
+  const rows = orThrow(
+    await supabase
+      .from("customer_offers")
+      .select("id, tenant_id, percent, expires_at")
+      .eq("customer_id", customerId)
+      .eq("tenant_id", tenantId)
+      .is("redeemed_at", null)
+      .gt("expires_at", new Date().toISOString())
+      .order("percent", { ascending: false })
+      .limit(1),
+  ) as Row[];
+  const r = rows[0];
+  return r ? { id: r.id as number, tenantId: r.tenant_id as string, percent: r.percent as number, expiresAt: r.expires_at as string } : undefined;
+}
 
 // Customers visible to the caller: a manager's own customers, or everyone for the owner.
 export const listCustomers = cache(async (): Promise<Customer[]> => {
@@ -151,13 +190,16 @@ export async function listOrderEvents(orderId: string): Promise<OrderEventRow[]>
 export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => {
   const supabase = await db();
   const r = orThrow(
-    await supabase.from("platform_settings").select("monthly_price, trial_days, owner_upi_id, owner_upi_name").eq("id", 1).maybeSingle(),
+    await supabase.from("platform_settings").select("monthly_price, trial_days, owner_upi_id, owner_upi_name, discount_3m, discount_6m, discount_12m").eq("id", 1).maybeSingle(),
   ) as Row | null;
   return {
     monthlyPrice: (r?.monthly_price as number) ?? 0,
     trialDays: (r?.trial_days as number) ?? 0,
     ownerUpiId: u(r?.owner_upi_id),
     ownerUpiName: (r?.owner_upi_name as string) ?? "Toss",
+    discount3m: (r?.discount_3m as number) ?? 0,
+    discount6m: (r?.discount_6m as number) ?? 0,
+    discount12m: (r?.discount_12m as number) ?? 0,
   };
 });
 

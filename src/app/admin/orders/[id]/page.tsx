@@ -144,6 +144,12 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                 <span className="text-2xl font-semibold tabular-nums">{formatINR(order.amountDue)}</span>{" "}
                 <span className="text-muted">for {formatKg(order.weightKg)}</span>
               </p>
+              {order.discountPct && (
+                <p className="text-xs text-good">
+                  🎁 {order.discountPct}% win-back discount applied
+                  {order.amountBeforeDiscount ? ` (was ${formatINR(order.amountBeforeDiscount)})` : ""}
+                </p>
+              )}
               {order.paymentRef && (
                 <p className="text-xs text-muted">
                   {order.paymentMethod ?? "UPI"} ref <span className="font-mono text-fg">{order.paymentRef}</span>

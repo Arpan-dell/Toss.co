@@ -1,6 +1,7 @@
 import { dispatchEnabled, dispatchOrder } from "@/lib/dispatch/service";
 import { handleIngest } from "@/lib/ingest/handle";
 import { SupabaseStore } from "@/lib/ingest/supabase-store";
+import { applyOfferToOrder } from "@/lib/offers";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 
 // Device ingest endpoint. Called by the Apps Script bridge (firmware v1) and firmware v2.
@@ -22,6 +23,8 @@ export async function POST(request: Request) {
     // A brand-new pickup goes straight to the nearest available driver. Dispatch problems never fail
     // the ingest itself: the order is saved, and managers can still assign it from the dashboard.
     const body = res.body as { changed?: boolean; status?: string; id?: string };
+    // A waiting win-back discount goes on the customer's next pickup (no-op if none, or already applied).
+    if (res.status === 200 && body.changed && body.status === "PENDING" && body.id) await applyOfferToOrder(body.id);
     if (res.status === 200 && body.changed && body.status === "PENDING" && body.id && dispatchEnabled()) {
       const dispatch = await dispatchOrder(body.id).catch((err) => {
         console.error("dispatch failed", err);

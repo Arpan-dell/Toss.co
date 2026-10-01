@@ -40,7 +40,10 @@ export function OrderTable({ orders, showAddress = false, emptyText = "No orders
               <td className="px-3 py-2.5 text-secondary">{formatDateTime(o.createdAt)}</td>
               {showAddress && <td className="max-w-[220px] truncate px-3 py-2.5 text-secondary">{o.address}</td>}
               <td className="px-3 py-2.5 text-right tabular-nums">{formatKg(o.weightKg)}</td>
-              <td className="px-3 py-2.5 text-right tabular-nums">{formatINR(o.amountDue)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">
+                {formatINR(o.amountDue)}
+                {o.discountPct ? <span className="ml-1.5 rounded-full bg-good-bg px-1.5 py-0.5 text-[10px] text-good">−{o.discountPct}%</span> : null}
+              </td>
               <td className="px-3 py-2.5"><OrderStatusBadge status={o.status} /></td>
               <td className="px-5 py-2.5"><PaymentBadge status={o.paymentStatus} /></td>
             </tr>

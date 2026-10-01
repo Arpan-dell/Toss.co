@@ -6,7 +6,7 @@ import { UpiPay } from "@/components/upi-pay";
 import { StatusTimeline } from "@/components/status-timeline";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, OrderStatusBadge, PageTitle } from "@/components/ui";
 import { reportPayment } from "@/lib/actions/customer";
-import { getCustomer, getDeviceForCustomer, getTenantById, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
+import { getCustomer, getDeviceForCustomer, getOpenOffer, getTenantById, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
 import { formatDate, formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
 import { qrSvg } from "@/lib/qr";
 import { requireRole } from "@/lib/session";
@@ -24,7 +24,7 @@ export default async function CustomerOverview() {
   const unpaid = orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID");
   const verifying = orders.filter((o) => o.paymentStatus === "PENDING");
   const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? "there";
-  const business = await getTenantById(customer?.tenantId);
+  const [business, offer] = await Promise.all([getTenantById(customer?.tenantId), getOpenOffer(session.userId, customer?.tenantId)]);
   const canPay = !!business && isValidUpiId(business.upiId) && !!business.upiId;
 
   // One UPI link + QR per unpaid order, pre-filled with this business's UPI ID and the amount.
@@ -48,6 +48,21 @@ export default async function CustomerOverview() {
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker="Overview">Hi, {firstName} 👋</PageTitle>
+
+      {offer && business && (
+        <div
+          role="status"
+          className="relative overflow-hidden rounded-2xl border border-good/30 bg-gradient-to-r from-good-bg via-white/[0.03] to-transparent p-5"
+        >
+          <p className="text-xs tracking-[0.14em] text-good uppercase">🎁 We miss you</p>
+          <p className="mt-1 text-xl font-semibold">
+            {offer.percent}% off your next pickup from {business.name}
+          </p>
+          <p className="mt-1 text-sm text-secondary">
+            Just fill your basket. The discount is applied automatically. Valid until {formatDate(offer.expiresAt)}.
+          </p>
+        </div>
+      )}
 
       <Card title={business ? "Your laundry" : "Connect to your laundry"}>
         <div className="flex flex-wrap items-center justify-between gap-4">

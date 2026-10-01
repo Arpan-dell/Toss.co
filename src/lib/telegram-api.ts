@@ -3,7 +3,7 @@ import "server-only";
 // Minimal Telegram Bot API client (https://core.telegram.org/bots/api). Sends only — the customer bot
 // is polled by the basket, so this never reads its updates; the driver bot receives updates by webhook.
 
-export type InlineButton = { text: string; url: string } | { text: string; callback_data: string };
+export type InlineButton = { text: string; url: string } | { text: string; callback_data: string } | { text: string; web_app: { url: string } };
 export type ReplyKeyboard = {
   keyboard: { text: string; request_location?: boolean; request_contact?: boolean }[][];
   resize_keyboard?: boolean;

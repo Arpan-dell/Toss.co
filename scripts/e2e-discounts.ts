@@ -34,6 +34,8 @@ const check = (name: string, ok: boolean, detail = "") => {
 };
 
 const admin = createClient(SB_URL, SECRET, { auth: { persistSession: false, autoRefreshToken: false } });
+// React separates adjacent text in server HTML with <!-- --> markers.
+const page = (url: string, cookie: string) => fetch(url, { headers: { cookie } }).then(async (r) => (await r.text()).replaceAll("<!-- -->", ""));
 const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
 
 async function signedIn(email: string) {
@@ -116,7 +118,7 @@ async function main() {
     const stats = await mgrDb.from("customer_offers").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId);
     check("manager sees their business's offers", stats.count === 1);
 
-    const dash = await fetch(`${SITE}/app`, { headers: { cookie: custCookie } }).then((r) => r.text());
+    const dash = await page(`${SITE}/app`, custCookie);
     check("customer dashboard shows the offer", dash.includes("20% off your next pickup"));
 
     await admin.from("orders").insert({
@@ -132,7 +134,7 @@ async function main() {
     );
     const again = await admin.rpc("apply_customer_offer", { p_order: `${DEVICE}#101` });
     check("discount isn't applied twice", again.data === null);
-    const after = await fetch(`${SITE}/app`, { headers: { cookie: custCookie } }).then((r) => r.text());
+    const after = await page(`${SITE}/app`, custCookie);
     check("offer disappears once used", !after.includes("20% off your next pickup"));
     const direct = await custDb.rpc("apply_customer_offer", { p_order: `${DEVICE}#101` });
     check("customers can't call the offer functions", !!direct.error);
@@ -152,7 +154,7 @@ async function main() {
     const p1 = (await admin.from("subscription_payments").select("amount, discount_pct").eq("payment_ref", `E2E${RUN}C`).single()).data;
     check("1 month: full price", p1?.amount === ps!.monthly_price && p1?.discount_pct === 0);
     await admin.from("subscription_payments").delete().eq("payment_ref", `E2E${RUN}C`); // a pending payment hides the pay box
-    const billing = await fetch(`${SITE}/admin/billing?months=12`, { headers: { cookie: mgrCookie } }).then((r) => r.text());
+    const billing = await page(`${SITE}/admin/billing?months=12`, mgrCookie);
     check("billing page shows the 12-month discount", ps!.discount_12m === 0 || billing.includes(`${ps!.discount_12m}% off for paying 12 months`));
   } finally {
     if (tenantId) {

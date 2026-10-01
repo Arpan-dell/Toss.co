@@ -34,6 +34,7 @@ function toOrder(r: Row): Order {
     paymentReportedAt: u(r.payment_reported_at),
     paymentConfirmedAt: u(r.payment_confirmed_at),
     amountDue: r.amount_due as number,
+    invoiceNumber: u(r.invoice_number),
     discountPct: u(r.discount_pct),
     amountBeforeDiscount: u(r.amount_before_discount),
     createdAt: r.placed_at as string,

@@ -2,6 +2,8 @@ import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Email } from "./templates";
 
+export type Attachment = { filename: string; content: Buffer; contentType: string };
+
 // Sends through the Toss Gmail account over SMTP with a Google App Password (free, ~500 mails/day).
 //   GMAIL_USER          the Toss Gmail address (also the sender)
 //   GMAIL_APP_PASSWORD  16-character App Password (Google Account → Security → App passwords)
@@ -24,7 +26,11 @@ function getTransport() {
 }
 
 /** Best-effort: an email problem never breaks the action that triggered it. Returns whether it was sent. */
-export async function sendEmail(to: string | undefined | null, email: Email, opts: { replyTo?: string } = {}): Promise<boolean> {
+export async function sendEmail(
+  to: string | undefined | null,
+  email: Email,
+  opts: { replyTo?: string; attachments?: Attachment[] } = {},
+): Promise<boolean> {
   if (!to || !emailEnabled()) return false;
   try {
     await getTransport().sendMail({
@@ -34,6 +40,7 @@ export async function sendEmail(to: string | undefined | null, email: Email, opt
       subject: email.subject,
       html: email.html,
       text: email.text,
+      attachments: opts.attachments,
     });
     return true;
   } catch (err) {

@@ -55,6 +55,18 @@ export function sendPhoto(
   });
 }
 
+// A file (e.g. an invoice PDF) uploaded with the message, HTML caption.
+export async function sendDocument(token: string, chatId: string, bytes: Uint8Array, filename: string, caption: string) {
+  const form = new FormData();
+  form.set("chat_id", chatId);
+  form.set("caption", caption);
+  form.set("parse_mode", "HTML");
+  form.set("document", new Blob([new Uint8Array(bytes)], { type: "application/pdf" }), filename);
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendDocument`, { method: "POST", body: form, signal: AbortSignal.timeout(15000) });
+  const json = (await res.json()) as { ok: boolean; description?: string };
+  if (!json.ok) throw new Error(`Telegram sendDocument: ${json.description ?? res.status}`);
+}
+
 export function sendLocation(token: string, chatId: string, lat: number, lng: number) {
   return tg(token, "sendLocation", { chat_id: chatId, latitude: lat, longitude: lng });
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { geocodeStore } from "../dispatch/service";
 import { notifyClosureRequested, notifySubscriptionSubmitted } from "../email/notify";
+import { sendInvoice } from "../invoice/service";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
@@ -81,8 +82,11 @@ async function updateOrder(orderId: string, patch: Record<string, unknown>) {
   done();
 }
 
+// Once a payment is confirmed, the customer gets their invoice PDF by email and in the Toss Control bot.
 export async function confirmPayment(formData: FormData) {
-  await updateOrder(text(formData, "orderId"), { payment_status: "PAID", payment_confirmed_at: new Date().toISOString() });
+  const orderId = text(formData, "orderId");
+  await updateOrder(orderId, { payment_status: "PAID", payment_confirmed_at: new Date().toISOString() });
+  await sendInvoice(orderId);
 }
 
 export async function rejectPayment(formData: FormData) {
@@ -90,11 +94,13 @@ export async function rejectPayment(formData: FormData) {
 }
 
 export async function markPaidCash(formData: FormData) {
-  await updateOrder(text(formData, "orderId"), {
+  const orderId = text(formData, "orderId");
+  await updateOrder(orderId, {
     payment_status: "PAID",
     payment_method: "CASH",
     payment_confirmed_at: new Date().toISOString(),
   });
+  await sendInvoice(orderId);
 }
 
 export async function setOrderAmount(_prev: FormState, formData: FormData): Promise<FormState> {

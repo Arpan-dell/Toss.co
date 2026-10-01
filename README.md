@@ -71,7 +71,7 @@ New pickups go to the **nearest online driver automatically**:
 
 1. Drivers press Start in the driver bot, then tap **🟢 Online** and share their **live location** in Telegram.
 2. When a basket places an order, Toss geocodes the pickup address (OpenStreetMap, free) and picks the nearest online driver who's under their job limit (Fleet → Max at once). With no fresh locations, it picks the least busy driver.
-3. The driver gets the pickup pin and buttons: **🗺 Navigate**, **🛣 My full route** (, recomputed on every tap: driver → all open pickups nearest-first → store), **✅ Picked up**, and **↩️ Can't take it** (passes it to the next-nearest driver).
+3. The driver gets the pickup pin and buttons: **🗺 Navigate**, **🛣 My full route** (`/r/<token>`, recomputed on every tap: driver → all open pickups nearest-first → store), **✅ Picked up**, and **↩️ Can't take it** (passes it to the next-nearest driver).
 4. The customer gets "driver on the way" and "picked up" messages in the customer bot (send-only, so the basket keeps polling it).
 
 Managers set the **store address** on the Business page; every route ends there. Orders can also be auto-assigned or assigned by hand from the order page, which notifies the driver too.

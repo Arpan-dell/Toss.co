@@ -13,6 +13,13 @@ export function normalizePhone(input: string, defaultCountry = "91"): string | n
   return null;
 }
 
+// Numbers Telegram hands us (shared contact, Telegram login) are verified but may lack the "+".
+export function fromTelegramPhone(raw: unknown): string | undefined {
+  if (typeof raw !== "string" && typeof raw !== "number") return undefined;
+  const digits = String(raw).replace(/\D/g, "");
+  return isE164(`+${digits}`) ? `+${digits}` : undefined;
+}
+
 export function isE164(v: string): boolean {
   return /^\+[1-9]\d{7,14}$/.test(v);
 }

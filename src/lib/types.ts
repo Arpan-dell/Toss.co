@@ -70,7 +70,8 @@ export interface Driver {
   id: string;
   tenantId: string;
   name: string;
-  telegramChatId: string; // matches Order.driverId
+  phone?: string; // E.164; the manager adds drivers by number
+  telegramChatId?: string; // matches Order.driverId; set when the driver shares their number with the driver bot
   status: DriverStatus;
   location?: { lat: number; lng: number };
   locationAt?: string; // when the driver bot last received their (live) location

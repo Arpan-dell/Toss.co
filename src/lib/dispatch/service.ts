@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { orderLabel } from "../format";
 import { supabaseAdmin } from "../supabase/admin";
 import * as api from "../telegram-api";
+import { fromTelegramPhone } from "../phone";
 import { esc, type InlineButton } from "../telegram-api";
 
 // Telegram messages are best-effort: a failed send (network blip, a driver who blocked the bot)
@@ -60,7 +61,11 @@ async function storeOf(tenantId: string): Promise<{ name: string; place?: LatLng
 
 async function candidates(tenantId: string): Promise<DriverCandidate[]> {
   const [{ data: drivers }, { data: jobs }] = await Promise.all([
-    db().from("drivers").select("id, name, telegram_chat_id, status, last_lat, last_lng, location_at, max_jobs").eq("tenant_id", tenantId),
+    db()
+      .from("drivers")
+      .select("id, name, telegram_chat_id, status, last_lat, last_lng, location_at, max_jobs")
+      .eq("tenant_id", tenantId)
+      .not("telegram_chat_id", "is", null), // not connected to the bot yet: can't be told about pickups
     db().from("orders").select("driver_id").eq("tenant_id", tenantId).in("status", ACTIVE).not("driver_id", "is", null),
   ]);
   const load = new Map<string, number>();
@@ -204,6 +209,44 @@ const MENU = {
   is_persistent: true,
 };
 
+const SHARE_PHONE = {
+  keyboard: [[{ text: "📱 Share my phone number", request_contact: true }]],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
+const WELCOME = (name: string) =>
+  `Hi ${esc(name)} 👋 You're a Toss driver.\n\n1. Tap <b>🟢 Online</b> when you're working.\n2. Share your <b>live location</b> (📎 → Location → Share live location) so you get the nearest pickups.\n3. Each pickup comes with a Google Maps button. <b>🛣 My route</b> always shows every stop, ending at the store.`;
+
+// The driver shared their contact with the request_contact button. Telegram only lets people share
+// their own number that way (contact.user_id is the sender), so the number is genuine; we attach this
+// chat to the driver the manager added with that number.
+async function connectByPhone(token: string, chatId: string, msg: TgMessage) {
+  const contact = msg.contact!;
+  const phone = fromTelegramPhone(contact.phone_number);
+  if (!phone || contact.user_id === undefined || contact.user_id !== msg.from?.id) {
+    await sendMessage(token, chatId, "Please share <b>your own</b> number with the button below.", { keyboard: SHARE_PHONE });
+    return;
+  }
+  const { data: won } = await db()
+    .from("drivers")
+    .update({ telegram_chat_id: chatId })
+    .eq("phone", phone)
+    .is("telegram_chat_id", null)
+    .select("name")
+    .maybeSingle();
+  if (!won) {
+    await sendMessage(
+      token,
+      chatId,
+      `No laundry has added <b>${esc(phone)}</b> as a driver yet. Ask your manager to add you on Toss (Fleet → Add driver) with this number, then tap the button again.`,
+      { keyboard: SHARE_PHONE },
+    );
+    return;
+  }
+  await sendMessage(token, chatId, `✅ Connected!\n\n${WELCOME(won.name as string)}`, { keyboard: MENU });
+}
+
 interface TgUpdate {
   message?: TgMessage;
   edited_message?: TgMessage;
@@ -212,7 +255,9 @@ interface TgUpdate {
 interface TgMessage {
   message_id: number;
   chat: { id: number; type: string };
+  from?: { id: number };
   text?: string;
+  contact?: { phone_number: string; user_id?: number };
   location?: { latitude: number; longitude: number; live_period?: number };
 }
 
@@ -227,13 +272,14 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
   const driver = await driverByChat(chatId);
 
   if (!driver) {
-    if (update.message) {
-      await sendMessage(
-        token,
-        chatId,
-        `👋 Hi! To get pickups, ask your laundry manager to add you on Toss (Fleet → Add driver) with this chat ID:\n\n<code>${chatId}</code>`,
-      );
-    }
+    if (!update.message) return;
+    if (msg.contact) return connectByPhone(token, chatId, msg);
+    await sendMessage(
+      token,
+      chatId,
+      "👋 Welcome to <b>Toss</b> for drivers!\n\nTap <b>📱 Share my phone number</b> below. If your laundry added you with this number, you're connected right away.",
+      { keyboard: SHARE_PHONE },
+    );
     return;
   }
 
@@ -260,12 +306,7 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
 
   const text = (msg.text ?? "").trim();
   if (text === "/start" || text === "/help") {
-    await sendMessage(
-      token,
-      chatId,
-      `Hi ${esc(driver.name as string)} 👋 You're a Toss driver.\n\n1. Tap <b>🟢 Online</b> when you're working.\n2. Share your <b>live location</b> (📎 → Location → Share live location) so you get the nearest pickups.\n3. Each pickup comes with a Google Maps button. <b>🛣 My route</b> always shows every stop, ending at the store.`,
-      { keyboard: MENU },
-    );
+    await sendMessage(token, chatId, WELCOME(driver.name as string), { keyboard: MENU });
   } else if (text === "🟢 Online" || text === "/online") {
     await db().from("drivers").update({ status: "AVAILABLE" }).eq("id", driver.id as string);
     const placed = await dispatchWaiting(driver.tenant_id as string);

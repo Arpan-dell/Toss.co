@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { dispatchOrder, notifyAssignment } from "../dispatch/service";
+import { formatPhone, normalizePhone } from "../phone";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
@@ -18,7 +19,6 @@ async function requireManager() {
 }
 
 const refresh = () => revalidatePath("/admin", "layout");
-const TELEGRAM_ID = /^-?\d{5,20}$/;
 
 // ---------- customers ----------
 
@@ -32,22 +32,25 @@ export async function removeCustomer(formData: FormData) {
 
 // ---------- drivers ----------
 
+// Drivers are added by name and mobile number. They start offline and unconnected; when they open
+// the driver bot and share their number, the bot matches it here and attaches their Telegram.
 export async function addDriver(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireManager();
   const name = text(formData, "name");
-  const chatId = text(formData, "chatId");
+  const phone = normalizePhone(text(formData, "phone"));
   if (name.length < 2 || name.length > 60) return { error: "Enter the driver's name." };
-  if (!TELEGRAM_ID.test(chatId)) return { error: "Enter the driver's numeric Telegram chat ID." };
+  if (!phone) return { error: "Enter the driver's mobile number, like 98765 43210." };
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("drivers")
-    .insert({ tenant_id: session.tenantId, name, telegram_chat_id: chatId, status: "AVAILABLE" });
+  const { error } = await supabase.from("drivers").insert({ tenant_id: session.tenantId, name, phone, status: "OFFLINE" });
   if (error) {
-    return { error: error.code === "23505" ? "That Telegram chat ID is already registered as a driver." : friendlyError(error) };
+    return { error: error.code === "23505" ? `${formatPhone(phone)} is already registered as a driver.` : friendlyError(error) };
   }
   refresh();
-  return { message: `${name} added. Their Accept/Complete taps in the driver bot now show under their name.` };
+  const bot = process.env.TELEGRAM_DRIVER_BOT_USERNAME;
+  return {
+    message: `${name} added. Ask them to open ${bot ? `@${bot}` : "the driver bot"} in Telegram and tap “📱 Share my phone number”. They connect automatically.`,
+  };
 }
 
 export async function setDriverMaxJobs(formData: FormData) {

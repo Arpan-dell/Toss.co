@@ -12,8 +12,8 @@ export function AddDriverForm() {
       <Field label="Driver name">
         <input name="name" required minLength={2} maxLength={60} placeholder="Vikram" className={fieldClass} />
       </Field>
-      <Field label="Telegram chat ID">
-        <input name="chatId" required inputMode="numeric" placeholder="e.g. 6100000001" className={`${fieldClass} font-mono`} />
+      <Field label="Mobile number">
+        <input name="phone" type="tel" inputMode="tel" required placeholder="98765 43210" className={fieldClass} />
       </Field>
     </ActionForm>
   );

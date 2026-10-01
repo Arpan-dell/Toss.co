@@ -4,7 +4,11 @@ import "server-only";
 // is polled by the basket, so this never reads its updates; the driver bot receives updates by webhook.
 
 export type InlineButton = { text: string; url: string } | { text: string; callback_data: string };
-export type ReplyKeyboard = { keyboard: { text: string; request_location?: boolean }[][]; resize_keyboard?: boolean; is_persistent?: boolean };
+export type ReplyKeyboard = {
+  keyboard: { text: string; request_location?: boolean; request_contact?: boolean }[][];
+  resize_keyboard?: boolean;
+  is_persistent?: boolean;
+};
 
 export async function tg<T = unknown>(token: string, method: string, body: Record<string, unknown>): Promise<T> {
   const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {

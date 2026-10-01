@@ -8,6 +8,7 @@ import { requireRole } from "@/lib/session";
 
 const nav = [
   { href: "/admin", label: "Live board" },
+  { href: "/admin/ai", label: "✨ Toss AI" },
   { href: "/admin/payments", label: "Payments" },
   { href: "/admin/customers", label: "Customers" },
   { href: "/admin/fleet", label: "Fleet" },

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { planGate } from "@/components/plan-gate";
-import { AiInsights } from "@/components/ai-insights";
 import { ColumnChart, LineChart } from "@/components/charts";
 import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { computeAggregates } from "@/lib/analytics";
@@ -33,9 +33,16 @@ export default async function Analytics() {
         <StatTile label="Avg time to pickup" value={`${agg.avgTurnaroundHrs} h`} hint="Basket full → picked up" />
       </div>
 
-      <Card title="AI demand forecast">
-        <AiInsights />
-      </Card>
+      <Link
+        href="/admin/ai"
+        className="group block rounded-2xl border border-accent/30 bg-gradient-to-r from-accent/15 via-white/[0.03] to-transparent p-5 transition hover:border-accent/60"
+      >
+        <p className="text-xs tracking-[0.14em] text-accent uppercase">✨ Toss AI</p>
+        <p className="mt-1 text-lg font-semibold">Forecasts, a daily action plan and an autopilot for your business</p>
+        <p className="text-sm text-secondary">
+          Busy-day driver alerts, win-back offers, payment reminders and pricing, done for you. <span className="text-accent group-hover:underline">Open Toss AI →</span>
+        </p>
+      </Link>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Laundry by day of week (kg)">

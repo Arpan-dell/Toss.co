@@ -1,7 +1,8 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "./supabase/server";
-import type { Customer, CustomerOffer, Device, Driver, Order, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
+import type { Report } from "./ai/brain";
+import type { AiAction, Customer, CustomerOffer, Device, Driver, Order, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
 
 // Data access layer. Every query runs as the signed-in user, so Postgres RLS decides what is
 // visible: customers see only their own rows, managers their own business, the owner everything.
@@ -73,7 +74,7 @@ function orThrow<T>(res: { data: T | null; error: { message: string } | null }):
 }
 
 const TENANT_COLUMNS =
-  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason";
+  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason, autopilot_enabled, autopilot_staffing, autopilot_winback, autopilot_nudges, autopilot_pricing, ai_max_discount, ai_price_min, ai_price_max, ai_price_step_pct";
 
 function toTenant(r: Row): Tenant {
   return {
@@ -95,6 +96,17 @@ function toTenant(r: Row): Tenant {
     winbackPct: (r.winback_pct as number) ?? 10,
     closureRequestedAt: u(r.closure_requested_at),
     closureReason: u(r.closure_reason),
+    autopilot: {
+      enabled: r.autopilot_enabled === true,
+      staffing: r.autopilot_staffing !== false,
+      winback: r.autopilot_winback !== false,
+      nudges: r.autopilot_nudges !== false,
+      pricing: r.autopilot_pricing === true,
+      maxDiscount: (r.ai_max_discount as number) ?? 20,
+      priceMin: u(r.ai_price_min),
+      priceMax: u(r.ai_price_max),
+      priceStepPct: (r.ai_price_step_pct as number) ?? 5,
+    },
   };
 }
 
@@ -131,6 +143,44 @@ export const getCustomer = cache(async (id: string): Promise<Customer | undefine
   if (claims?.claims.sub === id) customer.phone = u(orThrow(await supabase.rpc("my_phone")));
   return customer;
 });
+
+/** The latest Toss AI analysis of the manager's business. */
+export async function getLatestAiRun(tenantId: string): Promise<{ id: number; createdAt: string; trigger: string; report: Report; error?: string } | undefined> {
+  const supabase = await db();
+  const rows = orThrow(
+    await supabase.from("ai_runs").select("id, created_at, trigger, report, error").eq("tenant_id", tenantId).neq("trigger", "ask").order("created_at", { ascending: false }).limit(1),
+  ) as Row[];
+  const r = rows[0];
+  return r ? { id: r.id as number, createdAt: r.created_at as string, trigger: r.trigger as string, report: r.report as Report, error: u(r.error) } : undefined;
+}
+
+/** Toss AI's action queue and recent decisions for the manager's business. */
+export async function listAiActions(tenantId: string): Promise<AiAction[]> {
+  const supabase = await db();
+  const rows = orThrow(
+    await supabase
+      .from("ai_actions")
+      .select("id, type, label, reason, impact, priority, status, auto, result, params, created_at, decided_at")
+      .eq("tenant_id", tenantId)
+      .neq("status", "EXPIRED")
+      .order("created_at", { ascending: false })
+      .limit(80),
+  ) as Row[];
+  return rows.map((r) => ({
+    id: r.id as number,
+    type: r.type as AiAction["type"],
+    label: r.label as string,
+    reason: r.reason as string,
+    impact: r.impact as string,
+    priority: r.priority as AiAction["priority"],
+    status: r.status as AiAction["status"],
+    auto: r.auto as boolean,
+    result: u(r.result),
+    message: u((r.params as Row | null)?.message),
+    createdAt: r.created_at as string,
+    decidedAt: u(r.decided_at),
+  }));
+}
 
 /** Win-back offers of the manager's business: how many were sent and how many brought an order. */
 export async function getOfferStats(tenantId: string): Promise<{ sent: number; redeemed: number }> {

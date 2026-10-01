@@ -13,7 +13,7 @@ const OPEN_TOSS: InlineButton[][] = [[{ text: "📱 Open Toss", web_app: { url: 
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
 
-async function tell(chatId: string, html: string) {
+export async function tellCustomer(chatId: string, html: string) {
   const token = process.env.TELEGRAM_CUSTOMER_BOT_TOKEN;
   if (!token) return false;
   try {
@@ -35,7 +35,7 @@ export async function runWinback(): Promise<{ created: number; notified: number 
   let notified = 0;
   for (const o of offers) {
     if (!o.telegram_id) continue; // they'll still see it on the website
-    const sent = await tell(
+    const sent = await tellCustomer(
       o.telegram_id,
       [
         `🎁 <b>We miss you!</b>`,
@@ -65,7 +65,7 @@ export async function applyOfferToOrder(orderId: string): Promise<{ percent: num
 
     const { data: o } = await db.from("orders").select("device_order_id, customer_telegram_id").eq("id", orderId).maybeSingle();
     if (o?.customer_telegram_id) {
-      await tell(
+      await tellCustomer(
         o.customer_telegram_id as string,
         `🎁 <b>${applied.percent}% off applied!</b>\nPickup #${o.device_order_id}: <s>${formatINR(applied.before)}</s> → <b>${formatINR(applied.after)}</b>`,
       );

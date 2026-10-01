@@ -431,6 +431,140 @@ function ManagerScene({ step }: { step: number }) {
   );
 }
 
+// ---------- motion-graphics layer around the device ----------
+// Big kinetic keyword, orbit rings with a scroll-progress arc, a shape that morphs per step,
+// parallax particles, a light beam + glow burst on every step change, and floating info chips.
+
+const WORDS: Record<Role, string[]> = {
+  customer: ["JOIN", "FILL", "PICKUP", "PAY", "REWARD"],
+  driver: ["CONNECT", "ONLINE", "NEAREST", "ROUTE", "DONE"],
+  manager: ["LAUNCH", "LIVE", "PAID", "FORECAST", "AUTOPILOT"],
+};
+const RING: Record<Role, [string, string]> = { customer: ["#facc15", "#02a9a1"], driver: ["#2AABEE", "#5eead4"], manager: ["#8b7bff", "#22d3ee"] };
+const CHIPS: Record<Role, [string, string][][]> = {
+  customer: [
+    [["📱", "+91 98765 43210"], ["🏷️", "B-E2ZRFP"], ["✅", "Connected"]],
+    [["⚖️", "Live weight"], ["📡", "Basket online"], ["🎯", "Target 5 kg"]],
+    [["🚚", "Driver assigned"], ["⏱️", "ETA 18 min"], ["💬", "Telegram alert"]],
+    [["💳", "₹450 paid"], ["⚡", "UPI in 2 taps"], ["📄", "PDF invoice"]],
+    [["🎁", "15% off"], ["✨", "Toss AI"], ["💜", "Welcome back"]],
+  ],
+  driver: [
+    [["📞", "Phone verified"], ["🤝", "Fresh"], ["✅", "Connected"]],
+    [["🟢", "Online"], ["📍", "Live location"], ["📡", "Nearest jobs"]],
+    [["🔔", "New pickup"], ["📍", "1.2 km away"], ["⚖️", "5.0 kg"]],
+    [["🗺️", "Google Maps"], ["🛣️", "2 stops"], ["🏁", "Ends at store"]],
+    [["✅", "Picked up"], ["📊", "6 today"], ["🏁", "Delivered"]],
+  ],
+  manager: [
+    [["🏷️", "Business ID"], ["🎟️", "Free trial"], ["👥", "48 customers"]],
+    [["⚡", "Live updates"], ["🚚", "Auto-assigned"], ["🧺", "52 baskets"]],
+    [["💰", "96% collected"], ["📧", "Invoice emailed"], ["🧾", "UPI verified"]],
+    [["📈", "86% accurate"], ["❤️", "Health 82"], ["⚠️", "₹18k at risk"]],
+    [["🚀", "Autopilot"], ["🛡️", "Your limits"], ["☀️", "Every morning"]],
+  ],
+};
+const CHIP_POS: Record<"phone" | "window", React.CSSProperties[]> = {
+  phone: [
+    { left: "2.5%", top: "22%" },
+    { right: "2.5%", top: "44%" },
+    { left: "2.5%", bottom: "16%" },
+  ],
+  window: [
+    { left: "4%", top: "16%" },
+    { right: "4%", top: "16%" },
+    { right: "6%", bottom: "7%" },
+  ],
+};
+const CHIP_DRIFT = [-48, 36, -28];
+const SHAPES = ["50%", "30%", "14% 50% 14% 50%", "22%", "50% 16%"];
+const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
+  left: (i * 53) % 100,
+  top: (i * 37 + 11) % 100,
+  size: 2 + (i % 3),
+  speed: [-90, -50, -20, 30, 70][i % 5],
+  delay: (i % 6) * 0.45,
+}));
+
+function MotionLayer({ role, step }: { role: Role; step: number }) {
+  const [c1, c2] = RING[role];
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
+      {/* kinetic keyword, sliding with scroll */}
+      <div key={`w-${role}-${step}`} className="absolute inset-x-0 top-[8%] overflow-hidden text-center">
+        <span
+          className="hs-outline hs-word-in inline-block whitespace-nowrap leading-none font-black"
+          style={{ fontSize: `min(9.5rem, ${Math.round(118 / WORDS[role][step].length)}cqw)`, transform: "translateX(calc((0.5 - var(--p)) * 14%))" }}
+        >
+          {WORDS[role][step]}
+        </span>
+      </div>
+
+      {/* shape that morphs from step to step and turns with scroll */}
+      <div
+        className="absolute aspect-square w-[52%] max-w-[440px] border-2 transition-[border-radius,border-color] duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)]"
+        style={{ borderRadius: SHAPES[step], borderColor: `${c1}55`, transform: `rotate(calc(${step * 45}deg + var(--p) * 90deg))`, boxShadow: `0 0 60px -20px ${c1}` }}
+      />
+
+      {/* orbit rings + an arc that draws as you scroll through the step */}
+      <svg viewBox="0 0 400 400" className="absolute aspect-square h-[92%] max-w-[96%]">
+        <defs>
+          <linearGradient id={`hs-ring-${role}`} x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0" stopColor={c1} />
+            <stop offset="1" stopColor={c2} />
+          </linearGradient>
+        </defs>
+        <circle cx="200" cy="200" r="188" fill="none" stroke="rgb(255 255 255 / 0.07)" strokeDasharray="2 9" className="mg-orbit" />
+        <circle cx="200" cy="200" r="150" fill="none" stroke="rgb(255 255 255 / 0.06)" strokeDasharray="40 18" className="mg-orbit-rev" />
+        <circle
+          cx="200"
+          cy="200"
+          r="170"
+          fill="none"
+          stroke={`url(#hs-ring-${role})`}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray="1068"
+          transform="rotate(-90 200 200)"
+          style={{ strokeDashoffset: "calc(1068px * (1 - var(--p)))", filter: `drop-shadow(0 0 8px ${c1})` }}
+        />
+      </svg>
+
+      {/* parallax particles */}
+      {PARTICLES.map((pt, i) => (
+        <span
+          key={i}
+          className="hs-twinkle absolute rounded-full bg-white"
+          style={{ left: `${pt.left}%`, top: `${pt.top}%`, width: pt.size, height: pt.size, transform: `translateY(calc(var(--p) * ${pt.speed}px))`, animationDelay: `${pt.delay}s` }}
+        />
+      ))}
+
+      {/* every step change: a light beam sweeps across and a glow ring bursts */}
+      <div key={`fx-${role}-${step}`} className="absolute inset-0">
+        <span className="mg-beam absolute top-[52%] left-0 h-[2px] w-1/2 rounded-full opacity-0" style={{ background: `linear-gradient(90deg, transparent, ${c1}, #fff)`, boxShadow: `0 0 18px 3px ${c1}` }} />
+        <span className="mg-burst absolute top-1/2 left-1/2 size-56 -translate-x-1/2 -translate-y-1/2 rounded-full border-2" style={{ borderColor: c2 }} />
+      </div>
+    </div>
+  );
+}
+
+function Satellites({ role, step, device }: { role: Role; step: number; device: "phone" | "window" }) {
+  return (
+    <div key={`s-${role}-${step}`} aria-hidden className="pointer-events-none absolute inset-0 z-20 hidden sm:block">
+      {CHIPS[role][step].map(([icon, text], i) => (
+        <div key={text} className="absolute" style={{ ...CHIP_POS[device][i], transform: `translateY(calc((var(--p) - 0.5) * ${CHIP_DRIFT[i]}px))` }}>
+          <div className="mg-pop" style={{ animationDelay: `${450 + i * 220}ms` }}>
+            <div className="mg-bob flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.07] px-3 py-2 text-xs font-medium whitespace-nowrap text-white shadow-[0_12px_40px_-12px_rgb(0_0_0/0.8)] backdrop-blur-md" style={{ animationDelay: `${i * 0.7}s` }}>
+              <span className="grid size-6 place-items-center rounded-lg bg-white/10 text-sm">{icon}</span>
+              {text}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ---------- devices ----------
 function Phone({ app, children }: { app: string; children: React.ReactNode }) {
   return (
@@ -542,7 +676,7 @@ export function HowScrolly() {
       <div id="how-steps" className="relative grid scroll-mt-32 gap-8 lg:grid-cols-2 lg:gap-14">
         {/* sticky stage (on top on phones, on the right on desktop) */}
         <div className="sticky top-28 z-10 -mx-4 h-[50vh] bg-[var(--bg)] px-4 pb-3 lg:top-32 lg:order-2 lg:mx-0 lg:h-[calc(100vh-9rem)] lg:bg-transparent lg:px-0 lg:pb-0">
-          <div ref={stage} className="relative grid h-full place-items-center overflow-hidden rounded-[2rem] border border-white/10 bg-[#04060a]" style={{ ["--p" as string]: 0 } as React.CSSProperties}>
+          <div ref={stage} className="relative grid h-full place-items-center overflow-hidden rounded-[2rem] border border-white/10 bg-[#04060a] [container-type:inline-size]" style={{ ["--p" as string]: 0 } as React.CSSProperties}>
             {BLOBS[role].map((c, i) => (
               <span
                 key={i}
@@ -555,7 +689,13 @@ export function HowScrolly() {
                 }}
               />
             ))}
-            <div className="relative w-full scale-[0.78] px-4 sm:scale-90 lg:scale-100">
+            <MotionLayer role={role} step={step} />
+            <Satellites role={role} step={step} device={R.device} />
+            <div className="relative z-10 w-full scale-[0.78] px-4 sm:scale-90 lg:scale-100">
+              <div
+                className="transition-transform duration-150 ease-out"
+                style={{ transform: "perspective(1400px) rotateY(calc((var(--p) - 0.5) * -16deg)) rotateX(calc((0.5 - var(--p)) * 7deg)) translateY(calc((0.5 - var(--p)) * 14px))" }}
+              >
               {R.device === "phone" ? (
                 <Phone app={R.app}>
                   <div key={`${role}-${step}`} className="absolute inset-0">
@@ -569,8 +709,9 @@ export function HowScrolly() {
                   </div>
                 </Window>
               )}
+              </div>
             </div>
-            <div className="absolute top-4 left-4 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-[11px] text-white/70 backdrop-blur">
+            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-[11px] text-white/70 backdrop-blur">
               {R.icon} {R.label} · step {step + 1} of {R.steps.length}
             </div>
           </div>
@@ -595,9 +736,23 @@ export function HowScrolly() {
               >
                 {i < step ? "✓" : i + 1}
               </span>
-              <div className={`max-w-md transition-all duration-500 ${i === step ? "opacity-100" : "opacity-35 lg:translate-x-0"}`}>
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] tracking-wide text-accent">{s.tag}</span>
-                <h3 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{s.title}</h3>
+              <div className={`relative max-w-md transition-all duration-500 ${i === step ? "opacity-100" : "opacity-35"}`}>
+                <span
+                  aria-hidden
+                  className={`hs-outline pointer-events-none absolute -top-[5.2rem] -left-2 text-[6.5rem] leading-none font-black transition-all duration-700 select-none ${i === step ? "translate-x-0 opacity-100" : "-translate-x-4 opacity-0"}`}
+                >
+                  0{i + 1}
+                </span>
+                <span className="relative rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] tracking-wide text-accent">{s.tag}</span>
+                <h3 key={i === step ? "on" : "off"} className="relative mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+                  {i === step
+                    ? s.title.split(" ").map((w, k) => (
+                        <span key={k} className="mg-word mr-[0.25em]" style={{ animationDelay: `${k * 70}ms` }}>
+                          {w}
+                        </span>
+                      ))
+                    : s.title}
+                </h3>
                 <p className="mt-3 leading-relaxed text-secondary">{s.body}</p>
               </div>
             </li>

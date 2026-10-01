@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { planGate } from "@/components/plan-gate";
 import Link from "next/link";
 import { OrderTable } from "@/components/order-table";
 import { Card, PageTitle } from "@/components/ui";
@@ -15,6 +16,9 @@ const FILTERS: { label: string; status?: OrderStatus }[] = [
 ];
 
 export default async function AdminOrders({ searchParams }: PageProps<"/admin/orders">) {
+  const locked = await planGate();
+  if (locked) return locked;
+
   const params = await searchParams;
   const status = FILTERS.find((f) => f.status === params.status)?.status;
   const q = typeof params.q === "string" ? params.q : undefined;

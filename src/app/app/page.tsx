@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { OrderTable } from "@/components/order-table";
-import { PayButton } from "@/components/pay-button";
+import { IdChip } from "@/components/id-chip";
+import { JoinBusiness } from "@/components/join-business";
+import { UpiPay } from "@/components/upi-pay";
 import { StatusTimeline } from "@/components/status-timeline";
-import { Card, EmptyState, FillBar, OnlineBadge, OrderStatusBadge, PageTitle } from "@/components/ui";
-import { getCustomer, getDeviceForCustomer, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
+import { Badge, Card, EmptyState, FillBar, OnlineBadge, OrderStatusBadge, PageTitle } from "@/components/ui";
+import { reportPayment } from "@/lib/actions/customer";
+import { getCustomer, getDeviceForCustomer, getTenantById, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
 import { formatDate, formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
+import { qrSvg } from "@/lib/qr";
 import { requireRole } from "@/lib/session";
+import { buildUpiUri, isValidUpiId } from "@/lib/upi";
 
 export default async function CustomerOverview() {
   const session = await requireRole("CUSTOMER");
@@ -17,11 +22,54 @@ export default async function CustomerOverview() {
 
   const active = orders.find((o) => o.status === "PENDING" || o.status === "ACCEPTED");
   const unpaid = orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID");
+  const verifying = orders.filter((o) => o.paymentStatus === "PENDING");
   const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? "there";
+  const business = await getTenantById(customer?.tenantId);
+  const canPay = !!business && isValidUpiId(business.upiId) && !!business.upiId;
+
+  // One UPI link + QR per unpaid order, pre-filled with this business's UPI ID and the amount.
+  const payments = canPay
+    ? await Promise.all(
+        unpaid
+          .filter((o) => o.amountDue > 0)
+          .map(async (o) => {
+            const uri = buildUpiUri({
+              payeeUpiId: business.upiId!,
+              payeeName: business.upiName ?? business.name,
+              amount: o.amountDue,
+              note: `Toss pickup ${orderLabel(o)}`,
+              reference: `TOSS${o.deviceOrderId}`,
+            });
+            return { order: o, uri, qr: await qrSvg(uri) };
+          }),
+      )
+    : [];
 
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker="Overview">Hi, {firstName} 👋</PageTitle>
+
+      <Card title={business ? "Your laundry" : "Connect to your laundry"}>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          {business ? (
+            <div>
+              <p className="text-lg font-medium">{business.name}</p>
+              <p className="text-sm text-secondary">
+                Business ID <span className="font-mono text-fg">{business.joinCode}</span> · ₹{business.pricePerKg}/kg
+              </p>
+            </div>
+          ) : (
+            <div className="max-w-md flex-1 space-y-3">
+              <p className="text-sm text-secondary">
+                Ask your laundry for its <span className="text-fg">Business ID</span> and enter it here to see your pickups and pay
+                them.
+              </p>
+              <JoinBusiness compact />
+            </div>
+          )}
+          {customer && <IdChip label="Your Customer ID" value={customer.customerCode} />}
+        </div>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Active pickup" className="lg:col-span-2" action={active && <OrderStatusBadge status={active.status} />}>
@@ -77,23 +125,53 @@ export default async function CustomerOverview() {
       </div>
 
       <Card title="Invoices due">
-        {unpaid.length ? (
-          <ul className="divide-y divide-border">
-            {unpaid.map((o) => (
-              <li key={o.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+        {unpaid.length === 0 && verifying.length === 0 && <EmptyState>You&apos;re all paid up.</EmptyState>}
+        {unpaid.length > 0 && !canPay && (
+          <p className="mb-4 rounded-xl border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
+            {business
+              ? `${business.name} hasn't set up UPI payments yet. Pay them directly, and they'll mark it paid.`
+              : "Connect to your laundry above to pay these invoices."}
+          </p>
+        )}
+        <ul className="divide-y divide-border">
+          {unpaid.map((o) => {
+            const pay = payments.find((p) => p.order.id === o.id);
+            return (
+              <li key={o.id} className="flex flex-wrap items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
                 <div className="text-sm">
                   <p className="font-medium">
                     Pickup {orderLabel(o)} · {formatDate(o.createdAt)}
                   </p>
-                  <p className="text-muted tabular-nums">{formatKg(o.weightKg)}</p>
+                  <p className="text-muted tabular-nums">
+                    {formatKg(o.weightKg)} · {formatINR(o.amountDue)}
+                  </p>
                 </div>
-                <PayButton amountLabel={formatINR(o.amountDue)} />
+                {pay && business && (
+                  <UpiPay
+                    uri={pay.uri}
+                    qrSvg={pay.qr}
+                    amountLabel={formatINR(o.amountDue)}
+                    payeeName={business.upiName ?? business.name}
+                    payeeUpiId={business.upiId!}
+                    action={reportPayment}
+                    hidden={{ orderId: o.id }}
+                  />
+                )}
               </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState>You&apos;re all paid up.</EmptyState>
-        )}
+            );
+          })}
+          {verifying.map((o) => (
+            <li key={o.id} className="flex flex-wrap items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+              <div className="text-sm">
+                <p className="font-medium">
+                  Pickup {orderLabel(o)} · {formatINR(o.amountDue)}
+                </p>
+                <p className="text-muted">UPI ref <span className="font-mono">{o.paymentRef}</span></p>
+              </div>
+              <Badge tone="warn" icon="…">Awaiting confirmation</Badge>
+            </li>
+          ))}
+        </ul>
       </Card>
 
       <Card title="Recent orders" action={<Link href="/app/orders" className="text-sm text-accent transition-colors hover:text-accent-2">View all →</Link>}>

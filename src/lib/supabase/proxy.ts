@@ -23,7 +23,9 @@ export async function updateSession(request: NextRequest) {
   // Must run immediately after createServerClient: refreshes and verifies the token.
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
-  const role = claims?.app_metadata?.role === "manager" ? "MANAGER" : claims ? "CUSTOMER" : null;
+  const meta = claims?.app_metadata;
+  const role = !claims ? null : meta?.role === "owner" ? "OWNER" : meta?.role === "manager" ? "MANAGER" : "CUSTOMER";
+  const home = { OWNER: "/owner", MANAGER: "/admin", CUSTOMER: "/app" } as const;
 
   const { pathname } = request.nextUrl;
   const redirect = (path: string) => {
@@ -36,12 +38,11 @@ export async function updateSession(request: NextRequest) {
     return r;
   };
 
-  const inCustomer = pathname === "/app" || pathname.startsWith("/app/");
-  const inManager = pathname === "/admin" || pathname.startsWith("/admin/");
-  if ((inCustomer || inManager) && !role) return redirect("/login");
-  if (inManager && role !== "MANAGER") return redirect("/app");
-  if (inCustomer && role === "MANAGER") return redirect("/admin");
-  if (pathname === "/login" && role) return redirect(role === "MANAGER" ? "/admin" : "/app");
+  const area = (prefix: string) => pathname === prefix || pathname.startsWith(prefix + "/");
+  const zone = area("/owner") ? "OWNER" : area("/admin") ? "MANAGER" : area("/app") ? "CUSTOMER" : null;
+  if (zone && !role) return redirect("/login");
+  if (zone && role && zone !== role) return redirect(home[role]);
+  if (pathname === "/login" && role) return redirect(home[role]);
 
   return response;
 }

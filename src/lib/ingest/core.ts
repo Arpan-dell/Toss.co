@@ -41,7 +41,7 @@ export interface OrderRecord {
   id: string;
   deviceOrderId: number;
   deviceId: string;
-  tenantId: string;
+  tenantId?: string;
   customerTelegramId?: string;
   customerId?: string;
   driverId?: string;
@@ -171,7 +171,8 @@ const RANK: Record<OrderStatus, number> = { PENDING: 0, ACCEPTED: 1, COMPLETED: 
 export function mergeOrder(
   existing: OrderRecord | undefined,
   ev: OrderEvent,
-  ctx: { now: string; tenantId: string; pricePerKg: number; customerId?: string },
+  // tenantId is unknown until the basket's owner has joined a business (entered its Business ID).
+  ctx: { now: string; tenantId?: string; pricePerKg: number; customerId?: string },
 ): { record: OrderRecord; changed: boolean } {
   const at = ev.at ?? ctx.now;
 
@@ -207,6 +208,7 @@ export function mergeOrder(
   }
   if (ev.driverId && !record.driverId) record.driverId = ev.driverId;
   if (!record.customerId && ctx.customerId) record.customerId = ctx.customerId;
+  if (!record.tenantId && ctx.tenantId) record.tenantId = ctx.tenantId;
   if (!record.customerTelegramId && ev.customerTelegramId) record.customerTelegramId = ev.customerTelegramId;
 
   const changed = JSON.stringify(record) !== JSON.stringify(existing);

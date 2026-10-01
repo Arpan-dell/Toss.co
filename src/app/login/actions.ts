@@ -30,7 +30,8 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
       error: error.code === "email_not_confirmed" ? "Confirm your email first: check your inbox for the link." : "Wrong email or password.",
     };
   }
-  redirect(data.user?.app_metadata?.role === "manager" ? "/admin" : "/app");
+  const role = data.user?.app_metadata?.role;
+  redirect(role === "owner" ? "/owner" : role === "manager" ? "/admin" : "/app");
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {

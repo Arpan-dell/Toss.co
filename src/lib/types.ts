@@ -4,18 +4,45 @@
 export type OrderStatus = "PENDING" | "ACCEPTED" | "COMPLETED" | "CANCELLED";
 export type PaymentStatus = "UNPAID" | "PENDING" | "PAID" | "REFUNDED";
 export type DriverStatus = "AVAILABLE" | "ON_JOB" | "OFFLINE";
-export type Role = "CUSTOMER" | "MANAGER";
+export type Role = "CUSTOMER" | "MANAGER" | "OWNER";
 
+// A laundry business. Customers join it by entering its joinCode (the "Business ID").
 export interface Tenant {
   id: string;
   name: string;
   pricePerKg: number;
   currency: string;
+  joinCode: string;
+  managerId?: string;
+  upiId?: string; // where customers pay this business
+  upiName?: string;
+  planStatus: "TRIAL" | "ACTIVE" | "SUSPENDED";
+  trialEndsAt?: string;
+  paidUntil?: string;
+}
+
+export interface PlatformSettings {
+  monthlyPrice: number;
+  trialDays: number;
+  ownerUpiId?: string; // where businesses pay their Toss subscription
+  ownerUpiName: string;
+}
+
+export interface SubscriptionPayment {
+  id: number;
+  tenantId: string;
+  months: number;
+  amount: number;
+  paymentRef: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  createdAt: string;
+  reviewedAt?: string;
 }
 
 export interface Customer {
   id: string; // Supabase Auth user id
-  tenantId: string;
+  customerCode: string; // the "Customer ID" shown to the customer
+  tenantId?: string; // set once they enter a Business ID
   email?: string;
   name?: string;
   telegramId?: string; // == ownerChatId stored on the ESP32
@@ -23,7 +50,7 @@ export interface Customer {
 
 export interface Device {
   deviceId: string; // ESP32 MAC address, or legacy-<chatId> for firmware v1
-  tenantId: string;
+  tenantId?: string;
   ownerTelegramId?: string;
   customerId?: string;
   address?: string;
@@ -47,7 +74,7 @@ export interface Order {
   id: string; // `${deviceId}#${deviceOrderId}` — order numbers repeat across baskets
   deviceOrderId: number;
   deviceId: string;
-  tenantId: string;
+  tenantId?: string; // unknown until the basket's owner joins a business
   customerTelegramId?: string;
   customerId?: string;
   driverId?: string; // driver's Telegram chat ID
@@ -55,6 +82,10 @@ export interface Order {
   weightKg: number;
   status: OrderStatus;
   paymentStatus: PaymentStatus; // server-owned; device payloads never overwrite it
+  paymentMethod?: "UPI" | "CASH" | "OTHER";
+  paymentRef?: string; // UPI transaction reference the customer submitted
+  paymentReportedAt?: string;
+  paymentConfirmedAt?: string;
   amountDue: number;
   createdAt: string; // when the order was placed (orders.placed_at)
   acceptedAt?: string;

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { IdChip } from "@/components/id-chip";
+import { JoinBusiness } from "@/components/join-business";
 import { Badge, Card, PageTitle } from "@/components/ui";
-import { deviceLabel, getCustomer, getDeviceForCustomer } from "@/lib/data";
+import { deviceLabel, getCustomer, getDeviceForCustomer, getTenantById } from "@/lib/data";
 import { requireRole } from "@/lib/session";
 import { getTelegramOidcConfig } from "@/lib/telegram-oidc";
 
@@ -29,6 +32,7 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
     searchParams,
   ]);
   const result = typeof params.telegram === "string" ? RESULTS[params.telegram] : undefined;
+  const business = await getTenantById(customer?.tenantId);
   const telegramReady = getTelegramOidcConfig() !== null;
 
   return (
@@ -42,12 +46,38 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
       )}
 
       <Card title="Account">
-        <dl className="grid grid-cols-[120px_1fr] gap-y-2 text-sm">
-          <dt className="text-muted">Name</dt>
-          <dd>{customer?.name ?? "—"}</dd>
-          <dt className="text-muted">Email</dt>
-          <dd>{customer?.email ?? session.email}</dd>
-        </dl>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <dl className="grid grid-cols-[80px_1fr] gap-y-2 text-sm">
+            <dt className="text-muted">Name</dt>
+            <dd>{customer?.name ?? "—"}</dd>
+            <dt className="text-muted">Email</dt>
+            <dd>{customer?.email ?? session.email}</dd>
+          </dl>
+          {customer && <IdChip label="Customer ID" value={customer.customerCode} />}
+        </div>
+      </Card>
+
+      <Card title="Your laundry" action={business ? <Badge tone="good" icon="✓">Connected</Badge> : <Badge tone="warn" icon="!">Not connected</Badge>}>
+        {business ? (
+          <div className="space-y-4 text-sm">
+            <p>
+              You&apos;re a customer of <span className="font-medium text-fg">{business.name}</span> (Business ID{" "}
+              <span className="font-mono">{business.joinCode}</span>). Your pickups are billed at ₹{business.pricePerKg}/kg.
+            </p>
+            <details className="text-secondary">
+              <summary className="cursor-pointer text-xs text-muted">Switch to a different laundry</summary>
+              <div className="mt-3 max-w-md">
+                <JoinBusiness compact />
+                <p className="mt-2 text-xs text-muted">Past orders stay with the laundry that handled them.</p>
+              </div>
+            </details>
+          </div>
+        ) : (
+          <div className="max-w-md space-y-3 text-sm text-secondary">
+            <p>Enter your laundry&apos;s Business ID to connect your account to it.</p>
+            <JoinBusiness compact />
+          </div>
+        )}
       </Card>
 
       <Card
@@ -110,6 +140,16 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
           </p>
         )}
       </Card>
+      {!business && (
+        <Card title="Run a laundry business?">
+          <p className="text-sm text-secondary">
+            Register your business on Toss to manage pickups, drivers and payments. You get a free trial.
+          </p>
+          <Link href="/app/register-business" className="btn-ghost mt-4 inline-flex rounded-full px-4 py-2 text-sm">
+            Register my business →
+          </Link>
+        </Card>
+      )}
     </div>
   );
 }

@@ -19,18 +19,22 @@ export interface StoredOrder extends OrderRecord {
 
 export interface IngestStore {
   getDeviceKeyHash(deviceId: string): Promise<string | undefined>;
-  findCustomerIdByTelegram(telegramId: string): Promise<string | undefined>;
+  /** The linked customer for this Telegram ID, and the business they've joined (if any). */
+  findCustomerByTelegram(telegramId: string): Promise<{ customerId: string; tenantId?: string } | undefined>;
+  /** The business a basket already belongs to, if known. */
+  getDeviceTenant(deviceId: string): Promise<string | undefined>;
   getPricePerKg(tenantId: string): Promise<number | undefined>;
   getOrder(id: string): Promise<StoredOrder | undefined>;
   /** Inserts, or updates only if updatedAt still equals prevUpdatedAt. Returns false on a concurrent write. */
   saveOrder(record: OrderRecord, now: string, prevUpdatedAt: string | undefined): Promise<boolean>;
   appendEvent(e: { orderId: string; deviceId: string; type: string; at: string; payload: unknown }): Promise<void>;
-  touchDevice(deviceId: string, tenantId: string, now: string, fields: DeviceFields): Promise<void>;
+  /** Upserts the basket. tenantId is only applied when the basket has no business yet. */
+  touchDevice(deviceId: string, tenantId: string | undefined, now: string, fields: DeviceFields): Promise<void>;
 }
 
 export interface IngestConfig {
   bridgeKey?: string;
-  tenantId: string;
+  // Used when the basket's business isn't known yet; managers can adjust the amount later.
   defaultPricePerKg: number;
 }
 
@@ -65,11 +69,26 @@ async function authenticate(
   return hash && safeEqual(sha256(key), hash) ? { trusted: false, deviceId: deviceIdHint } : null;
 }
 
-async function applyOrder(store: IngestStore, cfg: IngestConfig, ev: OrderEvent, now: string, raw: unknown) {
-  const [price, customerId] = await Promise.all([
-    store.getPricePerKg(cfg.tenantId),
-    ev.customerTelegramId ? store.findCustomerIdByTelegram(ev.customerTelegramId) : undefined,
+// Which business does this payload belong to? The linked customer's business wins; otherwise
+// whatever business the basket already has. Undefined until the owner joins one.
+async function resolveOwner(store: IngestStore, deviceId: string, telegramId?: string) {
+  const [customer, deviceTenant] = await Promise.all([
+    telegramId ? store.findCustomerByTelegram(telegramId) : undefined,
+    store.getDeviceTenant(deviceId),
   ]);
+  return { customerId: customer?.customerId, tenantId: customer?.tenantId ?? deviceTenant };
+}
+
+async function applyOrder(
+  store: IngestStore,
+  cfg: IngestConfig,
+  ev: OrderEvent,
+  now: string,
+  raw: unknown,
+  owner: { customerId?: string; tenantId?: string },
+) {
+  const price = owner.tenantId ? await store.getPricePerKg(owner.tenantId) : undefined;
+  const { customerId, tenantId } = owner;
   const id = orderKey(ev.deviceId, ev.deviceOrderId);
 
   // Optimistic concurrency: retry if another request changed the order between read and write.
@@ -77,7 +96,7 @@ async function applyOrder(store: IngestStore, cfg: IngestConfig, ev: OrderEvent,
     const existing = await store.getOrder(id);
     const { record, changed } = mergeOrder(existing, ev, {
       now,
-      tenantId: cfg.tenantId,
+      tenantId,
       pricePerKg: price ?? cfg.defaultPricePerKg,
       customerId,
     });
@@ -113,17 +132,18 @@ export async function handleIngest(req: IngestRequest, store: IngestStore, cfg: 
   if (!caller.trusted && caller.deviceId !== ev.deviceId) return { status: 403, body: { error: "Forbidden" } };
 
   const now = new Date().toISOString();
+  const owner = await resolveOwner(store, ev.deviceId, ev.kind === "order" ? ev.customerTelegramId : ev.ownerTelegramId);
   if (ev.kind === "heartbeat") {
-    await store.touchDevice(ev.deviceId, cfg.tenantId, now, ev satisfies HeartbeatEvent);
+    await store.touchDevice(ev.deviceId, owner.tenantId, now, ev satisfies HeartbeatEvent);
     return { status: 200, body: { ok: true, deviceId: ev.deviceId } };
   }
 
   // Device row first: orders reference it by foreign key.
-  await store.touchDevice(ev.deviceId, cfg.tenantId, now, {
+  await store.touchDevice(ev.deviceId, owner.tenantId, now, {
     address: ev.address,
     ownerTelegramId: ev.customerTelegramId,
     fwVersion: ev.fwVersion,
   });
-  const result = await applyOrder(store, cfg, ev, now, body);
+  const result = await applyOrder(store, cfg, ev, now, body, owner);
   return { status: 200, body: { ok: true, ...result } };
 }

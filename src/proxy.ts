@@ -7,5 +7,5 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Pages that need a session. APIs authenticate themselves (device keys, cron secret, Telegram hash).
-  matcher: ["/app/:path*", "/admin/:path*", "/login", "/auth/:path*"],
+  matcher: ["/app/:path*", "/admin/:path*", "/owner/:path*", "/login", "/auth/:path*"],
 };

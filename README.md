@@ -10,7 +10,7 @@ Toss is a B2B2C platform for smart laundry baskets. An ESP32 + load-cell basket 
 
 - **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4, hosted on **Vercel** (Hobby, free)
 - **Supabase** (free): Postgres with row-level security, and Auth (Phase C)
-- **Stripe** for invoices, **Anthropic Claude** for demand forecasting (later phases)
+- **UPI** for payments (direct to each business, no gateway fees), **Anthropic Claude** for demand forecasting (later phase)
 
 ## Run locally
 
@@ -50,6 +50,20 @@ scripts/backfill-sheet.ts One-time import of the Google Sheet history
 scripts/e2e-live.ts       Live end-to-end check of auth, RLS, Telegram linking and the portals
 vercel.json               Singapore region (next to the database) + daily keep-alive cron
 ```
+
+## How the marketplace works
+
+| Role | ID | What they do |
+|---|---|---|
+| **Owner** (Toss) | — | `/owner`: every business, approve subscription payments, suspend/reactivate, set plan price, trial and UPI ID |
+| **Manager** (a laundry) | Business ID `B-XXXXXX` | `/admin`: pickups, fleet, analytics; **Payments** (confirm UPI payments, mark cash, edit amounts); **Business** (name, price/kg, UPI ID); **Billing** (pay Toss) |
+| **Customer** | Customer ID `C-XXXXXX` | `/app`: enter a Business ID to join that laundry, track pickups, pay invoices by UPI |
+
+**Customer → business payments.** Invoices link straight to the business's UPI ID (QR on desktop, `upi://` deep link on phones). Money never passes through Toss and there are no fees. The customer submits the UPI reference (UTR), and the manager confirms it under **Payments**.
+
+**Business → Toss subscription.** One monthly plan with a free trial. Managers pay the owner's UPI ID under **Billing** and submit the reference; the owner approves it under **Subscription payments**, which extends the plan. Expired or suspended businesses see a lock screen (orders keep flowing in).
+
+**Becoming a manager.** Sign up, then Settings → **Register my business**. Becoming the owner is a one-time SQL step (see Deploy).
 
 ## Device ingest API
 
@@ -102,11 +116,11 @@ TOSS_INGEST_URL=... TOSS_BRIDGE_KEY=... npx tsx scripts/backfill-sheet.ts orders
 1. Supabase → **Authentication → URL Configuration**: set **Site URL** to the Vercel URL, and add `https://<app>.vercel.app/**` and `http://localhost:3000/**` to **Redirect URLs**.
 2. Supabase's built-in email sender is only meant for testing. Either turn off **Confirm email** (Authentication → Sign In / Providers → Email), or add a free SMTP provider before inviting real customers.
 3. **Log in with Telegram** ([docs](https://core.telegram.org/bots/telegram-login)): open the **@BotFather mini app** → customer bot → **Login Widget** → add Allowed URLs `https://<app>.vercel.app` and `https://<app>.vercel.app/api/telegram/callback`, then copy the **Client Secret** into Vercel as `TELEGRAM_CLIENT_SECRET`. `TELEGRAM_CLIENT_ID` is the bot's numeric ID.
-4. Make someone a manager (run in the Supabase SQL editor after they sign up):
+4. Make yourself the platform owner (Supabase SQL editor, after signing up):
    ```sql
-   update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"manager"}' where email = 'you@example.com';
+   update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"owner"}' where email = 'you@example.com';
    ```
-   They must sign out and in again to pick up the role.
+   Sign out and in again, then set your plan price and UPI ID under **Owner → Plan & UPI**. Managers register themselves from their account settings.
 
 Verify everything against the live site (creates and deletes its own test data):
 
@@ -127,7 +141,7 @@ SUPABASE_SERVICE_ROLE_KEY=... TOSS_BRIDGE_KEY=... npx tsx scripts/e2e-live.ts
 | A | Frontend with mock data | ✅ Done |
 | B | Database, device ingest API, Google Sheet migration | ✅ Live (Supabase + Vercel); Apps Script bridge to connect |
 | C | Supabase Auth + Telegram account linking, portals on live data | ✅ Live |
-| D | Stripe payments | |
+| D | Multi-business marketplace: Business/Customer IDs, UPI payments, subscriptions | ✅ Live |
 | E | Manager portal on live data | |
 | F | Claude-powered demand forecasts | |
 | G | Firmware v2 (device ID, per-device key, heartbeat) | |

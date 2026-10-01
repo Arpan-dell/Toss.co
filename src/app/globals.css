@@ -472,3 +472,13 @@ html[data-scrolled] .site-header {
   .hs-switch > span { transform: translateX(100%); }
   .hs-confetti { display: none; }
 }
+
+.hs-outline { color: transparent; -webkit-text-stroke: 1.5px rgb(255 255 255 / 0.16); }
+.hs-word-in { animation: hs-word-in 1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.hs-twinkle { opacity: 0.2; animation: hs-twinkle 3.2s ease-in-out infinite; }
+@keyframes hs-word-in { from { opacity: 0; filter: blur(16px); letter-spacing: 0.25em; } to { opacity: 1; filter: blur(0); letter-spacing: -0.04em; } }
+@keyframes hs-twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.85; } }
+@media (prefers-reduced-motion: reduce) {
+  .hs-word-in { letter-spacing: -0.04em; }
+  .hs-twinkle { animation: none; opacity: 0.4; }
+}

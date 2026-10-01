@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ConfirmButton } from "@/components/confirm-button";
 import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, PageTitle } from "@/components/ui";
-import { deleteDriver, setDriverStatus } from "@/lib/actions/manager-ops";
+import { deleteDriver, setDriverMaxJobs, setDriverStatus } from "@/lib/actions/manager-ops";
 import { deviceLabel, isDeviceOnline, listActiveOrders, listCustomers, listDevices, listDrivers, listOrders, now } from "@/lib/data";
 import { orderLabel, timeAgo } from "@/lib/format";
 import type { DriverStatus } from "@/lib/types";
@@ -45,21 +45,30 @@ export default async function Fleet() {
         <div className="mb-5">
           <AddDriverForm />
           <p className="mt-2 text-xs text-muted">
-            The chat ID links taps in your driver bot to this person. A driver can get theirs by messaging{" "}
-            <span className="font-mono">@userinfobot</span> on Telegram.
+            {process.env.TELEGRAM_DRIVER_BOT_USERNAME ? (
+              <>
+                Drivers open <span className="font-mono text-fg">@{process.env.TELEGRAM_DRIVER_BOT_USERNAME}</span> and press Start: the bot
+                replies with their chat ID to enter here. Then they tap 🟢 Online and share their live location, and new pickups go
+                to the nearest one automatically.
+              </>
+            ) : (
+              <>The chat ID links the driver bot to this person. Automatic dispatch turns on once the driver bot is connected.</>
+            )}
           </p>
         </div>
         {drivers.length === 0 ? (
           <EmptyState>No drivers yet. Add your first one above.</EmptyState>
         ) : (
           <div className="-mx-5 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] tracking-[0.12em] text-muted uppercase">
                   <th className="px-5 py-2 font-medium">Driver</th>
                   <th className="px-3 py-2 font-medium">Status</th>
+                  <th className="px-3 py-2 font-medium">Location</th>
                   <th className="px-3 py-2 font-medium">Current job</th>
-                  <th className="px-3 py-2 text-right font-medium">Pickups today</th>
+                  <th className="px-3 py-2 text-right font-medium">Today</th>
+                  <th className="px-3 py-2 font-medium">Max at once</th>
                   <th className="px-5 py-2 font-medium" />
                 </tr>
               </thead>
@@ -91,8 +100,33 @@ export default async function Fleet() {
                           <button className="text-xs text-accent hover:text-accent-2">Set</button>
                         </form>
                       </td>
+                      <td className="px-3 py-2.5 text-xs">
+                        {drv.location && drv.locationAt ? (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${drv.location.lat},${drv.location.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={current.getTime() - new Date(drv.locationAt).getTime() < 30 * 60_000 ? "text-good" : "text-muted"}
+                          >
+                            📍 {timeAgo(drv.locationAt, current)}
+                          </a>
+                        ) : (
+                          <span className="text-muted">Not shared</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2.5 text-secondary">{job ? `${orderLabel(job)} · ${job.address}` : "—"}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{today}</td>
+                      <td className="px-3 py-2.5">
+                        <form action={setDriverMaxJobs} className="flex items-center gap-1.5">
+                          <input type="hidden" name="driverId" value={drv.id} />
+                          <select name="maxJobs" defaultValue={drv.maxJobs} aria-label={`Max pickups at once for ${drv.name}`} className="rounded-lg border border-border bg-surface-solid px-2 py-1 text-xs">
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                              <option key={n} value={n}>{n}</option>
+                            ))}
+                          </select>
+                          <button className="text-xs text-accent hover:text-accent-2">Set</button>
+                        </form>
+                      </td>
                       <td className="px-5 py-2.5 text-right">
                         <ConfirmButton
                           action={deleteDriver}

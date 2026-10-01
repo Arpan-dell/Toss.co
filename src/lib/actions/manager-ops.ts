@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { dispatchOrder, notifyAssignment } from "../dispatch/service";
 import { getSession } from "../session";
+import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
 import { friendlyError, text, type FormState } from "./shared";
 
@@ -46,6 +48,16 @@ export async function addDriver(_prev: FormState, formData: FormData): Promise<F
   }
   refresh();
   return { message: `${name} added. Their Accept/Complete taps in the driver bot now show under their name.` };
+}
+
+export async function setDriverMaxJobs(formData: FormData) {
+  await requireManager();
+  const maxJobs = Number(text(formData, "maxJobs"));
+  if (!(Number.isInteger(maxJobs) && maxJobs >= 1 && maxJobs <= 9)) throw new Error("Pick 1–9 pickups");
+  const supabase = await createClient();
+  const { error } = await supabase.from("drivers").update({ max_jobs: maxJobs }).eq("id", text(formData, "driverId"));
+  if (error) throw new Error(friendlyError(error));
+  refresh();
 }
 
 export async function setDriverStatus(formData: FormData) {
@@ -100,9 +112,27 @@ export async function assignDriver(formData: FormData) {
   const patch: Record<string, unknown> = { driver_id: chatId || null };
   // Assigning a driver to a waiting pickup also marks it accepted, like tapping Accept in the bot.
   if (chatId && order?.status === "PENDING") Object.assign(patch, { status: "ACCEPTED", accepted_at: new Date().toISOString() });
-  const { error } = await supabase.from("orders").update(patch).eq("id", orderId);
-  if (error) throw new Error(friendlyError(error));
+  const { data: updated, error } = await supabase.from("orders").update(patch).eq("id", orderId).select("id");
+  if (error || !updated?.length) throw new Error(friendlyError(error));
+  // Tell the driver on Telegram, with the pickup pin and map buttons (no-op without the driver bot).
+  if (chatId) {
+    const { data: full } = await supabaseAdmin().from("orders").select("*").eq("id", orderId).maybeSingle();
+    if (full) await notifyAssignment(full, chatId).catch((e) => console.error("notify failed", e));
+  }
   refresh();
+}
+
+// Finds the nearest available driver for a waiting pickup, like a new order from a basket does.
+export async function autoAssign(formData: FormData) {
+  await requireManager();
+  const orderId = text(formData, "orderId");
+  // RLS check: the manager can only see orders of their own business.
+  const supabase = await createClient();
+  const { data: mine } = await supabase.from("orders").select("id").eq("id", orderId).maybeSingle();
+  if (!mine) throw new Error("Order not found");
+  const result = await dispatchOrder(orderId);
+  refresh();
+  if (!result.assigned) throw new Error(`Couldn't auto-assign: ${result.reason}.`);
 }
 
 export async function setOrderStatus(formData: FormData) {

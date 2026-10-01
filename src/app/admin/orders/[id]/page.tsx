@@ -6,7 +6,7 @@ import { planGate } from "@/components/plan-gate";
 import { StatusTimeline } from "@/components/status-timeline";
 import { Card, OrderStatusBadge, PageTitle, PaymentBadge } from "@/components/ui";
 import { confirmPayment, markPaidCash, rejectPayment } from "@/lib/actions/manager";
-import { assignDriver, setOrderStatus } from "@/lib/actions/manager-ops";
+import { assignDriver, autoAssign, setOrderStatus } from "@/lib/actions/manager-ops";
 import { deviceLabel, getOrder, listCustomers, listDevices, listDrivers, listOrderEvents } from "@/lib/data";
 import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
 import { AmountForm } from "../../payments/amount-form";
@@ -95,6 +95,17 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                   </p>
                 )}
               </form>
+              {!order.driverId && (
+                <div className="flex flex-wrap items-center gap-3">
+                  <ConfirmButton
+                    action={autoAssign}
+                    fields={{ orderId: order.id }}
+                    label="⚡ Auto-assign nearest driver"
+                    tone="neutral"
+                    confirm="Send this pickup to the nearest online driver now?"
+                  />
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-3 border-t border-border pt-4">
                 {order.status === "PENDING" && (
                   <form action={setOrderStatus}>

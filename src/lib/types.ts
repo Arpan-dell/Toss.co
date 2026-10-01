@@ -16,6 +16,8 @@ export interface Tenant {
   managerId?: string;
   upiId?: string; // where customers pay this business
   upiName?: string;
+  storeAddress?: string; // where drivers deliver; the last stop of every route
+  storeLocated?: boolean; // the store address was found on the map
   planStatus: "TRIAL" | "ACTIVE" | "SUSPENDED";
   trialEndsAt?: string;
   paidUntil?: string;
@@ -68,6 +70,9 @@ export interface Driver {
   name: string;
   telegramChatId: string; // matches Order.driverId
   status: DriverStatus;
+  location?: { lat: number; lng: number };
+  locationAt?: string; // when the driver bot last received their (live) location
+  maxJobs: number;
 }
 
 export interface Order {

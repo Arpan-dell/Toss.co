@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LiveRefresh } from "@/components/live-refresh";
 import { PortalShell } from "@/components/portal-shell";
 import { getTenantById } from "@/lib/data";
 import { formatDate } from "@/lib/format";
@@ -8,6 +9,7 @@ import { requireRole } from "@/lib/session";
 const nav = [
   { href: "/admin", label: "Live board" },
   { href: "/admin/payments", label: "Payments" },
+  { href: "/admin/customers", label: "Customers" },
   { href: "/admin/fleet", label: "Fleet" },
   { href: "/admin/orders", label: "Orders" },
   { href: "/admin/analytics", label: "Analytics" },
@@ -22,6 +24,11 @@ export default async function ManagerLayout({ children }: LayoutProps<"/admin">)
 
   return (
     <PortalShell badge="Manager" subtitle={tenant?.name ?? ""} nav={nav}>
+      {tenant && (
+        <div className="mb-4 flex justify-end">
+          <LiveRefresh tenantId={tenant.id} />
+        </div>
+      )}
       {plan && plan.state !== "ACTIVE" && (
         <div
           role="status"

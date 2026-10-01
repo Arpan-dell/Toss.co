@@ -63,7 +63,7 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
       </div>
 
       <Card>
-        <OrderTable orders={orders} showAddress emptyText="No orders match this filter." />
+        <OrderTable orders={orders} showAddress linkToAdmin emptyText="No orders match this filter." />
       </Card>
     </div>
   );

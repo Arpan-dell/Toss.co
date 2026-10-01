@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, OrderStatusBadge, PageTitle, StatTile } from "@/components/ui";
 import { deviceLabel, isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, now } from "@/lib/data";
@@ -55,7 +56,10 @@ export default async function LiveBoard() {
                 <li key={o.id} className="-mx-2 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl px-2 py-3 transition-colors hover:bg-white/[0.03]">
                   <div className="min-w-[200px] flex-1">
                     <p className="text-sm font-medium">
-                      {deviceArea(o.deviceId)} <span className="font-mono text-xs text-muted">{orderLabel(o)}</span>
+                      {deviceArea(o.deviceId)}{" "}
+                      <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="font-mono text-xs text-accent hover:text-accent-2">
+                        {orderLabel(o)} →
+                      </Link>
                     </p>
                     <p className="text-sm text-secondary">{o.address}</p>
                   </div>

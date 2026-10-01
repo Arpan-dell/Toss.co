@@ -451,3 +451,24 @@ html[data-scrolled] .site-header {
   .mg-key { background-size: 100% 100%; }
   .mg-blob { transition: none; }
 }
+
+/* ---------- role-based scrollytelling (components/how-scrolly.tsx) ---------- */
+.mg-type { width: 0; animation: mg-type 0.9s steps(var(--chars, 12)) forwards; border-right: 1px solid rgb(255 255 255 / 0.6); }
+.hs-follow { offset-distance: 0%; offset-rotate: 0deg; animation: hs-follow 3.2s cubic-bezier(0.65, 0, 0.35, 1) 1.6s forwards; }
+.hs-radar { animation: hs-radar 1.8s ease-out infinite; }
+.hs-switch { animation: hs-switch-bg 0.35s ease forwards; animation-delay: inherit; }
+.hs-switch > span { animation: hs-switch-knob 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; animation-delay: inherit; }
+.hs-switch:not([style*="animation-delay"]) { animation-delay: 0.6s; }
+.hs-confetti { top: -4%; animation: hs-confetti 1.6s cubic-bezier(0.2, 0.7, 0.4, 1) forwards; }
+@keyframes mg-type { to { width: calc(var(--chars, 12) * 1ch); border-color: transparent; } }
+@keyframes hs-follow { to { offset-distance: 100%; } }
+@keyframes hs-radar { from { transform: translate(-50%, -50%) scale(0.2); opacity: 0.9; } to { transform: translate(-50%, -50%) scale(1.6); opacity: 0; } }
+@keyframes hs-switch-bg { to { background: #02a9a1; } }
+@keyframes hs-switch-knob { to { transform: translateX(calc(100% + 0px)); } }
+@keyframes hs-confetti { from { transform: translateY(0) rotate(0); opacity: 1; } to { transform: translateY(520%) rotate(540deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .mg-type { width: auto; border: 0; }
+  .hs-switch { background: #02a9a1; }
+  .hs-switch > span { transform: translateX(100%); }
+  .hs-confetti { display: none; }
+}

@@ -17,6 +17,7 @@ const MESSAGES: Record<string, string> = {
   only_managers: "Only business managers can do this.",
   invalid_months: "Choose between 1 and 12 months.",
   already_manages_a_business: "This account already runs a business.",
+  customer_not_in_business: "That customer isn't part of your business.",
   payment_not_pending: "That payment was already reviewed.",
 };
 

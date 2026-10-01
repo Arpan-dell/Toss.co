@@ -127,6 +127,26 @@ export const listCustomers = cache(async (): Promise<Customer[]> => {
   }));
 });
 
+export async function getOrder(id: string): Promise<Order | undefined> {
+  const supabase = await db();
+  const r = orThrow(await supabase.from("orders").select("*").eq("id", id).maybeSingle()) as Row | null;
+  return r ? toOrder(r) : undefined;
+}
+
+export interface OrderEventRow {
+  id: number;
+  type: string;
+  at: string;
+  payload: unknown;
+}
+
+// Every payload the basket/bridge sent for this order (status changes, retries ignored).
+export async function listOrderEvents(orderId: string): Promise<OrderEventRow[]> {
+  const supabase = await db();
+  const rows = orThrow(await supabase.from("order_events").select("id, type, at, payload").eq("order_id", orderId).order("at"));
+  return (rows as Row[]).map((r) => ({ id: r.id as number, type: r.type as string, at: r.at as string, payload: r.payload }));
+}
+
 // ---------- owner / billing ----------
 
 export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => {

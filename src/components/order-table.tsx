@@ -1,11 +1,14 @@
+import Link from "next/link";
 import type { Order } from "@/lib/types";
 import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
 import { EmptyState, OrderStatusBadge, PaymentBadge } from "./ui";
 
-export function OrderTable({ orders, showAddress = false, emptyText = "No orders yet." }: {
+// linkToAdmin: each order opens its detail page in the manager portal.
+export function OrderTable({ orders, showAddress = false, emptyText = "No orders yet.", linkToAdmin = false }: {
   orders: Order[];
   showAddress?: boolean;
   emptyText?: string;
+  linkToAdmin?: boolean;
 }) {
   if (orders.length === 0) return <EmptyState>{emptyText}</EmptyState>;
   return (
@@ -25,7 +28,15 @@ export function OrderTable({ orders, showAddress = false, emptyText = "No orders
         <tbody>
           {orders.map((o) => (
             <tr key={o.id} data-reveal="row" className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.03]">
-              <td className="px-5 py-2.5 font-mono text-xs">{orderLabel(o)}</td>
+              <td className="px-5 py-2.5 font-mono text-xs">
+                {linkToAdmin ? (
+                  <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="text-accent hover:text-accent-2">
+                    {orderLabel(o)}
+                  </Link>
+                ) : (
+                  orderLabel(o)
+                )}
+              </td>
               <td className="px-3 py-2.5 text-secondary">{formatDateTime(o.createdAt)}</td>
               {showAddress && <td className="max-w-[220px] truncate px-3 py-2.5 text-secondary">{o.address}</td>}
               <td className="px-3 py-2.5 text-right tabular-nums">{formatKg(o.weightKg)}</td>

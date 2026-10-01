@@ -185,6 +185,57 @@ async function main() {
     const after = await admin.from("orders").select("payment_status").eq("id", `legacy-${TG_CUSTOMER}#700`).single();
     check("pay: device retry never un-pays a confirmed invoice", reIngest === 200 && after.data?.payment_status === "PAID");
 
+    // ---------- Phase E: manager tools ----------
+    const addDrv = await mgrADb.from("drivers").insert({ tenant_id: a.tenant_id, name: "E2E Driver", telegram_chat_id: "7199999901", status: "AVAILABLE" }).select("id").single();
+    check("drivers: manager adds a driver", !addDrv.error, addDrv.error?.message);
+    const drvByB = await mgrBDb.from("drivers").select("id");
+    check("drivers: other business can't see them", (drvByB.data?.length ?? 0) === 0);
+    const drvCross = await mgrBDb.from("drivers").insert({ tenant_id: a.tenant_id, name: "Intruder", telegram_chat_id: "7199999902" });
+    check("drivers: can't add a driver to another business", !!drvCross.error);
+
+    const label = await mgrADb.from("devices").update({ area: "E2E Saket", target_kg: 6 }).eq("device_id", `legacy-${TG_CUSTOMER}`).select("area");
+    check("baskets: manager labels a basket", label.data?.[0]?.area === "E2E Saket", label.error?.message);
+    const keyHack = await mgrADb.from("devices").update({ api_key_hash: "x" }).eq("device_id", `legacy-${TG_CUSTOMER}`);
+    check("baskets: manager can't change a basket's device key", !!keyHack.error);
+    const weightHack = await mgrADb.from("orders").update({ weight_kg: 1 }).eq("id", `legacy-${TG_CUSTOMER}#700`);
+    check("orders: manager can't change the measured weight", !!weightHack.error);
+
+    // Realtime: A hears its own basket's new order; B hears nothing.
+    const heard = { a: 0, b: 0 };
+    const listen = (db: SupabaseClient, tenant: string, key: "a" | "b") =>
+      new Promise<() => Promise<unknown>>((resolve) => {
+        const ch = db
+          .channel(`e2e-${key}-${RUN}`)
+          .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `tenant_id=eq.${tenant}` }, () => heard[key]++)
+          .subscribe((s) => s === "SUBSCRIBED" && resolve(() => db.removeChannel(ch)));
+      });
+    await mgrADb.realtime.setAuth((await mgrADb.auth.getSession()).data.session!.access_token);
+    await mgrBDb.realtime.setAuth((await mgrBDb.auth.getSession()).data.session!.access_token);
+    const stopA = await listen(mgrADb, a.tenant_id, "a");
+    const stopB = await listen(mgrBDb, a.tenant_id, "b"); // B even asks for A's rows
+    await new Promise((r) => setTimeout(r, 1500));
+    await ingest(TG_CUSTOMER, 701);
+    await new Promise((r) => setTimeout(r, 5000));
+    await stopA();
+    await stopB();
+    check("live: manager A gets a realtime event for the new order", heard.a > 0, `events ${heard.a}`);
+    check("live: manager B gets nothing for A's orders", heard.b === 0, `events ${heard.b}`);
+
+    const assign = await mgrADb.from("orders").update({ driver_id: "7199999901", status: "ACCEPTED", accepted_at: new Date().toISOString() }).eq("id", `legacy-${TG_CUSTOMER}#701`).select("status");
+    check("orders: manager assigns a driver by hand", assign.data?.[0]?.status === "ACCEPTED", assign.error?.message);
+    const detailA = await get(`/admin/orders/${encodeURIComponent(`legacy-${TG_CUSTOMER}#701`)}`, mgrACookie);
+    check("orders: detail page shows the assigned driver", detailA.status === 200 && detailA.body.includes("E2E Driver"), `status ${detailA.status}`);
+    const mgrBCookieE = await cookiesFor(mgrB.email);
+    const detailB = await get(`/admin/orders/${encodeURIComponent(`legacy-${TG_CUSTOMER}#701`)}`, mgrBCookieE);
+    check("orders: another business gets 404 for it", detailB.status === 404, `status ${detailB.status}`);
+    const custPage = await get("/admin/customers", mgrACookie);
+    check("customers: page lists the customer with their ID", custPage.status === 200 && custPage.body.includes("Eve Customer") && custPage.body.includes(custRow.data!.customer_code));
+    const fleetPage = await get("/admin/fleet", mgrACookie);
+    check("fleet: page shows driver and labelled basket", fleetPage.body.includes("E2E Driver") && fleetPage.body.includes("E2E Saket"));
+
+    const removeByB = await mgrBDb.rpc("remove_customer", { p_customer: cust.id });
+    check("customers: another business can't remove them", !!removeByB.error?.message.includes("customer_not_in_business"));
+
     // ---------- subscription: manager pays → owner approves ----------
     const sub = await mgrADb.rpc("submit_subscription_payment", { p_months: 3, p_ref: "SUBREF123456" });
     check("subscription: manager submits payment", !sub.error, sub.error?.message);
@@ -202,6 +253,12 @@ async function main() {
     const extendedFromTrial = new Date(tAfter.data!.paid_until).getTime() > new Date(tAfter.data!.trial_ends_at).getTime() + 80 * 86_400_000;
     check("subscription: approval activates and adds 3 months after the trial", !approve.error && tAfter.data?.plan_status === "ACTIVE" && extendedFromTrial);
 
+    // ---------- removing a customer ----------
+    const removed = await mgrADb.rpc("remove_customer", { p_customer: cust.id });
+    const afterRemove = await admin.from("customers").select("tenant_id").eq("id", cust.id).single();
+    const historyKept = await admin.from("orders").select("tenant_id").eq("id", `legacy-${TG_CUSTOMER}#700`).single();
+    check("customers: manager removes a customer; history stays", !removed.error && afterRemove.data?.tenant_id === null && historyKept.data?.tenant_id === a.tenant_id);
+
     // ---------- suspension and expiry lock the manager out ----------
     await admin.from("tenants").update({ plan_status: "SUSPENDED" }).eq("id", b.tenant_id);
     const mgrBCookie = await cookiesFor(mgrB.email);
@@ -215,6 +272,7 @@ async function main() {
     await admin.from("orders").delete().in("device_id", [`legacy-${TG_CUSTOMER}`, `legacy-${TG_STRANGER}`]);
     await admin.from("devices").delete().in("device_id", [`legacy-${TG_CUSTOMER}`, `legacy-${TG_STRANGER}`]);
     if (tenantIds.length) {
+      await admin.from("drivers").delete().in("tenant_id", tenantIds);
       await admin.from("customers").update({ tenant_id: null }).in("tenant_id", tenantIds);
       await admin.from("tenants").delete().in("id", tenantIds);
     }

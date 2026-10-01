@@ -15,6 +15,8 @@ import { AskToss, PendingButton, RunNow } from "./parts";
 import { Simulator } from "./simulator";
 
 export const metadata: Metadata = { title: "Toss AI" };
+// "Re-analyse now" and "Ask Toss AI" wait on Gemini; give them room on the free tier.
+export const maxDuration = 120;
 
 const KIND: Record<AiAction["type"], { icon: string; name: string }> = {
   driver_alert: { icon: "📈", name: "Staffing" },

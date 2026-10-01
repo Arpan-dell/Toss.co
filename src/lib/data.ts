@@ -255,13 +255,14 @@ export async function getDeviceForCustomer(customerId: string): Promise<Device |
 export async function listDrivers(): Promise<Driver[]> {
   const supabase = await db();
   const rows = orThrow(
-    await supabase.from("drivers").select("id, tenant_id, name, telegram_chat_id, status, last_lat, last_lng, location_at, max_jobs").order("name"),
+    await supabase.from("drivers").select("id, tenant_id, name, phone, telegram_chat_id, status, last_lat, last_lng, location_at, max_jobs").order("name"),
   );
   return (rows as Row[]).map((r) => ({
     id: r.id as string,
     tenantId: r.tenant_id as string,
     name: r.name as string,
-    telegramChatId: r.telegram_chat_id as string,
+    phone: u(r.phone),
+    telegramChatId: u(r.telegram_chat_id),
     status: r.status as Driver["status"],
     location: r.last_lat != null ? { lat: r.last_lat as number, lng: r.last_lng as number } : undefined,
     locationAt: u(r.location_at),

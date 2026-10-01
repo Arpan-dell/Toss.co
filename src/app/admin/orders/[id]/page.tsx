@@ -81,7 +81,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                     className="flex-1 rounded-xl border border-border bg-surface-solid px-3 py-2 text-sm"
                   >
                     <option value="">— No driver —</option>
-                    {drivers.map((d) => (
+                    {drivers.filter((d) => d.telegramChatId).map((d) => (
                       <option key={d.id} value={d.telegramChatId}>
                         {d.name} ({d.status === "AVAILABLE" ? "available" : d.status === "ON_JOB" ? "on a job" : "offline"})
                       </option>

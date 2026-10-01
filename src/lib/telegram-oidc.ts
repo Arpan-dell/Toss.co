@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
+import { fromTelegramPhone } from "./phone";
 
 // "Log in with Telegram" via OpenID Connect (authorization code + PKCE).
 // https://core.telegram.org/bots/telegram-login
@@ -100,13 +101,6 @@ export async function verifyIdToken(idToken: string, clientId: string, jwks?: JW
     telegramId,
     name: typeof payload.name === "string" ? payload.name : undefined,
     username: typeof payload.preferred_username === "string" ? payload.preferred_username : undefined,
-    phone: verifiedPhone(payload.phone_number),
+    phone: fromTelegramPhone(payload.phone_number), // only when the user agreed to share it
   };
-}
-
-// Present only when the user agreed to share it (phone scope). Telegram may omit the leading "+".
-function verifiedPhone(raw: unknown): string | undefined {
-  if (typeof raw !== "string" && typeof raw !== "number") return undefined;
-  const digits = String(raw).replace(/\D/g, "");
-  return /^[1-9]\d{7,14}$/.test(digits) ? `+${digits}` : undefined;
 }

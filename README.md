@@ -56,7 +56,7 @@ vercel.json               Singapore region (next to the database) + daily keep-a
 | Role | ID | What they do |
 |---|---|---|
 | **Owner** (Toss) | — | `/owner`: every business, approve subscription payments, suspend/reactivate, set plan price, trial and UPI ID |
-| **Manager** (a laundry) | Business ID `B-XXXXXX` | `/admin` (updates live): pickups with an order detail page (assign driver, mark picked up, cancel); **Customers**; **Fleet** (add drivers by Telegram chat ID, label baskets); analytics; **Payments** (confirm UPI payments, mark cash, edit amounts); **Business** (name, price/kg, UPI ID); **Billing** (pay Toss) |
+| **Manager** (a laundry) | Business ID `B-XXXXXX` | `/admin` (updates live): pickups with an order detail page (assign driver, mark picked up, cancel); **Customers**; **Fleet** (add drivers by name + mobile number; they connect by sharing their number with the driver bot; label baskets); analytics; **Payments** (confirm UPI payments, mark cash, edit amounts); **Business** (name, price/kg, UPI ID); **Billing** (pay Toss) |
 | **Customer** | Customer ID `C-XXXXXX` | `/app`: enter a Business ID to join that laundry, track pickups, pay invoices by UPI |
 
 **Customer → business payments.** Invoices link straight to the business's UPI ID (QR on desktop, `upi://` deep link on phones). Money never passes through Toss and there are no fees. The customer submits the UPI reference (UTR), and the manager confirms it under **Payments**.

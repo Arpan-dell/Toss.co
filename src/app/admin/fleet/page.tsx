@@ -5,6 +5,7 @@ import { Badge, Card, EmptyState, FillBar, OnlineBadge, PageTitle } from "@/comp
 import { deleteDriver, setDriverMaxJobs, setDriverStatus } from "@/lib/actions/manager-ops";
 import { deviceLabel, isDeviceOnline, listActiveOrders, listCustomers, listDevices, listDrivers, listOrders, now } from "@/lib/data";
 import { orderLabel, timeAgo } from "@/lib/format";
+import { formatPhone } from "@/lib/phone";
 import type { DriverStatus } from "@/lib/types";
 import { AddDriverForm, BasketEditor } from "./forms";
 
@@ -47,12 +48,15 @@ export default async function Fleet() {
           <p className="mt-2 text-xs text-muted">
             {process.env.TELEGRAM_DRIVER_BOT_USERNAME ? (
               <>
-                Drivers open <span className="font-mono text-fg">@{process.env.TELEGRAM_DRIVER_BOT_USERNAME}</span> and press Start: the bot
-                replies with their chat ID to enter here. Then they tap 🟢 Online and share their live location, and new pickups go
-                to the nearest one automatically.
+                After you add a driver, they open{" "}
+                <a href={`https://t.me/${process.env.TELEGRAM_DRIVER_BOT_USERNAME}`} target="_blank" rel="noreferrer" className="font-mono text-fg underline">
+                  @{process.env.TELEGRAM_DRIVER_BOT_USERNAME}
+                </a>{" "}
+                and tap <span className="text-fg">📱 Share my phone number</span>. Telegram confirms the number and they&apos;re connected.
+                Then they tap 🟢 Online and share their live location, and new pickups go to the nearest one automatically.
               </>
             ) : (
-              <>The chat ID links the driver bot to this person. Automatic dispatch turns on once the driver bot is connected.</>
+              <>Automatic dispatch turns on once the driver bot is connected.</>
             )}
           </p>
         </div>
@@ -74,31 +78,42 @@ export default async function Fleet() {
               </thead>
               <tbody>
                 {drivers.map((drv) => {
-                  const job = active.find((o) => o.driverId === drv.telegramChatId && o.status === "ACCEPTED");
-                  const today = all.filter((o) => o.driverId === drv.telegramChatId && o.completedAt?.startsWith(todayKey)).length;
+                  const mine = (o: { driverId?: string }) => !!drv.telegramChatId && o.driverId === drv.telegramChatId;
+                  const job = active.find((o) => mine(o) && o.status === "ACCEPTED");
+                  const today = all.filter((o) => mine(o) && o.completedAt?.startsWith(todayKey)).length;
                   const s = STATUS[drv.status];
                   return (
                     <tr key={drv.id} className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.03]">
                       <td className="px-5 py-2.5">
                         <p className="font-medium">{drv.name}</p>
-                        <p className="font-mono text-xs text-muted">{drv.telegramChatId}</p>
+                        {drv.phone ? (
+                          <a href={`tel:${drv.phone}`} className="text-xs text-muted tabular-nums hover:text-fg">
+                            {formatPhone(drv.phone)}
+                          </a>
+                        ) : (
+                          <p className="font-mono text-xs text-muted">{drv.telegramChatId}</p>
+                        )}
                       </td>
                       <td className="px-3 py-2.5">
-                        <form action={setDriverStatus} className="flex items-center gap-2">
-                          <input type="hidden" name="driverId" value={drv.id} />
-                          <Badge tone={s.tone} icon="●" live={s.live}>{s.label}</Badge>
-                          <select
-                            name="status"
-                            defaultValue={drv.status}
-                            aria-label={`Change ${drv.name}'s status`}
-                            className="rounded-lg border border-border bg-surface-solid px-2 py-1 text-xs"
-                          >
-                            <option value="AVAILABLE">Available</option>
-                            <option value="ON_JOB">On a job</option>
-                            <option value="OFFLINE">Offline</option>
-                          </select>
-                          <button className="text-xs text-accent hover:text-accent-2">Set</button>
-                        </form>
+                        {!drv.telegramChatId ? (
+                          <Badge tone="warn" icon="!">Not connected to Telegram yet</Badge>
+                        ) : (
+                          <form action={setDriverStatus} className="flex items-center gap-2">
+                            <input type="hidden" name="driverId" value={drv.id} />
+                            <Badge tone={s.tone} icon="●" live={s.live}>{s.label}</Badge>
+                            <select
+                              name="status"
+                              defaultValue={drv.status}
+                              aria-label={`Change ${drv.name}'s status`}
+                              className="rounded-lg border border-border bg-surface-solid px-2 py-1 text-xs"
+                            >
+                              <option value="AVAILABLE">Available</option>
+                              <option value="ON_JOB">On a job</option>
+                              <option value="OFFLINE">Offline</option>
+                            </select>
+                            <button className="text-xs text-accent hover:text-accent-2">Set</button>
+                          </form>
+                        )}
                       </td>
                       <td className="px-3 py-2.5 text-xs">
                         {drv.location && drv.locationAt ? (
@@ -132,7 +147,7 @@ export default async function Fleet() {
                           action={deleteDriver}
                           fields={{ driverId: drv.id }}
                           label="Remove"
-                          confirm={`Remove ${drv.name}? Their past pickups keep their chat ID.`}
+                          confirm={`Remove ${drv.name}? Their past pickups stay in your history.`}
                         />
                       </td>
                     </tr>

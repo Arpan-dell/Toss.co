@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmButton } from "@/components/confirm-button";
+import { invoiceHref } from "@/components/order-table";
 import { planGate } from "@/components/plan-gate";
 import { StatusTimeline } from "@/components/status-timeline";
 import { Card, OrderStatusBadge, PageTitle, PaymentBadge } from "@/components/ui";
@@ -144,6 +145,13 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                 <span className="text-2xl font-semibold tabular-nums">{formatINR(order.amountDue)}</span>{" "}
                 <span className="text-muted">for {formatKg(order.weightKg)}</span>
               </p>
+              {order.paymentStatus === "PAID" && (
+                <p className="text-xs">
+                  <a href={invoiceHref(order.id)} target="_blank" rel="noreferrer" className="text-accent hover:text-accent-2">
+                    🧾 Invoice{order.invoiceNumber ? ` ${order.invoiceNumber}` : ""} (PDF)
+                  </a>
+                </p>
+              )}
               {order.discountPct && (
                 <p className="text-xs text-good">
                   🎁 {order.discountPct}% win-back discount applied

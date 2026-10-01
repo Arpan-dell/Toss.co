@@ -123,6 +123,34 @@ export const ownerBusinessLapsed = (b: { name: string; joinCode: string; manager
     }),
   );
 
+// ---------- to a customer ----------
+
+export const customerInvoice = (d: {
+  number: string;
+  business: { name: string };
+  customer: { name?: string };
+  order: { label: string; weightKg: number; total: number; discountPct?: number; completedAt?: string };
+  payment: { method: string; paidAt?: string };
+}) =>
+  mail(
+    `Your invoice from ${d.business.name} · ${inr(d.order.total)} paid`,
+    layout({
+      preheader: `Invoice ${d.number} for your laundry pickup is attached.`,
+      heading: `Thanks${d.customer.name ? `, ${d.customer.name.split(" ")[0]}` : ""}! Your payment is received`,
+      paragraphs: [`Your invoice from <b>${e(d.business.name)}</b> is attached as a PDF. You can also download it anytime from your Toss dashboard.`],
+      rows: [
+        ["Invoice", d.number],
+        ["Pickup", d.order.label],
+        ["Weight", `${d.order.weightKg.toFixed(2)} kg`],
+        ["Amount paid", `${inr(d.order.total)}${d.order.discountPct ? ` (${d.order.discountPct}% off)` : ""}`],
+        ["Paid by", d.payment.method],
+        ...(d.payment.paidAt ? ([["Paid on", day(d.payment.paidAt)]] as Row[]) : []),
+      ],
+      cta: { label: "View your orders", url: `${SITE}/app/orders` },
+      tone: "good",
+    }),
+  );
+
 // ---------- to a business manager ----------
 
 export const managerWelcome = (b: { name: string; joinCode: string; trialEndsAt?: string }) =>

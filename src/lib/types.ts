@@ -111,6 +111,7 @@ export interface Order {
   paymentReportedAt?: string;
   paymentConfirmedAt?: string;
   amountDue: number;
+  invoiceNumber?: string; // set once the order is paid and its invoice is issued
   discountPct?: number; // a customer offer applied to this pickup
   amountBeforeDiscount?: number;
   createdAt: string; // when the order was placed (orders.placed_at)

@@ -3,6 +3,8 @@ import type { Order } from "@/lib/types";
 import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
 import { EmptyState, OrderStatusBadge, PaymentBadge } from "./ui";
 
+export const invoiceHref = (orderId: string) => `/invoice/${encodeURIComponent(orderId)}`;
+
 // linkToAdmin: each order opens its detail page in the manager portal.
 export function OrderTable({ orders, showAddress = false, emptyText = "No orders yet.", linkToAdmin = false }: {
   orders: Order[];
@@ -45,7 +47,17 @@ export function OrderTable({ orders, showAddress = false, emptyText = "No orders
                 {o.discountPct ? <span className="ml-1.5 rounded-full bg-good-bg px-1.5 py-0.5 text-[10px] text-good">−{o.discountPct}%</span> : null}
               </td>
               <td className="px-3 py-2.5"><OrderStatusBadge status={o.status} /></td>
-              <td className="px-5 py-2.5"><PaymentBadge status={o.paymentStatus} /></td>
+              <td className="px-5 py-2.5">
+                <span className="flex items-center gap-2">
+                  <PaymentBadge status={o.paymentStatus} />
+                  {o.paymentStatus === "PAID" && (
+                    // Plain link: the route returns a PDF.
+                    <a href={invoiceHref(o.id)} target="_blank" rel="noreferrer" className="text-xs text-accent hover:text-accent-2">
+                      Invoice
+                    </a>
+                  )}
+                </span>
+              </td>
             </tr>
           ))}
         </tbody>

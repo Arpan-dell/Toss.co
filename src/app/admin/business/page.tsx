@@ -71,7 +71,7 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
       </Card>
       <Card title="🎁 Win back quiet customers">
         <p className="mb-4 text-sm text-secondary">
-          When a customer hasn&apos;t had a pickup for a while, Toss sends them a discount in the Toss bot and on their dashboard. It&apos;s
+          When a customer hasn&apos;t had a pickup for a while, Toss sends them a discount in the Toss Control bot and on their dashboard. It&apos;s
           applied to their next pickup automatically, valid for 14 days.
           {offers.sent > 0 && (
             <span className="text-fg">

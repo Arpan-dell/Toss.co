@@ -121,7 +121,7 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-secondary">
-              The easiest way: open the Toss bot in Telegram and tap <span className="text-fg">📱 Open Toss</span>. Your
+              The easiest way: open the <span className="text-fg">Toss Control</span> bot in Telegram and tap <span className="text-fg">📱 Open Toss</span>. Your
               account links itself. Or log in with Telegram below and share your number to verify it. Use the Telegram
               account that claimed your basket, and your past and future orders will appear here.
             </p>

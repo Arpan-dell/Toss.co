@@ -66,7 +66,7 @@ export async function updateWinback(_prev: FormState, formData: FormData): Promi
   done();
   return {
     message: enabled
-      ? `Saved. Customers with no pickup for ${days} days get ${pct}% off their next one, announced in the Toss bot.`
+      ? `Saved. Customers with no pickup for ${days} days get ${pct}% off their next one, announced in the Toss Control bot.`
       : "Saved. Win-back offers are off.",
   };
 }

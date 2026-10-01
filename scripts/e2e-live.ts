@@ -151,8 +151,12 @@ async function main() {
     const seenByB = await mgrBDb.from("orders").select("id");
     check("rls: manager A sees only A's orders", seenByA.data?.length === 1 && seenByA.data[0].id === `legacy-${TG_CUSTOMER}#700`, JSON.stringify(seenByA.data));
     check("rls: manager B sees none of A's orders", seenByB.data?.length === 0, JSON.stringify(seenByB.data));
+    // Every account has its own customers row (created at signup), which its owner may always read.
     const custsB = await mgrBDb.from("customers").select("id");
-    check("rls: manager B can't see A's customers", custsB.data?.length === 0);
+    const othersB = (custsB.data ?? []).filter((r) => r.id !== mgrB.id);
+    check("rls: manager B can't see A's customers", othersB.length === 0, `sees ${JSON.stringify(custsB.data)}; own id ${mgrB.id}`);
+    const custsA = await mgrADb.from("customers").select("id");
+    check("rls: manager A sees their customer", (custsA.data ?? []).some((r) => r.id === cust.id));
     const planHack = await mgrADb.from("tenants").update({ plan_status: "ACTIVE", paid_until: "2099-01-01" }).eq("id", a.tenant_id).select("id");
     check("rls: manager can't extend their own plan", !!planHack.error);
     const crossEdit = await mgrBDb.from("orders").update({ amount_due: 1 }).eq("id", `legacy-${TG_CUSTOMER}#700`).select("id");

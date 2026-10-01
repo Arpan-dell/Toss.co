@@ -1,3 +1,4 @@
+import { dispatchEnabled, dispatchOrder } from "@/lib/dispatch/service";
 import { handleIngest } from "@/lib/ingest/handle";
 import { SupabaseStore } from "@/lib/ingest/supabase-store";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
@@ -18,6 +19,16 @@ export async function POST(request: Request) {
         defaultPricePerKg: Number(process.env.DEFAULT_PRICE_PER_KG ?? 80),
       },
     );
+    // A brand-new pickup goes straight to the nearest available driver. Dispatch problems never fail
+    // the ingest itself: the order is saved, and managers can still assign it from the dashboard.
+    const body = res.body as { changed?: boolean; status?: string; id?: string };
+    if (res.status === 200 && body.changed && body.status === "PENDING" && body.id && dispatchEnabled()) {
+      const dispatch = await dispatchOrder(body.id).catch((err) => {
+        console.error("dispatch failed", err);
+        return { assigned: false, reason: "dispatch error" };
+      });
+      return Response.json({ ...res.body, dispatch }, { status: res.status });
+    }
     return Response.json(res.body, { status: res.status });
   } catch (err) {
     console.error("ingest failed", err);

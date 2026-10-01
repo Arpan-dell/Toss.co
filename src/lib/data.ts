@@ -70,7 +70,7 @@ function orThrow<T>(res: { data: T | null; error: { message: string } | null }):
 }
 
 const TENANT_COLUMNS =
-  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until";
+  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat";
 
 function toTenant(r: Row): Tenant {
   return {
@@ -82,6 +82,8 @@ function toTenant(r: Row): Tenant {
     managerId: u(r.manager_id),
     upiId: u(r.upi_id),
     upiName: u(r.upi_name),
+    storeAddress: u(r.store_address),
+    storeLocated: r.store_lat != null,
     planStatus: r.plan_status as Tenant["planStatus"],
     trialEndsAt: u(r.trial_ends_at),
     paidUntil: u(r.paid_until),
@@ -255,13 +257,18 @@ export async function getDeviceForCustomer(customerId: string): Promise<Device |
 
 export async function listDrivers(): Promise<Driver[]> {
   const supabase = await db();
-  const rows = orThrow(await supabase.from("drivers").select("id, tenant_id, name, telegram_chat_id, status").order("name"));
+  const rows = orThrow(
+    await supabase.from("drivers").select("id, tenant_id, name, telegram_chat_id, status, last_lat, last_lng, location_at, max_jobs").order("name"),
+  );
   return (rows as Row[]).map((r) => ({
     id: r.id as string,
     tenantId: r.tenant_id as string,
     name: r.name as string,
     telegramChatId: r.telegram_chat_id as string,
     status: r.status as Driver["status"],
+    location: r.last_lat != null ? { lat: r.last_lat as number, lng: r.last_lng as number } : undefined,
+    locationAt: u(r.location_at),
+    maxJobs: (r.max_jobs as number) ?? 3,
   }));
 }
 

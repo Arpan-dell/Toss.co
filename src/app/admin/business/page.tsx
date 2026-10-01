@@ -50,6 +50,18 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
           <Field label="UPI ID for customer payments" hint="Where customers' money goes. Change it anytime; unpaid invoices use the new ID.">
             <input name="upiId" required autoComplete="off" defaultValue={tenant.upiId ?? ""} placeholder="yourshop@okaxis" className={`${fieldClass} font-mono`} />
           </Field>
+          <Field
+            label="Store address (where drivers deliver)"
+            hint={
+              tenant.storeAddress
+                ? tenant.storeLocated
+                  ? "✓ Found on the map. Every driver route ends here."
+                  : "Not found on the map. Routes will search it by text; adding area and city helps."
+                : "Every driver's Google Maps route ends at this address."
+            }
+          >
+            <input name="storeAddress" maxLength={300} defaultValue={tenant.storeAddress ?? ""} placeholder="Shop 4, Lajpat Nagar Market, New Delhi" className={fieldClass} />
+          </Field>
           <Field label="Name shown in UPI apps">
             <input name="upiName" maxLength={50} defaultValue={tenant.upiName ?? ""} placeholder={tenant.name} className={fieldClass} />
           </Field>

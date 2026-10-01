@@ -42,7 +42,7 @@ export function buildAuthorizeUrl(p: { clientId: string; redirectUri: string; st
     client_id: p.clientId,
     redirect_uri: p.redirectUri,
     response_type: "code",
-    scope: "openid profile",
+    scope: "openid profile phone", // phone: Telegram asks the user to share their verified number
     state: p.state,
     code_challenge: p.challenge,
     code_challenge_method: "S256",
@@ -77,7 +77,7 @@ export async function exchangeCode(
 
 let remoteJwks: JWTVerifyGetKey | undefined;
 
-export type TelegramIdentity = { telegramId: string; name?: string; username?: string };
+export type TelegramIdentity = { telegramId: string; name?: string; username?: string; phone?: string };
 
 /**
  * Verifies the ID token's signature (Telegram's JWKS), issuer, audience (our bot ID) and expiry.
@@ -100,5 +100,13 @@ export async function verifyIdToken(idToken: string, clientId: string, jwks?: JW
     telegramId,
     name: typeof payload.name === "string" ? payload.name : undefined,
     username: typeof payload.preferred_username === "string" ? payload.preferred_username : undefined,
+    phone: verifiedPhone(payload.phone_number),
   };
+}
+
+// Present only when the user agreed to share it (phone scope). Telegram may omit the leading "+".
+function verifiedPhone(raw: unknown): string | undefined {
+  if (typeof raw !== "string" && typeof raw !== "number") return undefined;
+  const digits = String(raw).replace(/\D/g, "");
+  return /^[1-9]\d{7,14}$/.test(digits) ? `+${digits}` : undefined;
 }

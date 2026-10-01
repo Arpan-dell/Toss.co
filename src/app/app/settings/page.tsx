@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ActionForm, fieldClass } from "@/components/action-form";
 import { IdChip } from "@/components/id-chip";
 import { JoinBusiness } from "@/components/join-business";
 import { Badge, Card, PageTitle } from "@/components/ui";
+import { updatePhone } from "@/lib/actions/customer";
 import { deviceLabel, getCustomer, getDeviceForCustomer, getTenantById } from "@/lib/data";
+import { formatPhone } from "@/lib/phone";
 import { requireRole } from "@/lib/session";
 import { getTelegramOidcConfig } from "@/lib/telegram-oidc";
 
@@ -52,9 +55,30 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
             <dd>{customer?.name ?? "—"}</dd>
             <dt className="text-muted">Email</dt>
             <dd>{customer?.email ?? session.email}</dd>
+            <dt className="text-muted">Mobile</dt>
+            <dd className="flex flex-wrap items-center gap-2">
+              {customer?.phone ? formatPhone(customer.phone) : <span className="text-warn">Not added</span>}
+              {customer?.phoneVerified && <Badge tone="good" icon="✓">Verified by Telegram</Badge>}
+            </dd>
           </dl>
           {customer && <IdChip label="Customer ID" value={customer.customerCode} />}
         </div>
+        <details className="mt-4 text-sm" open={!customer?.phone}>
+          <summary className="cursor-pointer text-xs text-muted">{customer?.phone ? "Change mobile number" : "Add your mobile number"}</summary>
+          <ActionForm action={updatePhone} submitLabel="Save number" className="mt-3 flex max-w-md flex-wrap items-start gap-2">
+            <input
+              name="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              defaultValue={customer?.phone ? formatPhone(customer.phone) : ""}
+              placeholder="98765 43210"
+              required
+              className={`${fieldClass} flex-1`}
+            />
+          </ActionForm>
+          <p className="mt-2 text-xs text-muted">Your laundry finds you by this number. Linking Telegram marks it verified.</p>
+        </details>
       </Card>
 
       <Card title="Your laundry" action={business ? <Badge tone="good" icon="✓">Connected</Badge> : <Badge tone="warn" icon="!">Not connected</Badge>}>
@@ -94,7 +118,9 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-secondary">
-              Use the same Telegram account you used to claim your basket. Your past and future orders will appear here.
+              The easiest way: open the Toss bot in Telegram and tap <span className="text-fg">📱 Open Toss</span>. Your
+              account links itself. Or log in with Telegram below and share your number to verify it. Use the Telegram
+              account that claimed your basket, and your past and future orders will appear here.
             </p>
             {telegramReady ? (
               // Plain link, not <Link>: this must be a full navigation to the redirecting API route.

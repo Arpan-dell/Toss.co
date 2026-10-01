@@ -1,4 +1,5 @@
 import { PortalShell } from "@/components/portal-shell";
+import { TelegramMiniApp } from "@/components/telegram-miniapp";
 import { getCustomer } from "@/lib/data";
 import { requireRole } from "@/lib/session";
 
@@ -14,6 +15,7 @@ export default async function CustomerLayout({ children }: LayoutProps<"/app">) 
   return (
     <PortalShell subtitle={customer?.name ?? ""} nav={nav}>
       {children}
+      <TelegramMiniApp linked={Boolean(customer?.telegramId)} />
     </PortalShell>
   );
 }

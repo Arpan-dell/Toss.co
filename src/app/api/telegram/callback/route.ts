@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/session";
-import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
-import { OIDC_COOKIE, exchangeCode, getTelegramOidcConfig, verifyIdToken } from "@/lib/telegram-oidc";
+import { isSupabaseConfigured } from "@/lib/supabase/admin";
+import { attachTelegram } from "@/lib/telegram-link";
+import { OIDC_COOKIE, type TelegramIdentity, exchangeCode, getTelegramOidcConfig, verifyIdToken } from "@/lib/telegram-oidc";
 
 // Telegram redirects here with ?code&state after the user approves. We check state against the
 // cookie, exchange the code (PKCE + client secret), verify the signed ID token, then link the
-// Telegram ID to the signed-in Toss account and attach every order and basket it already owns.
+// Telegram ID to the signed-in Toss account, attach every order and basket it already owns, and
+// store the phone number Telegram verified (when the user chose to share it).
 export async function GET(request: NextRequest) {
   const back = (result: string) => {
     const url = request.nextUrl.clone();
@@ -39,24 +41,18 @@ export async function GET(request: NextRequest) {
   const code = params.get("code");
   if (!code || !saved.state || !saved.verifier || params.get("state") !== saved.state) return back("invalid");
 
-  let telegramId: string;
+  let identity: TelegramIdentity;
   try {
     const idToken = await exchangeCode(cfg, {
       code,
       verifier: saved.verifier,
       redirectUri: `${request.nextUrl.origin}/api/telegram/callback`,
     });
-    telegramId = (await verifyIdToken(idToken, cfg.clientId)).telegramId;
+    identity = await verifyIdToken(idToken, cfg.clientId);
   } catch (err) {
     console.error("telegram login failed", err);
     return back("invalid");
   }
 
-  const { error } = await supabaseAdmin().rpc("link_telegram", { p_customer: session.userId, p_telegram_id: telegramId });
-  if (error) {
-    if (error.message.includes("telegram_already_linked")) return back("taken");
-    console.error("link_telegram failed", error);
-    return back("error");
-  }
-  return back("linked");
+  return back(await attachTelegram(session.userId, identity.telegramId, identity.phone));
 }

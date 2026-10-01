@@ -34,6 +34,13 @@ describe("verifyIdToken", () => {
     });
   });
 
+  it("returns the shared phone number in E.164, with or without the plus", async () => {
+    expect((await verifyIdToken(await sign({ id: 1, phone_number: "919876543210" }), CLIENT_ID, jwks)).phone).toBe("+919876543210");
+    expect((await verifyIdToken(await sign({ id: 1, phone_number: "+14155550123" }), CLIENT_ID, jwks)).phone).toBe("+14155550123");
+    expect((await verifyIdToken(await sign({ id: 1 }), CLIENT_ID, jwks)).phone).toBeUndefined();
+    expect((await verifyIdToken(await sign({ id: 1, phone_number: "12" }), CLIENT_ID, jwks)).phone).toBeUndefined();
+  });
+
   it("falls back to a numeric sub when there is no id claim", async () => {
     const token = await sign({ sub: "1000000001" });
     await expect(verifyIdToken(token, CLIENT_ID, jwks)).resolves.toMatchObject({ telegramId: "1000000001" });
@@ -70,7 +77,7 @@ describe("authorization request", () => {
       client_id: CLIENT_ID,
       redirect_uri: "https://x.app/cb",
       response_type: "code",
-      scope: "openid profile",
+      scope: "openid profile phone",
       state: p.state,
       code_challenge_method: "S256",
     });

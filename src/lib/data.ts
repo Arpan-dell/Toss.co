@@ -98,35 +98,32 @@ export const getTenantById = cache(async (id: string | undefined): Promise<Tenan
   return r ? toTenant(r) : undefined;
 });
 
-export const getCustomer = cache(async (id: string): Promise<Customer | undefined> => {
-  const supabase = await db();
-  const r = orThrow(
-    await supabase.from("customers").select("id, customer_code, tenant_id, email, name, telegram_id").eq("id", id).maybeSingle(),
-  ) as Row | null;
-  return r
-    ? {
-        id: r.id as string,
-        customerCode: r.customer_code as string,
-        tenantId: u(r.tenant_id),
-        email: u(r.email),
-        name: u(r.name),
-        telegramId: u(r.telegram_id),
-      }
-    : undefined;
-});
+const CUSTOMER_COLUMNS = "id, customer_code, tenant_id, email, name, phone, phone_verified, telegram_id";
 
-// Customers visible to the caller: a manager's own customers, or everyone for the owner.
-export const listCustomers = cache(async (): Promise<Customer[]> => {
-  const supabase = await db();
-  const rows = orThrow(await supabase.from("customers").select("id, customer_code, tenant_id, email, name, telegram_id").order("name"));
-  return (rows as Row[]).map((r) => ({
+function toCustomer(r: Row): Customer {
+  return {
     id: r.id as string,
     customerCode: r.customer_code as string,
     tenantId: u(r.tenant_id),
     email: u(r.email),
     name: u(r.name),
+    phone: u(r.phone),
+    phoneVerified: Boolean(r.phone_verified),
     telegramId: u(r.telegram_id),
-  }));
+  };
+}
+
+export const getCustomer = cache(async (id: string): Promise<Customer | undefined> => {
+  const supabase = await db();
+  const r = orThrow(await supabase.from("customers").select(CUSTOMER_COLUMNS).eq("id", id).maybeSingle()) as Row | null;
+  return r ? toCustomer(r) : undefined;
+});
+
+// Customers visible to the caller: a manager's own customers, or everyone for the owner.
+export const listCustomers = cache(async (): Promise<Customer[]> => {
+  const supabase = await db();
+  const rows = orThrow(await supabase.from("customers").select(CUSTOMER_COLUMNS).order("name"));
+  return (rows as Row[]).map(toCustomer);
 });
 
 export async function getOrder(id: string): Promise<Order | undefined> {

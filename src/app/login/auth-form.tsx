@@ -38,7 +38,21 @@ export function AuthForm({ notice }: { notice?: string }) {
 
       <form action={mode === "signin" ? inAction : upAction} className="space-y-3">
         {mode === "signup" && (
-          <input name="name" autoComplete="name" placeholder="Full name" required className={inputClass} />
+          <>
+            <input name="name" autoComplete="name" placeholder="Full name" required className={inputClass} />
+            <div className="flex overflow-hidden rounded-xl border border-border bg-white/[0.03] transition-shadow focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgb(139_123_255/0.2)]">
+              <span className="flex items-center border-r border-border px-3 text-sm text-muted">+91</span>
+              <input
+                name="phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel-national"
+                placeholder="Mobile number"
+                required
+                className="w-full bg-transparent px-3 py-2.5 text-sm placeholder:text-muted focus:outline-none"
+              />
+            </div>
+          </>
         )}
         <input name="email" type="email" autoComplete="email" placeholder="Email" required className={inputClass} />
         <input

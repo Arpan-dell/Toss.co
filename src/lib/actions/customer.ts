@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCustomer } from "../data";
+import { formatPhone, normalizePhone } from "../phone";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
@@ -26,6 +27,23 @@ export async function joinBusiness(_prev: FormState, formData: FormData): Promis
   if (error) return { error: friendlyError(error) };
   revalidatePath("/app", "layout");
   return { message: `You're now connected to ${(data as { name: string }).name}.` };
+}
+
+// Sets or changes the customer's mobile number. A new number is unverified until Telegram confirms it.
+export async function updatePhone(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireCustomer();
+  const phone = normalizePhone(text(formData, "phone"));
+  if (!phone) return { error: "Enter a valid mobile number, like 98765 43210." };
+
+  const customer = await getCustomer(session.userId);
+  if (customer?.phone === phone) return { message: "That's already your number." };
+
+  const { error } = await supabaseAdmin().from("customers").update({ phone, phone_verified: false }).eq("id", session.userId);
+  if (error) {
+    return { error: error.code === "23505" ? "That mobile number is already used by another Toss account." : friendlyError(error) };
+  }
+  revalidatePath("/app", "layout");
+  return { message: `Saved. Your number is now ${formatPhone(phone)}.` };
 }
 
 // After paying in their UPI app, the customer submits the transaction reference for the manager to verify.

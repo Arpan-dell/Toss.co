@@ -47,6 +47,8 @@ export interface Customer {
   tenantId?: string; // set once they enter a Business ID
   email?: string;
   name?: string;
+  phone?: string; // E.164 mobile number, unique: the customer's identity
+  phoneVerified: boolean; // Telegram confirmed this number belongs to the linked account
   telegramId?: string; // == ownerChatId stored on the ESP32
 }
 

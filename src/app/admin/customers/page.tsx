@@ -5,6 +5,7 @@ import { Badge, Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { removeCustomer } from "@/lib/actions/manager-ops";
 import { listCustomers, listDevices, listOrders, now } from "@/lib/data";
 import { formatINR, timeAgo } from "@/lib/format";
+import { formatPhone } from "@/lib/phone";
 import { requireRole } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Customers" };
@@ -16,6 +17,8 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
 
   const [customers, orders, devices, params] = await Promise.all([listCustomers(), listOrders(), listDevices(), searchParams]);
   const q = typeof params.q === "string" ? params.q.trim().toLowerCase() : "";
+  // "98765 43210", "+91-98765…" and "9876543210" all find the same customer.
+  const qDigits = q.replace(/\D/g, "");
   const current = now();
 
   const rows = customers
@@ -34,7 +37,8 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
     .filter(
       ({ c }) =>
         !q ||
-        [c.name, c.email, c.customerCode, c.telegramId].some((v) => v?.toLowerCase().includes(q)),
+        [c.name, c.email, c.customerCode, c.telegramId].some((v) => v?.toLowerCase().includes(q)) ||
+        (qDigits.length >= 4 && Boolean(c.phone?.includes(qDigits))),
     )
     .sort((a, b) => (b.lastOrder ?? "").localeCompare(a.lastOrder ?? ""));
 
@@ -58,7 +62,7 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
             <input
               name="q"
               defaultValue={q}
-              placeholder="Search name, ID, email…"
+              placeholder="Search name, phone, ID…"
               className="w-full rounded-full border border-border bg-white/[0.03] px-4 py-1.5 text-sm placeholder:text-muted focus:border-accent/60 focus:outline-none"
             />
           </form>
@@ -88,7 +92,18 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
                   <tr key={c.id} data-reveal="row" className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.03]">
                     <td className="px-5 py-2.5">
                       <p className="font-medium">{c.name ?? c.email ?? "—"}</p>
-                      <p className="font-mono text-xs text-muted">{c.customerCode}</p>
+                      <p className="text-xs text-muted">
+                        <span className="font-mono">{c.customerCode}</span>
+                        {c.phone && (
+                          <>
+                            {" · "}
+                            <a href={`tel:${c.phone}`} className="tabular-nums hover:text-fg">
+                              {formatPhone(c.phone)}
+                            </a>
+                            {c.phoneVerified && <span title="Verified by Telegram" className="text-good"> ✓</span>}
+                          </>
+                        )}
+                      </p>
                     </td>
                     <td className="px-3 py-2.5">
                       {c.telegramId ? <Badge tone="good" icon="✓">Linked</Badge> : <Badge tone="warn" icon="!">Not linked</Badge>}

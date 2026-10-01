@@ -98,6 +98,7 @@ async function main() {
       "fleet page shows the number and 'not connected'",
       fleet.includes(`+91 ${DRIVER_PHONE.slice(3, 8)} ${DRIVER_PHONE.slice(8)}`) && fleet.includes("Not connected to Telegram yet"),
     );
+    check("fleet page shows the driver-bot QR code", fleet.includes("Scan to open Toss Handy") && fleet.includes("<svg") && fleet.includes("toss-handy-qr.svg"));
 
     // ---- driver bot ----
     check("bot: /start from an unknown chat is answered", (await msg(DRIVER_CHAT, { text: "/start" })) === 200);

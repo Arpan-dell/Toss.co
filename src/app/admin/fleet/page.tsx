@@ -7,6 +7,7 @@ import { deviceLabel, isDeviceOnline, listActiveOrders, listCustomers, listDevic
 import { orderLabel, timeAgo } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import type { DriverStatus } from "@/lib/types";
+import { DriverBotQr } from "./driver-qr";
 import { AddDriverForm, BasketEditor } from "./forms";
 
 export const metadata: Metadata = { title: "Fleet" };
@@ -37,28 +38,32 @@ export default async function Fleet() {
   const current = now();
   const todayKey = current.toISOString().slice(0, 10);
   const owner = new Map(customers.map((c) => [c.id, c]));
+  const botUsername = process.env.TELEGRAM_DRIVER_BOT_USERNAME;
 
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker="Baskets & drivers">Fleet</PageTitle>
 
       <Card title={`Drivers (${drivers.length})`}>
-        <div className="mb-5">
-          <AddDriverForm />
-          <p className="mt-2 text-xs text-muted">
-            {process.env.TELEGRAM_DRIVER_BOT_USERNAME ? (
-              <>
-                After you add a driver, they open{" "}
-                <a href={`https://t.me/${process.env.TELEGRAM_DRIVER_BOT_USERNAME}`} target="_blank" rel="noreferrer" className="font-mono text-fg underline">
-                  @{process.env.TELEGRAM_DRIVER_BOT_USERNAME}
-                </a>{" "}
-                and tap <span className="text-fg">📱 Share my phone number</span>. Telegram confirms the number and they&apos;re connected.
-                Then they tap 🟢 Online and share their live location, and new pickups go to the nearest one automatically.
-              </>
-            ) : (
-              <>Automatic dispatch turns on once the driver bot is connected.</>
-            )}
-          </p>
+        <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
+          <div>
+            <AddDriverForm />
+            <p className="mt-2 text-xs text-muted">
+              {botUsername ? (
+                <>
+                  After you add a driver, they scan the QR code or open{" "}
+                  <a href={`https://t.me/${botUsername}`} target="_blank" rel="noreferrer" className="font-mono text-fg underline">
+                    @{botUsername}
+                  </a>{" "}
+                  and tap <span className="text-fg">📱 Share my phone number</span>. Telegram confirms the number and they&apos;re connected.
+                  Then they tap 🟢 Online and share their live location, and new pickups go to the nearest one automatically.
+                </>
+              ) : (
+                <>Automatic dispatch turns on once the driver bot is connected.</>
+              )}
+            </p>
+          </div>
+          {botUsername && <DriverBotQr username={botUsername} />}
         </div>
         {drivers.length === 0 ? (
           <EmptyState>No drivers yet. Add your first one above.</EmptyState>

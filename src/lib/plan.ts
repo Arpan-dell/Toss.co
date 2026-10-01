@@ -19,3 +19,17 @@ export function planState(t: PlanFields, now = new Date()): { state: PlanState; 
 }
 
 export const isUsable = (s: PlanState) => s === "TRIAL" || s === "ACTIVE";
+
+/** Which renewal reminder (if any) a business is due: 7/3/1 days before, and once when it ends. */
+export function reminderFor(b: PlanFields, now = new Date()) {
+  const p = planState(b, now);
+  if (p.state === "SUSPENDED" || !p.until) return null;
+  const kind: "TRIAL" | "ACTIVE" = p.state === "EXPIRED" ? (b.paidUntil ? "ACTIVE" : "TRIAL") : p.state;
+  const daysLeft = p.state === "EXPIRED" ? 0 : (p.daysLeft ?? 0);
+  // Expired more than a week ago: they've been told; don't start emailing old businesses.
+  if (p.state === "EXPIRED" && now.getTime() - new Date(p.until).getTime() > 7 * 86_400_000) return null;
+  const buckets = kind === "TRIAL" ? [0, 1, 3] : [0, 1, 3, 7];
+  const bucket = buckets.find((d) => daysLeft <= d);
+  if (bucket === undefined) return null;
+  return { kind, daysLeft, until: p.until, key: `${kind}:${p.until.slice(0, 10)}:${bucket}` };
+}

@@ -3,8 +3,9 @@ import { ChangePasswordCard } from "@/components/change-password";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { IdChip } from "@/components/id-chip";
 import { Card, PageTitle, StatTile } from "@/components/ui";
-import { updateBusiness, updateWinback } from "@/lib/actions/manager";
+import { requestClosure, updateBusiness, updateWinback } from "@/lib/actions/manager";
 import { getOfferStats, getTenantById, listCustomers } from "@/lib/data";
+import { formatDate } from "@/lib/format";
 import { requireRole } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Business" };
@@ -95,6 +96,32 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
       </Card>
 
       <ChangePasswordCard email={session.email} />
+
+      <Card title="Close your business">
+        {tenant.closureRequestedAt ? (
+          <p className="rounded-xl border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
+            You asked Toss to close this business on {formatDate(tenant.closureRequestedAt)}. We&apos;ll contact you by email to complete it.
+          </p>
+        ) : (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted">Request to remove {tenant.name} from Toss</summary>
+            <ActionForm
+              action={requestClosure}
+              submitLabel="Send removal request"
+              submitClassName="rounded-full border border-critical/40 px-5 py-2.5 text-sm font-medium text-critical transition hover:bg-critical-bg disabled:opacity-70"
+              className="mt-3 max-w-md space-y-3"
+            >
+              <Field label="Why are you leaving? (optional)">
+                <textarea name="reason" maxLength={500} rows={3} className={fieldClass} />
+              </Field>
+              <label className="flex items-start gap-2 text-sm text-secondary">
+                <input type="checkbox" name="confirm" className="mt-0.5 size-4 accent-[var(--color-critical)]" />
+                I want to close my business. Toss will contact me to complete it.
+              </label>
+            </ActionForm>
+          </details>
+        )}
+      </Card>
     </div>
   );
 }

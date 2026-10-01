@@ -67,6 +67,11 @@ export default async function OwnerHome() {
                     <td className="px-5 py-2.5">
                       <p className="font-medium">{t.name}</p>
                       <p className="font-mono text-xs text-muted">{t.joinCode}</p>
+                      {t.closureRequestedAt && (
+                        <p className="mt-1 text-xs text-warn" title={t.closureReason ?? undefined}>
+                          ⚠️ Asked to be removed{t.closureReason ? `: “${t.closureReason}”` : ""}
+                        </p>
+                      )}
                     </td>
                     <td className="px-3 py-2.5 text-secondary">{s?.managerEmail ?? "—"}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{s?.customers ?? 0}</td>

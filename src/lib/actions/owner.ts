@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notifySubscriptionReviewed, notifySuspension } from "../email/notify";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { isValidUpiId, normalizeUpiId } from "../upi";
@@ -41,6 +42,7 @@ export async function reviewSubscriptionPayment(formData: FormData) {
   const approve = text(formData, "decision") === "approve";
   const { error } = await supabaseAdmin().rpc("review_subscription_payment", { p_id: id, p_approve: approve });
   if (error) throw new Error(friendlyError(error));
+  await notifySubscriptionReviewed(id);
   revalidatePath("/owner", "layout");
 }
 
@@ -53,5 +55,6 @@ export async function setBusinessSuspended(formData: FormData) {
     .update({ plan_status: suspend ? "SUSPENDED" : "ACTIVE" })
     .eq("id", tenantId);
   if (error) throw new Error(friendlyError(error));
+  await notifySuspension(tenantId, suspend);
   revalidatePath("/owner", "layout");
 }

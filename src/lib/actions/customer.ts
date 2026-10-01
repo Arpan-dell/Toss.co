@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getCustomer } from "../data";
 import { formatPhone, normalizePhone } from "../phone";
+import { notifyBusinessRegistered } from "../email/notify";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
@@ -76,7 +77,7 @@ export async function registerBusiness(_prev: FormState, formData: FormData): Pr
   if (!isValidUpiId(upiId)) return { error: "Enter a valid UPI ID, like yourshop@okaxis." };
   if (!(price > 0 && price <= 10_000)) return { error: "Enter your price per kg in rupees." };
 
-  const { error } = await supabaseAdmin().rpc("register_business", {
+  const { data, error } = await supabaseAdmin().rpc("register_business", {
     p_user: session.userId,
     p_name: name,
     p_upi_id: normalizeUpiId(upiId),
@@ -84,6 +85,7 @@ export async function registerBusiness(_prev: FormState, formData: FormData): Pr
     p_price: price,
   });
   if (error) return { error: friendlyError(error) };
+  await notifyBusinessRegistered((data as { tenant_id: string }).tenant_id);
 
   // The new role lives in the JWT, so mint a fresh session before entering the manager portal.
   const supabase = await createClient();

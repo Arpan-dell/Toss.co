@@ -72,7 +72,7 @@ function orThrow<T>(res: { data: T | null; error: { message: string } | null }):
 }
 
 const TENANT_COLUMNS =
-  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, winback_enabled, winback_days, winback_pct";
+  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason";
 
 function toTenant(r: Row): Tenant {
   return {
@@ -92,6 +92,8 @@ function toTenant(r: Row): Tenant {
     winbackEnabled: r.winback_enabled !== false,
     winbackDays: (r.winback_days as number) ?? 30,
     winbackPct: (r.winback_pct as number) ?? 10,
+    closureRequestedAt: u(r.closure_requested_at),
+    closureReason: u(r.closure_reason),
   };
 }
 

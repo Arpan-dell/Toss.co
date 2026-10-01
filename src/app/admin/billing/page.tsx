@@ -6,6 +6,7 @@ import { submitSubscriptionPayment } from "@/lib/actions/manager";
 import { getPlatformSettings, getTenantById, listSubscriptionPayments } from "@/lib/data";
 import { formatDate, formatDateTime, formatINR } from "@/lib/format";
 import { planState } from "@/lib/plan";
+import { subscriptionQuote } from "@/lib/pricing";
 import { qrSvg } from "@/lib/qr";
 import { requireRole } from "@/lib/session";
 import { buildUpiUri, isValidUpiId } from "@/lib/upi";
@@ -28,7 +29,8 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
   const history = await listSubscriptionPayments({ tenantId: tenant.id });
   const plan = planState(tenant);
   const months = MONTH_OPTIONS.includes(Number(params.months)) ? Number(params.months) : 1;
-  const amount = platform.monthlyPrice * months;
+  const quote = (m: number) => subscriptionQuote(platform.monthlyPrice, platform, m);
+  const { amount, pct, full, saved } = quote(months);
   const pending = history.find((p) => p.status === "PENDING");
   const canPay = isValidUpiId(platform.ownerUpiId) && amount > 0;
 
@@ -55,7 +57,10 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
           {plan.state === "EXPIRED" && "Your subscription has lapsed. Renew below to unlock the dashboard."}
           {plan.state === "SUSPENDED" && "Toss has suspended this business. Contact support."}{" "}
           The plan is <span className="text-fg">{formatINR(platform.monthlyPrice)}/month</span>. Paying early adds time on top of
-          what you have left.
+          what you have left
+          {platform.discount12m > 0 || platform.discount6m > 0 || platform.discount3m > 0
+            ? `, and paying for several months at once is cheaper (up to ${Math.max(platform.discount3m, platform.discount6m, platform.discount12m)}% off).`
+            : "."}
         </p>
       </Card>
 
@@ -79,9 +84,16 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
                     className={`rounded-full px-3.5 py-1 ${m === months ? "bg-white/10 font-medium text-fg" : "text-muted hover:text-fg"}`}
                   >
                     {m} month{m > 1 ? "s" : ""}
+                    {quote(m).pct > 0 && <span className="ml-1.5 text-[11px] font-medium text-good">−{quote(m).pct}%</span>}
                   </Link>
                 ))}
               </div>
+              {pct > 0 && (
+                <p className="rounded-xl border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
+                  🎉 {pct}% off for paying {months} months at once: <s className="opacity-70">{formatINR(full)}</s>{" "}
+                  <span className="font-semibold">{formatINR(amount)}</span>. You save {formatINR(saved)}.
+                </p>
+              )}
               <UpiPay
                 key={months}
                 uri={uri!}

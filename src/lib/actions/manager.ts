@@ -48,6 +48,29 @@ export async function updateBusiness(_prev: FormState, formData: FormData): Prom
     : { message: "Saved, but we couldn't find the store address on the map. Drivers' routes will search it by text. Try adding the area and city." };
 }
 
+// Win-back offers: after `days` without a pickup, the customer gets `pct`% off their next one.
+export async function updateWinback(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireManager();
+  const enabled = formData.get("enabled") === "on";
+  const days = Number(text(formData, "days"));
+  const pct = Number(text(formData, "pct"));
+  if (!(Number.isInteger(days) && days >= 7 && days <= 365)) return { error: "Choose between 7 and 365 days." };
+  if (!(Number.isInteger(pct) && pct >= 1 && pct <= 50)) return { error: "Choose a discount between 1% and 50%." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tenants")
+    .update({ winback_enabled: enabled, winback_days: days, winback_pct: pct })
+    .eq("id", session.tenantId);
+  if (error) return { error: friendlyError(error) };
+  done();
+  return {
+    message: enabled
+      ? `Saved. Customers with no pickup for ${days} days get ${pct}% off their next one, announced in the Toss bot.`
+      : "Saved. Win-back offers are off.",
+  };
+}
+
 async function updateOrder(orderId: string, patch: Record<string, unknown>) {
   await requireManager();
   const supabase = await createClient();

@@ -21,6 +21,17 @@ export interface Tenant {
   planStatus: "TRIAL" | "ACTIVE" | "SUSPENDED";
   trialEndsAt?: string;
   paidUntil?: string;
+  winbackEnabled: boolean; // offer a discount to customers who stop ordering
+  winbackDays: number; // …after this many days without a pickup
+  winbackPct: number; // …of this many percent off their next pickup
+}
+
+// A discount waiting for a customer's next pickup (e.g. a win-back offer).
+export interface CustomerOffer {
+  id: number;
+  tenantId: string;
+  percent: number;
+  expiresAt: string;
 }
 
 export interface PlatformSettings {
@@ -28,6 +39,9 @@ export interface PlatformSettings {
   trialDays: number;
   ownerUpiId?: string; // where businesses pay their Toss subscription
   ownerUpiName: string;
+  discount3m: number; // % off a subscription paid 3–5 months at once
+  discount6m: number; // 6–11 months
+  discount12m: number; // 12 months
 }
 
 export interface SubscriptionPayment {
@@ -95,6 +109,8 @@ export interface Order {
   paymentReportedAt?: string;
   paymentConfirmedAt?: string;
   amountDue: number;
+  discountPct?: number; // a customer offer applied to this pickup
+  amountBeforeDiscount?: number;
   createdAt: string; // when the order was placed (orders.placed_at)
   acceptedAt?: string;
   completedAt?: string;

@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { orderLabel } from "../format";
 import { supabaseAdmin } from "../supabase/admin";
 import * as api from "../telegram-api";
-import { fromTelegramPhone } from "../phone";
+import { formatPhone, fromTelegramPhone } from "../phone";
 import { esc, type InlineButton } from "../telegram-api";
 
 // Telegram messages are best-effort: a failed send (network blip, a driver who blocked the bot)
@@ -173,7 +173,7 @@ export async function notifyAssignment(order: Row, chatId: string, pickup?: LatL
   const driver = await driverByChat(chatId);
   const store = await storeOf(order.tenant_id as string);
   const { data: c } = order.customer_id
-    ? await db().from("customers").select("name").eq("id", order.customer_id as string).maybeSingle()
+    ? await db().from("customers").select("name, phone").eq("id", order.customer_id as string).maybeSingle()
     : { data: null };
 
   if (pickup) await sendLocation(token, chatId, pickup.lat, pickup.lng);
@@ -191,6 +191,9 @@ export async function notifyAssignment(order: Row, chatId: string, pickup?: LatL
     "━━━━━━━━━━━━━━",
     `📍 ${esc((order.address as string) || "Address not set")}`,
     c?.name ? `👤 ${esc(c.name as string)}` : null,
+    // Customer numbers are private: only the driver collecting the laundry gets one, and it disappears
+    // from this message once they mark it picked up.
+    c?.phone ? `📞 ${formatPhone(c.phone as string)}` : null,
     `⚖️ ${Number(order.weight_kg).toFixed(1)} kg`,
     store.place ? `🏁 Then deliver to <b>${esc(store.name)}</b>` : null,
   ].filter(Boolean);
@@ -274,12 +277,14 @@ async function statusCard(driver: Row): Promise<string> {
   ].join("\n");
 }
 
-const pickupCard = (j: Row, title: string) =>
+// phone: the customer's number, shown only on open pickups (never to managers).
+const pickupCard = (j: Row, title: string, phone?: string | null) =>
   [
     `🧺 <b>${title}</b> · #${j.device_order_id}`,
     LINE,
     `📍 ${esc((j.address as string) || "Address not set")}`,
     `⚖️ ${Number(j.weight_kg).toFixed(1)} kg`,
+    ...(phone ? [`📞 ${formatPhone(phone)}`] : []),
   ].join("\n");
 
 const pickupButtons = (j: Row, navigate: string): InlineButton[][] => [
@@ -404,7 +409,7 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
   } else if (text === "📋 My pickups" || text === "/pickups") {
     const { data: jobs } = await db()
       .from("orders")
-      .select("id, device_id, device_order_id, address, weight_kg")
+      .select("id, device_id, device_order_id, address, weight_kg, customer_id")
       .eq("driver_id", chatId)
       .in("status", ACTIVE)
       .order("assigned_at");
@@ -412,8 +417,11 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
       await sendMessage(token, chatId, "📋 No open pickups. Stay 🟢 online and new ones will come here.", { keyboard: MENU });
     } else {
       await sendMessage(token, chatId, `📋 <b>Your pickups</b> (${jobs.length})`, { keyboard: MENU });
+      const ids = jobs.map((j) => j.customer_id as string | null).filter((v): v is string => !!v);
+      const { data: people } = ids.length ? await db().from("customers").select("id, phone").in("id", ids) : { data: [] };
+      const phoneOf = new Map((people ?? []).map((p: Row) => [p.id as string, p.phone as string | null]));
       for (const j of jobs) {
-        await sendMessage(token, chatId, pickupCard(j, "Pickup"), { inline: pickupButtons(j, searchUrl(j.address as string)) });
+        await sendMessage(token, chatId, pickupCard(j, "Pickup", phoneOf.get(j.customer_id as string)), { inline: pickupButtons(j, searchUrl(j.address as string)) });
       }
     }
   } else {

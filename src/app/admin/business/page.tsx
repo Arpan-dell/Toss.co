@@ -3,8 +3,8 @@ import { ChangePasswordCard } from "@/components/change-password";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { IdChip } from "@/components/id-chip";
 import { Card, PageTitle, StatTile } from "@/components/ui";
-import { updateBusiness } from "@/lib/actions/manager";
-import { getTenantById, listCustomers } from "@/lib/data";
+import { updateBusiness, updateWinback } from "@/lib/actions/manager";
+import { getOfferStats, getTenantById, listCustomers } from "@/lib/data";
 import { requireRole } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Business" };
@@ -14,6 +14,7 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
   const [tenant, customers, params] = await Promise.all([getTenantById(session.tenantId), listCustomers(), searchParams]);
   if (!tenant) return <Card>This manager account isn&apos;t linked to a business.</Card>;
   const mine = customers.filter((c) => c.tenantId === tenant.id);
+  const offers = await getOfferStats(tenant.id);
 
   return (
     <div className="stagger max-w-3xl space-y-6">
@@ -68,6 +69,31 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
           </Field>
         </ActionForm>
       </Card>
+      <Card title="🎁 Win back quiet customers">
+        <p className="mb-4 text-sm text-secondary">
+          When a customer hasn&apos;t had a pickup for a while, Toss sends them a discount in the Toss bot and on their dashboard. It&apos;s
+          applied to their next pickup automatically, valid for 14 days.
+          {offers.sent > 0 && (
+            <span className="text-fg">
+              {" "}
+              So far: {offers.sent} sent, {offers.redeemed} came back.
+            </span>
+          )}
+        </p>
+        <ActionForm action={updateWinback} submitLabel="Save offer" className="grid gap-3 sm:grid-cols-2 sm:items-end">
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" name="enabled" defaultChecked={tenant.winbackEnabled} className="size-4 accent-[var(--color-accent)]" />
+            Send win-back offers
+          </label>
+          <Field label="After this many days without a pickup">
+            <input name="days" type="number" min={7} max={365} step={1} required defaultValue={tenant.winbackDays} className={fieldClass} />
+          </Field>
+          <Field label="Discount on their next pickup (%)">
+            <input name="pct" type="number" min={1} max={50} step={1} required defaultValue={tenant.winbackPct} className={fieldClass} />
+          </Field>
+        </ActionForm>
+      </Card>
+
       <ChangePasswordCard email={session.email} />
     </div>
   );

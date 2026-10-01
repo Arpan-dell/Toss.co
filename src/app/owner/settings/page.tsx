@@ -28,6 +28,21 @@ export default async function OwnerSettings() {
           <Field label="Name shown in UPI apps">
             <input name="ownerUpiName" maxLength={50} defaultValue={s.ownerUpiName} className={fieldClass} />
           </Field>
+          <fieldset className="space-y-2">
+            <legend className="text-xs font-medium text-secondary">Discount for paying several months at once (%)</legend>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="3–5 months">
+                <input name="discount3m" type="number" min={0} max={90} step={1} required defaultValue={s.discount3m} className={fieldClass} />
+              </Field>
+              <Field label="6–11 months">
+                <input name="discount6m" type="number" min={0} max={90} step={1} required defaultValue={s.discount6m} className={fieldClass} />
+              </Field>
+              <Field label="12 months">
+                <input name="discount12m" type="number" min={0} max={90} step={1} required defaultValue={s.discount12m} className={fieldClass} />
+              </Field>
+            </div>
+            <span className="block text-xs text-muted">Shown on every business&apos;s Billing page. 1 month is always full price.</span>
+          </fieldset>
         </ActionForm>
       </Card>
       <ChangePasswordCard email={session.email} />

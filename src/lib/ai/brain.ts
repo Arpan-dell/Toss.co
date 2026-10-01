@@ -66,7 +66,8 @@ Your job:
    - driver_alert: a motivating one-line message for the drivers.
    - payment_reminder / basket_nudge: a polite one-line message.
    - price_change: newPrice within the stated step and limits, only if the data clearly supports it.
-3. Refer to customers only by their codes. Use ₹ for money. Plain text only, no markdown, no emojis in the briefing.`;
+3. In the briefing, refer to customers only by their codes. Messages that customers receive must NEVER contain a customer code or name: speak to them as "you" (e.g. "Your basket is almost full!").
+4. Write money in Indian format with ₹ (₹70,470; ₹1,20,000). Plain text only, no markdown, no emojis in the briefing.`;
 
 export function brainPrompt(
   a: Analysis,

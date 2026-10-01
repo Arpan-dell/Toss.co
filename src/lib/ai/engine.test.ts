@@ -137,6 +137,11 @@ describe("applying the AI's decisions", () => {
     expect(out).toHaveLength(3);
   });
 
+  it("never lets a customer code into a customer-facing message", () => {
+    const out = applyDecisions(cands, [{ candidateId: "c3", approve: true, message: "Hi C-KH7QVB, please clear ₹271 for order #114." }], input);
+    expect(out.find((c) => c.id === "c3")?.params.message).toBe("Hi please clear ₹271 for order #114.");
+  });
+
   it("drops what the AI rejects and keeps everything when it says nothing", () => {
     expect(applyDecisions(cands, [{ candidateId: "c3", approve: false }], input).map((c) => c.id)).toEqual(["c1", "c2"]);
     expect(applyDecisions(cands, undefined, input)).toHaveLength(3);

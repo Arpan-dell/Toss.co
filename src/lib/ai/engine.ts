@@ -309,7 +309,8 @@ export function applyDecisions(candidates: Candidate[], decisions: AiDecision[] 
       const next: Candidate = { ...c, params: { ...c.params } };
       if (d.reason) next.reason = tidy(d.reason, 240);
       if (d.priority && [1, 2, 3].includes(d.priority)) next.priority = d.priority as 1 | 2 | 3;
-      if (d.message) next.params.message = tidy(d.message, 300);
+      // Customers see this text: never let an internal customer code through.
+      if (d.message) next.params.message = tidy(d.message.replace(/\bC-[A-Z0-9]{6}\b,?/g, ""), 300);
       if (c.type === "winback_offer" && d.discountPct !== undefined) {
         const pct = clamp(Math.round(d.discountPct), 1, maxDiscount);
         next.params.pct = pct;

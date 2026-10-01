@@ -1,14 +1,13 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "./supabase/server";
-import type { Customer, Device, Driver, Order, Tenant } from "./types";
+import type { Customer, Device, Driver, Order, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
 
 // Data access layer. Every query runs as the signed-in user, so Postgres RLS decides what is
-// visible: customers see only their own rows, managers see the whole tenant.
+// visible: customers see only their own rows, managers their own business, the owner everything.
 
 export const DEVICE_ONLINE_WINDOW_MS = 10 * 60_000;
 const MAX_ORDERS = 1000;
-const DEFAULT_TENANT_ID = process.env.DEFAULT_TENANT_ID ?? "tenant-delhi-01";
 
 export function now(): Date {
   return new Date();
@@ -22,7 +21,7 @@ function toOrder(r: Row): Order {
     id: r.id as string,
     deviceOrderId: r.device_order_id as number,
     deviceId: r.device_id as string,
-    tenantId: r.tenant_id as string,
+    tenantId: u(r.tenant_id),
     customerTelegramId: u(r.customer_telegram_id),
     customerId: u(r.customer_id),
     driverId: u(r.driver_id),
@@ -30,6 +29,10 @@ function toOrder(r: Row): Order {
     weightKg: r.weight_kg as number,
     status: r.status as Order["status"],
     paymentStatus: r.payment_status as Order["paymentStatus"],
+    paymentMethod: u(r.payment_method),
+    paymentRef: u(r.payment_ref),
+    paymentReportedAt: u(r.payment_reported_at),
+    paymentConfirmedAt: u(r.payment_confirmed_at),
     amountDue: r.amount_due as number,
     createdAt: r.placed_at as string,
     acceptedAt: u(r.accepted_at),
@@ -40,7 +43,7 @@ function toOrder(r: Row): Order {
 function toDevice(r: Row): Device {
   return {
     deviceId: r.device_id as string,
-    tenantId: r.tenant_id as string,
+    tenantId: u(r.tenant_id),
     ownerTelegramId: u(r.owner_telegram_id),
     customerId: u(r.customer_id),
     address: u(r.address),
@@ -66,21 +69,124 @@ function orThrow<T>(res: { data: T | null; error: { message: string } | null }):
   return res.data as T;
 }
 
-export const getTenant = cache(async (): Promise<Tenant> => {
+const TENANT_COLUMNS =
+  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until";
+
+function toTenant(r: Row): Tenant {
+  return {
+    id: r.id as string,
+    name: r.name as string,
+    pricePerKg: r.price_per_kg as number,
+    currency: r.currency as string,
+    joinCode: r.join_code as string,
+    managerId: u(r.manager_id),
+    upiId: u(r.upi_id),
+    upiName: u(r.upi_name),
+    planStatus: r.plan_status as Tenant["planStatus"],
+    trialEndsAt: u(r.trial_ends_at),
+    paidUntil: u(r.paid_until),
+  };
+}
+
+// A business the caller can see (their own as manager, the one they joined as customer, any as owner).
+export const getTenantById = cache(async (id: string | undefined): Promise<Tenant | undefined> => {
+  if (!id) return undefined;
   const supabase = await db();
-  const r = orThrow(await supabase.from("tenants").select("id, name, price_per_kg, currency").eq("id", DEFAULT_TENANT_ID).maybeSingle()) as Row | null;
-  return r
-    ? { id: r.id as string, name: r.name as string, pricePerKg: r.price_per_kg as number, currency: r.currency as string }
-    : { id: DEFAULT_TENANT_ID, name: "Toss", pricePerKg: 0, currency: "INR" };
+  const r = orThrow(await supabase.from("tenants").select(TENANT_COLUMNS).eq("id", id).maybeSingle()) as Row | null;
+  return r ? toTenant(r) : undefined;
 });
 
 export const getCustomer = cache(async (id: string): Promise<Customer | undefined> => {
   const supabase = await db();
-  const r = orThrow(await supabase.from("customers").select("id, tenant_id, email, name, telegram_id").eq("id", id).maybeSingle()) as Row | null;
+  const r = orThrow(
+    await supabase.from("customers").select("id, customer_code, tenant_id, email, name, telegram_id").eq("id", id).maybeSingle(),
+  ) as Row | null;
   return r
-    ? { id: r.id as string, tenantId: r.tenant_id as string, email: u(r.email), name: u(r.name), telegramId: u(r.telegram_id) }
+    ? {
+        id: r.id as string,
+        customerCode: r.customer_code as string,
+        tenantId: u(r.tenant_id),
+        email: u(r.email),
+        name: u(r.name),
+        telegramId: u(r.telegram_id),
+      }
     : undefined;
 });
+
+// Customers visible to the caller: a manager's own customers, or everyone for the owner.
+export const listCustomers = cache(async (): Promise<Customer[]> => {
+  const supabase = await db();
+  const rows = orThrow(await supabase.from("customers").select("id, customer_code, tenant_id, email, name, telegram_id").order("name"));
+  return (rows as Row[]).map((r) => ({
+    id: r.id as string,
+    customerCode: r.customer_code as string,
+    tenantId: u(r.tenant_id),
+    email: u(r.email),
+    name: u(r.name),
+    telegramId: u(r.telegram_id),
+  }));
+});
+
+// ---------- owner / billing ----------
+
+export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => {
+  const supabase = await db();
+  const r = orThrow(
+    await supabase.from("platform_settings").select("monthly_price, trial_days, owner_upi_id, owner_upi_name").eq("id", 1).maybeSingle(),
+  ) as Row | null;
+  return {
+    monthlyPrice: (r?.monthly_price as number) ?? 0,
+    trialDays: (r?.trial_days as number) ?? 0,
+    ownerUpiId: u(r?.owner_upi_id),
+    ownerUpiName: (r?.owner_upi_name as string) ?? "Toss",
+  };
+});
+
+export async function listTenants(): Promise<Tenant[]> {
+  const supabase = await db();
+  const rows = orThrow(await supabase.from("tenants").select(TENANT_COLUMNS).order("name"));
+  return (rows as Row[]).map(toTenant);
+}
+
+// Owner view: who runs each business and how big it is.
+export async function listTenantStats(tenants: Tenant[]) {
+  const supabase = await db();
+  const [customers, orders] = await Promise.all([
+    supabase.from("customers").select("id, tenant_id, email"),
+    supabase.from("orders").select("tenant_id").not("tenant_id", "is", null).limit(10_000),
+  ]);
+  const customerRows = orThrow(customers) as Row[];
+  const stats = new Map<string, { customers: number; orders: number; managerEmail?: string }>();
+  const get = (id: string) => stats.get(id) ?? stats.set(id, { customers: 0, orders: 0 }).get(id)!;
+  for (const c of customerRows) if (c.tenant_id) get(c.tenant_id as string).customers++;
+  for (const o of orThrow(orders) as Row[]) get(o.tenant_id as string).orders++;
+  const emails = new Map(customerRows.map((c) => [c.id as string, u<string>(c.email)]));
+  for (const t of tenants) if (t.managerId) get(t.id).managerEmail = emails.get(t.managerId);
+  return stats;
+}
+
+export async function listSubscriptionPayments(filter?: { tenantId?: string; status?: SubscriptionPayment["status"] }) {
+  const supabase = await db();
+  let q = supabase
+    .from("subscription_payments")
+    .select("id, tenant_id, months, amount, payment_ref, status, created_at, reviewed_at")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (filter?.tenantId) q = q.eq("tenant_id", filter.tenantId);
+  if (filter?.status) q = q.eq("status", filter.status);
+  return (orThrow(await q) as Row[]).map(
+    (r): SubscriptionPayment => ({
+      id: r.id as number,
+      tenantId: r.tenant_id as string,
+      months: r.months as number,
+      amount: r.amount as number,
+      paymentRef: r.payment_ref as string,
+      status: r.status as SubscriptionPayment["status"],
+      createdAt: r.created_at as string,
+      reviewedAt: u(r.reviewed_at),
+    }),
+  );
+}
 
 export async function listOrdersForCustomer(customerId: string): Promise<Order[]> {
   const supabase = await db();

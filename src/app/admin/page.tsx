@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, OrderStatusBadge, PageTitle, StatTile } from "@/components/ui";
 import { deviceLabel, isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, now } from "@/lib/data";
 import { formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
@@ -8,6 +9,9 @@ export const metadata: Metadata = { title: "Live board" };
 const STALE_PENDING_MINS = 15;
 
 export default async function LiveBoard() {
+  const locked = await planGate();
+  if (locked) return locked;
+
   const [active, devices, drivers, all] = await Promise.all([
     listActiveOrders(),
     listDevices(),

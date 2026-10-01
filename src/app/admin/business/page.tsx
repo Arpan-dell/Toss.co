@@ -1,0 +1,60 @@
+import type { Metadata } from "next";
+import { ActionForm, Field, fieldClass } from "@/components/action-form";
+import { IdChip } from "@/components/id-chip";
+import { Card, PageTitle, StatTile } from "@/components/ui";
+import { updateBusiness } from "@/lib/actions/manager";
+import { getTenantById, listCustomers } from "@/lib/data";
+import { requireRole } from "@/lib/session";
+
+export const metadata: Metadata = { title: "Business" };
+
+export default async function Business({ searchParams }: PageProps<"/admin/business">) {
+  const session = await requireRole("MANAGER");
+  const [tenant, customers, params] = await Promise.all([getTenantById(session.tenantId), listCustomers(), searchParams]);
+  if (!tenant) return <Card>This manager account isn&apos;t linked to a business.</Card>;
+  const mine = customers.filter((c) => c.tenantId === tenant.id);
+
+  return (
+    <div className="stagger max-w-3xl space-y-6">
+      <PageTitle kicker="Your business">{tenant.name}</PageTitle>
+
+      {params.welcome && (
+        <p role="status" className="rounded-xl border border-good/30 bg-good-bg px-4 py-3 text-sm text-good">
+          🎉 Your business is live. Share your Business ID with customers so they can connect to you.
+        </p>
+      )}
+
+      <Card title="Share with your customers">
+        <div className="flex flex-wrap items-center gap-6">
+          <IdChip label="Business ID" value={tenant.joinCode} />
+          <p className="max-w-sm text-sm text-secondary">
+            Customers enter this after signing up on Toss. Their baskets, pickups and invoices then show up here, and their
+            payments go to your UPI ID.
+          </p>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-2 gap-4">
+        <StatTile label="Connected customers" value={String(mine.length)} />
+        <StatTile label="Price per kg" value={`₹${tenant.pricePerKg}`} />
+      </div>
+
+      <Card title="Business details">
+        <ActionForm action={updateBusiness} submitLabel="Save changes">
+          <Field label="Business name">
+            <input name="name" required minLength={2} maxLength={80} defaultValue={tenant.name} className={fieldClass} />
+          </Field>
+          <Field label="Price per kg (₹)" hint="Applies to new pickups. Existing invoices keep their amount (edit them under Payments).">
+            <input name="price" type="number" required min={1} max={10000} step="1" defaultValue={tenant.pricePerKg} className={fieldClass} />
+          </Field>
+          <Field label="UPI ID for customer payments" hint="Where customers' money goes. Change it anytime; unpaid invoices use the new ID.">
+            <input name="upiId" required autoComplete="off" defaultValue={tenant.upiId ?? ""} placeholder="yourshop@okaxis" className={`${fieldClass} font-mono`} />
+          </Field>
+          <Field label="Name shown in UPI apps">
+            <input name="upiName" maxLength={50} defaultValue={tenant.upiName ?? ""} placeholder={tenant.name} className={fieldClass} />
+          </Field>
+        </ActionForm>
+      </Card>
+    </div>
+  );
+}

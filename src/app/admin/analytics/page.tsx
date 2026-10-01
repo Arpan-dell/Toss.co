@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { planGate } from "@/components/plan-gate";
 import { AiInsights } from "@/components/ai-insights";
 import { ColumnChart, LineChart } from "@/components/charts";
 import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
@@ -9,6 +10,9 @@ import { formatDate } from "@/lib/format";
 export const metadata: Metadata = { title: "Analytics" };
 
 export default async function Analytics() {
+  const locked = await planGate();
+  if (locked) return locked;
+
   const agg = computeAggregates(await listOrders());
   // First and current weeks are partial and would read as false dips, so chart complete weeks only.
   const weekly = agg.byWeek.slice(1, -1).map((w) => ({

@@ -3,18 +3,22 @@ import { handleIngest, sha256, type DeviceFields, type IngestStore, type StoredO
 
 class MemoryStore implements IngestStore {
   devices = new Map<string, DeviceFields & { apiKeyHash?: string; tenantId?: string; lastSeenAt?: string }>();
-  customers = new Map<string, string>(); // telegramId -> customerId
+  customers = new Map<string, { customerId: string; tenantId?: string }>(); // keyed by Telegram ID
   orders = new Map<string, StoredOrder>();
   events: unknown[] = [];
 
   async getDeviceKeyHash(id: string) {
     return this.devices.get(id)?.apiKeyHash;
   }
-  async findCustomerIdByTelegram(t: string) {
+  async findCustomerByTelegram(t: string) {
     return this.customers.get(t);
   }
-  async getPricePerKg() {
-    return undefined; // fall back to config default
+  async getDeviceTenant(id: string) {
+    return this.devices.get(id)?.tenantId;
+  }
+  prices = new Map<string, number>();
+  async getPricePerKg(tenantId: string) {
+    return this.prices.get(tenantId);
   }
   async getOrder(id: string) {
     const o = this.orders.get(id);
@@ -29,14 +33,14 @@ class MemoryStore implements IngestStore {
   async appendEvent(e: unknown) {
     this.events.push(e);
   }
-  async touchDevice(id: string, tenantId: string, now: string, f: DeviceFields) {
+  async touchDevice(id: string, tenantId: string | undefined, now: string, f: DeviceFields) {
     const d = this.devices.get(id) ?? {};
     const defined = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined));
     this.devices.set(id, { ...d, ...defined, tenantId: d.tenantId ?? tenantId, lastSeenAt: now });
   }
 }
 
-const cfg = { bridgeKey: "bridge-secret", tenantId: "tenant-1", defaultPricePerKg: 80 };
+const cfg = { bridgeKey: "bridge-secret", defaultPricePerKg: 80 };
 const legacy = { orderId: 104, customerId: "1000000001", address: "Apt 4B", weight: 5.27, status: "PENDING", paymentStatus: "UNPAID" };
 
 let store: MemoryStore;
@@ -56,18 +60,39 @@ describe("handleIngest", () => {
   });
 
   it("stores a legacy bridge order and links the known customer", async () => {
-    store.customers.set("1000000001", "user-123");
+    store.customers.set("1000000001", { customerId: "user-123", tenantId: "tenant-1" });
+    store.prices.set("tenant-1", 100);
     const res = await send(legacy);
     expect(res).toMatchObject({ status: 200, body: { ok: true, id: "legacy-1000000001#104", changed: true } });
     expect(store.orders.get("legacy-1000000001#104")).toMatchObject({
       status: "PENDING",
       paymentStatus: "UNPAID",
-      amountDue: 422,
+      amountDue: 527, // 5.27 kg at the business's own ₹100/kg
       customerId: "user-123",
       tenantId: "tenant-1",
     });
     expect(store.events).toHaveLength(1);
     expect(store.devices.get("legacy-1000000001")).toMatchObject({ address: "Apt 4B", tenantId: "tenant-1" });
+  });
+
+  it("keeps orders from a basket whose owner hasn't joined a business unassigned, at the default price", async () => {
+    await send(legacy);
+    expect(store.orders.get("legacy-1000000001#104")).toMatchObject({ tenantId: undefined, amountDue: 422 });
+    expect(store.devices.get("legacy-1000000001")?.tenantId).toBeUndefined();
+  });
+
+  it("assigns the business once the owner joins, without repricing the order", async () => {
+    await send(legacy);
+    store.customers.set("1000000001", { customerId: "user-123", tenantId: "tenant-9" });
+    store.prices.set("tenant-9", 200);
+    await send({ ...legacy, status: "ACCEPTED" });
+    expect(store.orders.get("legacy-1000000001#104")).toMatchObject({ tenantId: "tenant-9", customerId: "user-123", amountDue: 422 });
+  });
+
+  it("files a basket's orders under its business even when the owner isn't linked", async () => {
+    store.devices.set("legacy-1000000001", { tenantId: "tenant-5" });
+    await send(legacy);
+    expect(store.orders.get("legacy-1000000001#104")?.tenantId).toBe("tenant-5");
   });
 
   it("is idempotent for retried payloads", async () => {

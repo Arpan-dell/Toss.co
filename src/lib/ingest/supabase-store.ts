@@ -9,7 +9,7 @@ type OrderRow = {
   id: string;
   device_order_id: number;
   device_id: string;
-  tenant_id: string;
+  tenant_id: string | null;
   customer_telegram_id: string | null;
   customer_id: string | null;
   driver_id: string | null;
@@ -31,7 +31,7 @@ function fromRow(r: OrderRow): StoredOrder {
     id: r.id,
     deviceOrderId: r.device_order_id,
     deviceId: r.device_id,
-    tenantId: r.tenant_id,
+    tenantId: u(r.tenant_id),
     customerTelegramId: u(r.customer_telegram_id),
     customerId: u(r.customer_id),
     driverId: u(r.driver_id),
@@ -53,7 +53,7 @@ function toRow(o: OrderRecord) {
     id: o.id,
     device_order_id: o.deviceOrderId,
     device_id: o.deviceId,
-    tenant_id: o.tenantId,
+    tenant_id: o.tenantId ?? null,
     customer_telegram_id: o.customerTelegramId ?? null,
     customer_id: o.customerId ?? null,
     driver_id: o.driverId ?? null,
@@ -76,10 +76,16 @@ export class SupabaseStore implements IngestStore {
     return u(data?.api_key_hash as string | null);
   }
 
-  async findCustomerIdByTelegram(telegramId: string) {
-    const { data, error } = await this.db.from("customers").select("id").eq("telegram_id", telegramId).maybeSingle();
+  async findCustomerByTelegram(telegramId: string) {
+    const { data, error } = await this.db.from("customers").select("id, tenant_id").eq("telegram_id", telegramId).maybeSingle();
     if (error) throw error;
-    return u(data?.id as string | null);
+    return data ? { customerId: data.id as string, tenantId: u(data.tenant_id as string | null) } : undefined;
+  }
+
+  async getDeviceTenant(deviceId: string) {
+    const { data, error } = await this.db.from("devices").select("tenant_id").eq("device_id", deviceId).maybeSingle();
+    if (error) throw error;
+    return u(data?.tenant_id as string | null);
   }
 
   async getPricePerKg(tenantId: string) {
@@ -118,7 +124,7 @@ export class SupabaseStore implements IngestStore {
     if (error) throw error;
   }
 
-  async touchDevice(deviceId: string, tenantId: string, now: string, f: DeviceFields) {
+  async touchDevice(deviceId: string, tenantId: string | undefined, now: string, f: DeviceFields) {
     const fields = {
       last_weight_kg: f.weightKg,
       target_kg: f.targetKg,
@@ -131,15 +137,20 @@ export class SupabaseStore implements IngestStore {
 
     const { error: insertError } = await this.db
       .from("devices")
-      .insert({ device_id: deviceId, tenant_id: tenantId, last_seen_at: now, ...defined });
+      .insert({ device_id: deviceId, tenant_id: tenantId ?? null, last_seen_at: now, ...defined });
     if (!insertError) return;
     if (insertError.code !== "23505") throw insertError;
 
-    // Existing device: update only the fields this payload carries (never tenant or key hash).
+    // Existing device: update only the fields this payload carries (never the key hash).
     const { error } = await this.db
       .from("devices")
       .update({ last_seen_at: now, ...defined })
       .eq("device_id", deviceId);
     if (error) throw error;
+    // A basket's business is set once (when its owner joins) and never moved by a device payload.
+    if (tenantId) {
+      const { error: tenantError } = await this.db.from("devices").update({ tenant_id: tenantId }).eq("device_id", deviceId).is("tenant_id", null);
+      if (tenantError) throw tenantError;
+    }
   }
 }

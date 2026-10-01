@@ -15,7 +15,6 @@ export async function POST(request: Request) {
       new SupabaseStore(supabaseAdmin()),
       {
         bridgeKey: process.env.DEVICE_BRIDGE_KEY,
-        tenantId: process.env.DEFAULT_TENANT_ID ?? "tenant-delhi-01",
         defaultPricePerKg: Number(process.env.DEFAULT_PRICE_PER_KG ?? 80),
       },
     );

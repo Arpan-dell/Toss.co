@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, PageTitle } from "@/components/ui";
 import { deviceLabel, isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, now } from "@/lib/data";
 import { orderLabel, timeAgo } from "@/lib/format";
@@ -19,6 +20,9 @@ function signalLabel(rssi: number) {
 }
 
 export default async function Fleet() {
+  const locked = await planGate();
+  if (locked) return locked;
+
   const [devices, drivers, active, all] = await Promise.all([listDevices(), listDrivers(), listActiveOrders(), listOrders()]);
   const current = now();
   const todayKey = current.toISOString().slice(0, 10);

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ChangePasswordCard } from "@/components/change-password";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { IdChip } from "@/components/id-chip";
 import { Card, PageTitle, StatTile } from "@/components/ui";
@@ -67,6 +68,7 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
           </Field>
         </ActionForm>
       </Card>
+      <ChangePasswordCard email={session.email} />
     </div>
   );
 }

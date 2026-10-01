@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
+import { ChangePasswordCard } from "@/components/change-password";
 import { Card, PageTitle } from "@/components/ui";
 import { updatePlatformSettings } from "@/lib/actions/owner";
 import { getPlatformSettings } from "@/lib/data";
@@ -8,7 +9,7 @@ import { requireRole } from "@/lib/session";
 export const metadata: Metadata = { title: "Plan & UPI" };
 
 export default async function OwnerSettings() {
-  await requireRole("OWNER");
+  const session = await requireRole("OWNER");
   const s = await getPlatformSettings();
   return (
     <div className="stagger max-w-xl space-y-6">
@@ -29,6 +30,7 @@ export default async function OwnerSettings() {
           </Field>
         </ActionForm>
       </Card>
+      <ChangePasswordCard email={session.email} />
     </div>
   );
 }

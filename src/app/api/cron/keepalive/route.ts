@@ -7,7 +7,7 @@ import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 // after a week without activity), sends win-back discounts to customers who have gone quiet, and
 // emails renewal reminders to businesses whose trial or subscription is about to end, and runs the
 // Toss AI morning analysis (and autopilot) for every active business.
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   if (request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}` || !process.env.CRON_SECRET) {
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     console.error("plan reminders failed", err);
     return { error: "reminders failed" };
   });
-  const ai = await runAutopilotAll(40_000).catch((err) => {
+  const ai = await runAutopilotAll(200_000).catch((err) => {
     console.error("Toss AI daily run failed", err);
     return { error: "ai failed" };
   });

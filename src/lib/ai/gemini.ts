@@ -27,12 +27,18 @@ class GeminiError extends Error {
 }
 
 async function callModel(model: string, body: Record<string, unknown>, timeoutMs: number): Promise<string> {
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY ?? "" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY ?? "" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    // Timed out or network blip: a slow model is better retried on the faster fallback.
+    throw new GeminiError(`Gemini ${model}: ${err instanceof Error ? err.message : err}`, true);
+  }
   const json = (await res.json().catch(() => ({}))) as GeminiResponse;
   if (!res.ok) {
     // Overloaded / rate-limited / gone: worth trying again or another model.
@@ -55,6 +61,7 @@ async function generate(body: Record<string, unknown>, timeoutMs: number): Promi
       } catch (err) {
         last = err;
         if (!(err instanceof GeminiError) || !err.retryable) throw err;
+        if (/aborted|timeout/i.test(err.message)) break; // don't wait twice on a slow model: move on
         if (attempt === 0) await new Promise((r) => setTimeout(r, 1200));
       }
     }
@@ -70,7 +77,7 @@ export async function geminiJson<T>(o: { system: string; prompt: string; schema:
       contents: [{ role: "user", parts: [{ text: o.prompt }] }],
       generationConfig: { responseMimeType: "application/json", responseSchema: o.schema, temperature: o.temperature ?? 0.4 },
     },
-    o.timeoutMs ?? 25_000,
+    o.timeoutMs ?? 30_000,
   );
   return { data: JSON.parse(text) as T, model };
 }

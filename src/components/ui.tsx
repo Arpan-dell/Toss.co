@@ -139,21 +139,31 @@ export function PageTitle({ children, kicker }: { children: React.ReactNode; kic
 
 // Brand artwork lives in public/brand (generated from the original logo for the dark theme).
 // "wordmark" = shirt + TOSS for headers; "full" adds the SMART LAUNDRY tagline.
+// Each variant is two same-size layers: the logo without the shirt, and the shirt alone,
+// so the shirt can wave (see .logo-shirt in globals.css) while the letters stay still.
 const LOGOS = {
-  wordmark: { src: "/brand/toss-wordmark.png", width: 588, height: 288 },
-  full: { src: "/brand/toss-logo.png", width: 588, height: 335 },
+  wordmark: { base: "/brand/toss-wordmark-base.png", shirt: "/brand/toss-wordmark-shirt.png", width: 588, height: 288 },
+  full: { base: "/brand/toss-logo-base.png", shirt: "/brand/toss-logo-shirt.png", width: 588, height: 335 },
 };
+
+// The shirt pivots where it bursts out of the "O": pixel (240, 160) in both source images.
+const SHIRT_PIVOT = { x: 240, y: 160 };
 
 export function Logo({ variant = "wordmark", className = "h-11" }: { variant?: keyof typeof LOGOS; className?: string }) {
   const l = LOGOS[variant];
   return (
-    <Image
-      src={l.src}
-      width={l.width}
-      height={l.height}
-      alt="Toss"
-      priority
-      className={`w-auto drop-shadow-[0_0_18px_rgb(2_169_161/0.35)] ${className}`}
-    />
+    <span className={`logo relative inline-block drop-shadow-[0_0_18px_rgb(2_169_161/0.35)] ${className}`} role="img" aria-label="Toss">
+      <Image src={l.base} width={l.width} height={l.height} alt="" priority className="h-full w-auto" />
+      <Image
+        src={l.shirt}
+        width={l.width}
+        height={l.height}
+        alt=""
+        priority
+        className="logo-shirt absolute inset-0 h-full w-auto"
+        style={{ transformOrigin: `${(SHIRT_PIVOT.x / l.width) * 100}% ${(SHIRT_PIVOT.y / l.height) * 100}%` }}
+      />
+    </span>
   );
 }
+

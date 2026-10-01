@@ -2,7 +2,20 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { orderLabel } from "../format";
 import { supabaseAdmin } from "../supabase/admin";
-import { answerCallback, editMessage, esc, sendLocation, sendMessage, type InlineButton } from "../telegram-api";
+import * as api from "../telegram-api";
+import { esc, type InlineButton } from "../telegram-api";
+
+// Telegram messages are best-effort: a failed send (network blip, a driver who blocked the bot)
+// must never stop an assignment, a hand-over or a pickup from being recorded.
+const safe = <A extends unknown[]>(fn: (...args: A) => Promise<unknown>) => (...args: A) =>
+  fn(...args).catch((err) => {
+    console.error("telegram send failed", err instanceof Error ? err.message : err);
+    return undefined;
+  });
+const sendMessage = safe(api.sendMessage);
+const sendLocation = safe(api.sendLocation);
+const editMessage = safe(api.editMessage);
+const answerCallback = safe(api.answerCallback);
 import { chooseDriver, directionsUrl, routeUrl, searchUrl, type DriverCandidate, type LatLng } from "./core";
 import { geocode } from "./geocode";
 

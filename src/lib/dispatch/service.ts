@@ -17,6 +17,7 @@ const sendMessage = safe(api.sendMessage);
 const sendLocation = safe(api.sendLocation);
 const editMessage = safe(api.editMessage);
 const answerCallback = safe(api.answerCallback);
+const sendPhoto = safe(api.sendPhoto);
 import { chooseDriver, directionsUrl, routeUrl, searchUrl, type DriverCandidate, type LatLng } from "./core";
 import { geocode } from "./geocode";
 
@@ -186,7 +187,8 @@ export async function notifyAssignment(order: Row, chatId: string, pickup?: LatL
     ],
   ];
   const lines = [
-    `🧺 <b>New pickup</b> · ${esc(orderLabel({ deviceId: order.device_id as string, deviceOrderId: order.device_order_id as number }))}`,
+    `🔔 <b>NEW PICKUP</b> · ${esc(orderLabel({ deviceId: order.device_id as string, deviceOrderId: order.device_order_id as number }))}`,
+    "━━━━━━━━━━━━━━",
     `📍 ${esc((order.address as string) || "Address not set")}`,
     c?.name ? `👤 ${esc(c.name as string)}` : null,
     `⚖️ ${Number(order.weight_kg).toFixed(1)} kg`,
@@ -201,22 +203,92 @@ async function notifyCustomer(order: Row, text: string) {
   if (token && chat) await sendMessage(token, chat, text);
 }
 
-// ---------- driver bot ----------
+// ---------- driver bot ("Toss Handy") ----------
+
+const BANNER = `${SITE}/brand/driver/welcome.jpg`;
+const LINE = "━━━━━━━━━━━━━━";
 
 const MENU = {
-  keyboard: [[{ text: "🟢 Online" }, { text: "🔴 Offline" }], [{ text: "🛣 My route" }, { text: "📋 My pickups" }]],
+  keyboard: [
+    [{ text: "🟢 Online" }, { text: "🔴 Offline" }],
+    [{ text: "📋 My pickups" }, { text: "🛣 My route" }],
+    [{ text: "👤 My status" }],
+  ],
   resize_keyboard: true,
   is_persistent: true,
+  input_field_placeholder: "Toss Handy",
 };
 
 const SHARE_PHONE = {
   keyboard: [[{ text: "📱 Share my phone number", request_contact: true }]],
   resize_keyboard: true,
   is_persistent: true,
+  input_field_placeholder: "Tap the button below",
 };
 
-const WELCOME = (name: string) =>
-  `Hi ${esc(name)} 👋 You're a Toss driver.\n\n1. Tap <b>🟢 Online</b> when you're working.\n2. Share your <b>live location</b> (📎 → Location → Share live location) so you get the nearest pickups.\n3. Each pickup comes with a Google Maps button. <b>🛣 My route</b> always shows every stop, ending at the store.`;
+const HOW_IT_WORKS = [
+  "<b>How it works</b>",
+  "🟢 <b>Online</b>: tap it when you start working",
+  "📍 <b>Live location</b>: 📎 → Location → <i>Share live location</i>, so you get the nearest pickups",
+  "🧺 <b>Pickups</b> arrive here with a 🗺 Google Maps button",
+  "🛣 <b>My route</b>: every stop in order, ending at the store",
+].join("\n");
+
+const WELCOME = (name: string) => `👋 <b>Hi ${esc(name)}, welcome to Toss Handy</b>\n${LINE}\n${HOW_IT_WORKS}`;
+
+// A card with the branded banner on top; falls back to plain text if the photo can't be sent.
+async function sendBanner(token: string, chatId: string, caption: string, keyboard: api.ReplyKeyboard) {
+  const sent = await sendPhoto(token, chatId, BANNER, caption, { keyboard });
+  if (!sent) await sendMessage(token, chatId, caption, { keyboard });
+}
+
+// Midnight in India, as an ISO timestamp: "today" for the driver's daily count.
+function startOfTodayIST(now = Date.now()) {
+  const IST = 5.5 * 3_600_000;
+  return new Date(Math.floor((now + IST) / 86_400_000) * 86_400_000 - IST).toISOString();
+}
+
+const ago = (iso: string) => {
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`;
+};
+
+async function statusCard(driver: Row): Promise<string> {
+  const chatId = driver.telegram_chat_id as string;
+  const [{ count: open }, { count: done }, store] = await Promise.all([
+    db().from("orders").select("id", { count: "exact", head: true }).eq("driver_id", chatId).in("status", ACTIVE),
+    db().from("orders").select("id", { count: "exact", head: true }).eq("driver_id", chatId).eq("status", "COMPLETED").gte("completed_at", startOfTodayIST()),
+    storeOf(driver.tenant_id as string),
+  ]);
+  const status = driver.status === "OFFLINE" ? "🔴 Offline" : driver.status === "ON_JOB" ? "🚚 On a job" : "🟢 Online";
+  const fresh = driver.location_at && Date.now() - new Date(driver.location_at as string).getTime() < 30 * 60_000;
+  const location = driver.location_at ? `${fresh ? "📍" : "⚠️"} Location: ${ago(driver.location_at as string)}` : "⚠️ Location: not shared yet";
+  return [
+    `👤 <b>${esc(driver.name as string)}</b> · ${esc(store.name)}`,
+    LINE,
+    `Status: <b>${status}</b>`,
+    location,
+    `🧺 Open pickups: <b>${open ?? 0}</b>`,
+    `✅ Done today: <b>${done ?? 0}</b>`,
+    ...(!fresh && driver.status !== "OFFLINE" ? ["", "<i>Share your live location so you get the nearest pickups.</i>"] : []),
+  ].join("\n");
+}
+
+const pickupCard = (j: Row, title: string) =>
+  [
+    `🧺 <b>${title}</b> · #${j.device_order_id}`,
+    LINE,
+    `📍 ${esc((j.address as string) || "Address not set")}`,
+    `⚖️ ${Number(j.weight_kg).toFixed(1)} kg`,
+  ].join("\n");
+
+const pickupButtons = (j: Row, navigate: string): InlineButton[][] => [
+  [{ text: "🗺 Navigate", url: navigate }],
+  [
+    { text: "✅ Picked up", callback_data: `done:${j.id}` },
+    { text: "↩️ Can't take it", callback_data: `decline:${j.id}` },
+  ],
+];
 
 // The driver shared their contact with the request_contact button. Telegram only lets people share
 // their own number that way (contact.user_id is the sender), so the number is genuine; we attach this
@@ -225,7 +297,7 @@ async function connectByPhone(token: string, chatId: string, msg: TgMessage) {
   const contact = msg.contact!;
   const phone = fromTelegramPhone(contact.phone_number);
   if (!phone || contact.user_id === undefined || contact.user_id !== msg.from?.id) {
-    await sendMessage(token, chatId, "Please share <b>your own</b> number with the button below.", { keyboard: SHARE_PHONE });
+    await sendMessage(token, chatId, "🙅 Please share <b>your own</b> number with the button below.", { keyboard: SHARE_PHONE });
     return;
   }
   const { data: won } = await db()
@@ -239,12 +311,12 @@ async function connectByPhone(token: string, chatId: string, msg: TgMessage) {
     await sendMessage(
       token,
       chatId,
-      `No laundry has added <b>${esc(phone)}</b> as a driver yet. Ask your manager to add you on Toss (Fleet → Add driver) with this number, then tap the button again.`,
+      `🔎 <b>Number not found</b>\n${LINE}\nNo laundry has added <b>${esc(phone)}</b> as a driver yet.\n\nAsk your manager to add you on Toss (<i>Fleet → Add driver</i>) with this number, then tap the button again.`,
       { keyboard: SHARE_PHONE },
     );
     return;
   }
-  await sendMessage(token, chatId, `✅ Connected!\n\n${WELCOME(won.name as string)}`, { keyboard: MENU });
+  await sendBanner(token, chatId, `✅ <b>You're connected!</b>\n\n${WELCOME(won.name as string)}`, MENU);
 }
 
 interface TgUpdate {
@@ -274,11 +346,11 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
   if (!driver) {
     if (!update.message) return;
     if (msg.contact) return connectByPhone(token, chatId, msg);
-    await sendMessage(
+    await sendBanner(
       token,
       chatId,
-      "👋 Welcome to <b>Toss</b> for drivers!\n\nTap <b>📱 Share my phone number</b> below. If your laundry added you with this number, you're connected right away.",
-      { keyboard: SHARE_PHONE },
+      `👋 <b>Welcome to Toss Handy</b>\n${LINE}\nThe driver app for Toss laundries: pickups near you, with routes that end at the store.\n\nTap <b>📱 Share my phone number</b> below. If your laundry added you with this number, you're connected right away.`,
+      SHARE_PHONE,
     );
     return;
   }
@@ -295,8 +367,8 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
         token,
         chatId,
         live
-          ? "📍 Live location on. You'll get the pickups nearest to you."
-          : "📍 Got it. For automatic nearest pickups, share your <b>live</b> location (📎 → Location → Share live location).",
+          ? "📍 <b>Live location on</b>\nYou'll get the pickups nearest to you."
+          : "📍 <b>Got it</b>\nFor automatic nearest pickups, share your <b>live</b> location: 📎 → Location → <i>Share live location</i>.",
         { keyboard: MENU },
       );
       if (driver.status !== "OFFLINE") await dispatchWaiting(driver.tenant_id as string);
@@ -306,20 +378,27 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
 
   const text = (msg.text ?? "").trim();
   if (text === "/start" || text === "/help") {
-    await sendMessage(token, chatId, WELCOME(driver.name as string), { keyboard: MENU });
+    await sendBanner(token, chatId, WELCOME(driver.name as string), MENU);
   } else if (text === "🟢 Online" || text === "/online") {
     await db().from("drivers").update({ status: "AVAILABLE" }).eq("id", driver.id as string);
     const placed = await dispatchWaiting(driver.tenant_id as string);
-    await sendMessage(token, chatId, placed ? `🟢 You're online. ${placed} waiting pickup${placed > 1 ? "s" : ""} assigned.` : "🟢 You're online. New pickups will come here.", { keyboard: MENU });
+    await sendMessage(
+      token,
+      chatId,
+      `🟢 <b>You're online</b>\n${LINE}\n${placed ? `🧺 ${placed} waiting pickup${placed > 1 ? "s" : ""} assigned to you.` : "New pickups will come here."}${driver.location_at ? "" : "\n\n📍 Share your <b>live location</b> so you get the nearest ones."}`,
+      { keyboard: MENU },
+    );
   } else if (text === "🔴 Offline" || text === "/offline") {
     await db().from("drivers").update({ status: "OFFLINE" }).eq("id", driver.id as string);
-    await sendMessage(token, chatId, "🔴 You're offline. You won't get new pickups. Finish any open ones from 📋 My pickups.", { keyboard: MENU });
+    await sendMessage(token, chatId, `🔴 <b>You're offline</b>\n${LINE}\nNo new pickups until you go online.\nFinish any open ones from 📋 <b>My pickups</b>.`, { keyboard: MENU });
+  } else if (text === "👤 My status" || text === "/status") {
+    await sendMessage(token, chatId, await statusCard(driver), { keyboard: MENU });
   } else if (text === "🛣 My route" || text === "/route") {
     const r = await currentRoute(driver);
     await sendMessage(
       token,
       chatId,
-      r.url ? `🛣 ${r.stops} pickup${r.stops > 1 ? "s" : ""}, then the store.` : "No open pickups right now.",
+      r.url ? `🛣 <b>Your route</b>\n${LINE}\n${r.stops} pickup${r.stops > 1 ? "s" : ""}, then the store 🏁\n<i>The link stays up to date as pickups change.</i>` : "🛣 No open pickups right now.",
       r.url ? { inline: [[{ text: "🗺 Open route in Google Maps", url: routeLink(driver) }]] } : { keyboard: MENU },
     );
   } else if (text === "📋 My pickups" || text === "/pickups") {
@@ -330,22 +409,15 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
       .in("status", ACTIVE)
       .order("assigned_at");
     if (!jobs?.length) {
-      await sendMessage(token, chatId, "No open pickups.", { keyboard: MENU });
+      await sendMessage(token, chatId, "📋 No open pickups. Stay 🟢 online and new ones will come here.", { keyboard: MENU });
     } else {
+      await sendMessage(token, chatId, `📋 <b>Your pickups</b> (${jobs.length})`, { keyboard: MENU });
       for (const j of jobs) {
-        await sendMessage(token, chatId, `🧺 #${j.device_order_id} · ${Number(j.weight_kg).toFixed(1)} kg\n📍 ${esc((j.address as string) || "—")}`, {
-          inline: [
-            [{ text: "🗺 Navigate", url: searchUrl(j.address as string) }],
-            [
-              { text: "✅ Picked up", callback_data: `done:${j.id}` },
-              { text: "↩️ Can't take it", callback_data: `decline:${j.id}` },
-            ],
-          ],
-        });
+        await sendMessage(token, chatId, pickupCard(j, "Pickup"), { inline: pickupButtons(j, searchUrl(j.address as string)) });
       }
     }
   } else {
-    await sendMessage(token, chatId, "Use the buttons below.", { keyboard: MENU });
+    await sendMessage(token, chatId, "Use the buttons below 👇", { keyboard: MENU });
   }
 }
 
@@ -364,11 +436,11 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
   if (action === "done") {
     await db().from("orders").update({ status: "COMPLETED", completed_at: new Date().toISOString() }).eq("id", orderId);
     await answerCallback(token, cb.id, "Marked as picked up ✅");
-    if (msg) await editMessage(token, String(msg.chat.id), msg.message_id, `✅ Picked up #${o.device_order_id} · ${esc((o.address as string) || "")}`);
+    if (msg) await editMessage(token, String(msg.chat.id), msg.message_id, `✅ <b>Picked up</b> · #${o.device_order_id}\n<s>${esc((o.address as string) || "")}</s>`);
     await notifyCustomer(o as Row, `✅ Your laundry has been picked up (order #${o.device_order_id}). Thank you!`).catch(() => {});
     const r = await currentRoute(driver);
     if (r.url) {
-      await sendMessage(token, chatId, `Next: ${r.stops} more pickup${r.stops > 1 ? "s" : ""}.`, {
+      await sendMessage(token, chatId, `👍 Nice! <b>${r.stops} more pickup${r.stops > 1 ? "s" : ""}</b> to go.`, {
         inline: [[{ text: "🛣 Continue route", url: routeLink(driver) }]],
       });
     } else {
@@ -377,7 +449,7 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
       await sendMessage(
         token,
         chatId,
-        `🏁 All pickups done. Deliver to <b>${esc(store.name)}</b>.`,
+        `🏁 <b>All pickups done!</b>\n━━━━━━━━━━━━━━\nDeliver the laundry to <b>${esc(store.name)}</b>.`,
         store.place ? { inline: [[{ text: "🗺 Navigate to the store", url: directionsUrl({ destination: store.place }) }]] } : {},
       );
     }
@@ -387,7 +459,7 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
       .update({ driver_id: null, status: "PENDING", assigned_at: null, declined_by: [...((o.declined_by as string[]) ?? []), chatId] })
       .eq("id", orderId);
     await answerCallback(token, cb.id, "Passed on. We'll find another driver.");
-    if (msg) await editMessage(token, String(msg.chat.id), msg.message_id, `↩️ You passed on #${o.device_order_id}.`);
+    if (msg) await editMessage(token, String(msg.chat.id), msg.message_id, `↩️ <i>You passed on #${o.device_order_id}. We'll find another driver.</i>`);
     const { count } = await db().from("orders").select("id", { count: "exact", head: true }).eq("driver_id", chatId).in("status", ACTIVE);
     if (!count) await db().from("drivers").update({ status: "AVAILABLE" }).eq("id", driver.id as string).neq("status", "OFFLINE");
     await dispatchOrder(orderId);

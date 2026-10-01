@@ -8,6 +8,7 @@ export type ReplyKeyboard = {
   keyboard: { text: string; request_location?: boolean; request_contact?: boolean }[][];
   resize_keyboard?: boolean;
   is_persistent?: boolean;
+  input_field_placeholder?: string;
 };
 
 export async function tg<T = unknown>(token: string, method: string, body: Record<string, unknown>): Promise<T> {
@@ -33,6 +34,23 @@ export function sendMessage(
     text,
     parse_mode: "HTML",
     link_preview_options: { is_disabled: true },
+    reply_markup: opts.inline ? { inline_keyboard: opts.inline } : opts.keyboard,
+  });
+}
+
+// A photo (by URL) with an HTML caption, e.g. the bot's welcome banner.
+export function sendPhoto(
+  token: string,
+  chatId: string,
+  photoUrl: string,
+  caption: string,
+  opts: { inline?: InlineButton[][]; keyboard?: ReplyKeyboard } = {},
+) {
+  return tg<{ message_id: number }>(token, "sendPhoto", {
+    chat_id: chatId,
+    photo: photoUrl,
+    caption,
+    parse_mode: "HTML",
     reply_markup: opts.inline ? { inline_keyboard: opts.inline } : opts.keyboard,
   });
 }

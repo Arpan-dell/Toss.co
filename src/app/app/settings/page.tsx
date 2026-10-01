@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm, fieldClass } from "@/components/action-form";
+import { ChangePasswordCard } from "@/components/change-password";
 import { IdChip } from "@/components/id-chip";
 import { JoinBusiness } from "@/components/join-business";
 import { Badge, Card, PageTitle } from "@/components/ui";
@@ -80,6 +81,8 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
           <p className="mt-2 text-xs text-muted">Your laundry finds you by this number. Linking Telegram marks it verified.</p>
         </details>
       </Card>
+
+      <ChangePasswordCard email={customer?.email ?? session.email} />
 
       <Card title="Your laundry" action={business ? <Badge tone="good" icon="✓">Connected</Badge> : <Badge tone="warn" icon="!">Not connected</Badge>}>
         {business ? (

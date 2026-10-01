@@ -7,7 +7,8 @@ import { supabaseAdmin } from "../supabase/admin";
 import { esc, sendMessage } from "../telegram-api";
 import { ASK_SYSTEM, BRAIN_SCHEMA, BRAIN_SYSTEM, brainPrompt, cleanBriefing, rulesBriefing, type BrainAnswer, type Report } from "./brain";
 import { CATEGORY_OF, analyze, applyDecisions, type ActionType, type Candidate, type Category, type EngineInput } from "./engine";
-import { geminiEnabled, geminiJson, geminiModel, geminiText } from "./gemini";
+import { geminiEnabled, geminiJson, geminiText } from "./gemini";
+import { computeInsights, insightsSummary, type Insights } from "./insights";
 
 // Toss AI orchestration (service role). A run: load the business → engine → Gemini briefing and
 // decisions → save the report and action queue → the autopilot executes the categories the manager
@@ -121,20 +122,60 @@ async function loadContext(tenantId: string): Promise<Context | null> {
 
 const autoCategories = (s: AutopilotSettings) => (s.enabled ? (Object.keys(s.categories) as Category[]).filter((c) => s.categories[c]) : []);
 
+/** Deep analytics for one business (forecast with backtest, segments, money, areas, drivers, anomalies). */
+export async function businessInsights(tenantId: string): Promise<Insights> {
+  const since = new Date(Date.now() - 180 * DAY).toISOString();
+  const [{ data: orders }, { data: customers }, { data: devices }, { data: drivers }] = await Promise.all([
+    db()
+      .from("orders")
+      .select("id, placed_at, assigned_at, completed_at, weight_kg, amount_due, status, payment_status, payment_confirmed_at, customer_id, device_id, driver_id, declined_by")
+      .eq("tenant_id", tenantId)
+      .gte("placed_at", since)
+      .limit(10000),
+    db().from("customers").select("id, customer_code").eq("tenant_id", tenantId),
+    db().from("devices").select("device_id, area").eq("tenant_id", tenantId),
+    db().from("drivers").select("name, telegram_chat_id").eq("tenant_id", tenantId),
+  ]);
+  return computeInsights({
+    now: new Date().toISOString(),
+    orders: (orders ?? []).map((o: Row) => ({
+      id: o.id as string,
+      placedAt: o.placed_at as string,
+      assignedAt: (o.assigned_at as string) ?? undefined,
+      completedAt: (o.completed_at as string) ?? undefined,
+      weightKg: Number(o.weight_kg),
+      amount: Number(o.amount_due),
+      status: o.status as string,
+      paymentStatus: o.payment_status as string,
+      paymentConfirmedAt: (o.payment_confirmed_at as string) ?? undefined,
+      customerId: (o.customer_id as string) ?? undefined,
+      deviceId: o.device_id as string,
+      driverId: (o.driver_id as string) ?? undefined,
+      declinedBy: (o.declined_by as string[]) ?? [],
+    })),
+    customers: (customers ?? []).map((c: Row) => ({ id: c.id as string, code: c.customer_code as string })),
+    devices: (devices ?? []).map((d: Row) => ({ deviceId: d.device_id as string, area: (d.area as string) ?? undefined })),
+    drivers: (drivers ?? []).map((d: Row) => ({ name: d.name as string, chatId: (d.telegram_chat_id as string) ?? undefined })),
+  });
+}
+
 /** Runs a full analysis for one business. Returns the run id. */
 export async function runAnalysis(tenantId: string, trigger: "daily" | "manual"): Promise<{ runId: number; by: "ai" | "rules"; actions: number; executed: number } | null> {
   const ctx = await loadContext(tenantId);
   if (!ctx) return null;
   const analysis = analyze(ctx.input);
-  const fallback = rulesBriefing(analysis);
+  const insights = await businessInsights(tenantId);
+  const fallback = rulesBriefing(analysis, insights);
 
   let by: "ai" | "rules" = "rules";
   let briefing = fallback;
   let actions: Candidate[] = analysis.candidates;
   let error: string | undefined;
+  let model: string | undefined;
   if (geminiEnabled()) {
     try {
-      const answer = await geminiJson<BrainAnswer>({
+      const analytics = insightsSummary(insights);
+      const { data: answer, model: used } = await geminiJson<BrainAnswer>({
         system: BRAIN_SYSTEM,
         prompt: brainPrompt(analysis, {
           business: ctx.tenant.name as string,
@@ -142,19 +183,21 @@ export async function runAnalysis(tenantId: string, trigger: "daily" | "manual")
           maxDiscount: ctx.input.guardrails.maxDiscount,
           priceStepPct: ctx.input.guardrails.priceStepPct,
           autopilot: autoCategories(ctx.settings),
+          analytics,
         }),
         schema: BRAIN_SCHEMA,
       });
       briefing = cleanBriefing(answer, fallback);
       actions = applyDecisions(analysis.candidates, answer.decisions, ctx.input);
       by = "ai";
+      model = used;
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
       console.error("Toss AI: Gemini failed, using rules", error);
     }
   }
 
-  const report: Report = { ...briefing, kpis: analysis.kpis, forecast: analysis.forecast, health: analysis.health, by, model: by === "ai" ? geminiModel() : undefined };
+  const report: Report = { ...briefing, kpis: analysis.kpis, forecast: analysis.forecast, health: analysis.health, by, model };
   const { data: run, error: runError } = await db()
     .from("ai_runs")
     .insert({ tenant_id: tenantId, trigger, source: by, model: report.model ?? null, report, error: error ?? null })
@@ -320,6 +363,7 @@ export async function askAi(tenantId: string, question: string): Promise<string>
   if (!ctx) return "I couldn't find your business.";
   const a = analyze(ctx.input);
   let answer: string;
+  let model: string | null = null;
   if (!geminiEnabled()) {
     answer = "Toss AI's language model isn't connected yet. Your numbers: " + rulesBriefing(a).narrative;
   } else {
@@ -330,13 +374,13 @@ export async function askAi(tenantId: string, question: string): Promise<string>
       health: a.health,
       forecast: a.forecast,
       pendingActions: a.candidates.map((c) => c.label),
+      analytics: insightsSummary(await businessInsights(tenantId)),
       drivers: ctx.input.drivers.map((d) => ({ connected: d.connected, maxJobs: d.maxJobs })),
     };
-    answer = (await geminiText({ system: ASK_SYSTEM, prompt: `BUSINESS DATA (JSON):\n${JSON.stringify(facts)}\n\nQUESTION: ${question.slice(0, 500)}` }))
-      .replace(/[*#`]/g, "")
-      .trim()
-      .slice(0, 1500);
+    const reply = await geminiText({ system: ASK_SYSTEM, prompt: `BUSINESS DATA (JSON):\n${JSON.stringify(facts)}\n\nQUESTION: ${question.slice(0, 500)}` });
+    answer = reply.text.replace(/[*#`]/g, "").trim().slice(0, 1500);
+    model = reply.model;
   }
-  await db().from("ai_runs").insert({ tenant_id: tenantId, trigger: "ask", source: geminiEnabled() ? "ai" : "rules", model: geminiEnabled() ? geminiModel() : null, report: { question: question.slice(0, 500), answer } });
+  await db().from("ai_runs").insert({ tenant_id: tenantId, trigger: "ask", source: model ? "ai" : "rules", model, report: { question: question.slice(0, 500), answer } });
   return answer;
 }

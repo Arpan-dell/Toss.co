@@ -1,4 +1,5 @@
 import type { AiDecision, Analysis, Candidate } from "./engine";
+import type { Insights } from "./insights";
 
 // What the language model is asked, and the shape it must answer in. The model sees only numbers,
 // dates and customer codes (no names, phone numbers, emails or addresses), and may only choose among
@@ -59,6 +60,7 @@ You get the business's numbers and a list of candidate actions computed by a det
 
 Your job:
 1. Brief the manager like a sharp COO: what's going well, what needs attention, what to do. Be specific with the numbers given; never invent numbers, names or events.
+   Use the analytics: name revenue at risk, the busiest window, any anomaly, money stuck in old invoices, and mention forecast accuracy when it's known.
 2. Decide each candidate action: approve the ones worth doing, reject ones that are redundant or unwise. You may personalise:
    - winback_offer: discountPct within the stated cap (bigger for loyal customers, smaller for occasional ones) and a warm one-line message.
    - driver_alert: a motivating one-line message for the drivers.
@@ -66,7 +68,10 @@ Your job:
    - price_change: newPrice within the stated step and limits, only if the data clearly supports it.
 3. Refer to customers only by their codes. Use ₹ for money. Plain text only, no markdown, no emojis in the briefing.`;
 
-export function brainPrompt(a: Analysis, ctx: { business: string; pricePerKg: number; maxDiscount: number; priceStepPct: number; autopilot: string[] }) {
+export function brainPrompt(
+  a: Analysis,
+  ctx: { business: string; pricePerKg: number; maxDiscount: number; priceStepPct: number; autopilot: string[]; analytics?: object },
+) {
   const facts = {
     business: ctx.business,
     pricePerKg: ctx.pricePerKg,
@@ -76,6 +81,7 @@ export function brainPrompt(a: Analysis, ctx: { business: string; pricePerKg: nu
     forecastNext7Days: a.forecast.map((d) => ({ date: d.date, weekday: d.weekday, expectedOrders: d.expectedOrders, driversNeeded: d.driversNeeded, driversConnected: d.driversConnected })),
     guardrails: { maxDiscountPct: ctx.maxDiscount, maxPriceStepPct: ctx.priceStepPct },
     autopilotRunsAutomatically: ctx.autopilot,
+    analytics: ctx.analytics, // segments, revenue at risk, forecast accuracy, aging, areas, drivers, anomalies
   };
   const candidates = a.candidates.map((c: Candidate) => ({ id: c.id, type: c.type, summary: c.label, params: c.params, why: c.reason }));
   return `BUSINESS FACTS (JSON):\n${JSON.stringify(facts)}\n\nCANDIDATE ACTIONS (JSON):\n${JSON.stringify(candidates)}\n\nReturn the JSON briefing and your decisions.`;
@@ -84,7 +90,7 @@ export function brainPrompt(a: Analysis, ctx: { business: string; pricePerKg: nu
 const pct = (n: number) => `${n > 0 ? "+" : ""}${n}%`;
 
 /** The briefing without a language model: plain, numbers-first. */
-export function rulesBriefing(a: Analysis): Briefing {
+export function rulesBriefing(a: Analysis, i?: Insights): Briefing {
   const k = a.kpis;
   const peak = [...a.forecast].sort((x, y) => y.expectedOrders - x.expectedOrders)[0];
   const short = a.forecast.filter((d) => d.driversNeeded > d.driversConnected);
@@ -97,13 +103,27 @@ export function rulesBriefing(a: Analysis): Briefing {
   if (winbacks) opportunities.push(`${winbacks} regular customer(s) are overdue and could be won back with an offer.`);
   if (k.repeatPct < 50 && k.activeCustomers) opportunities.push(`Repeat rate is ${k.repeatPct}%: nudging first-time customers could lift it.`);
   if (k.growthPct >= 15) opportunities.push(`Demand is growing (${pct(k.growthPct)}): a good time to add a driver.`);
+  if (i) {
+    const old = i.money.aging[2].amount + i.money.aging[3].amount;
+    if (i.customers.revenueAtRisk > 0) risks.unshift(`₹${i.customers.revenueAtRisk.toLocaleString("en-IN")} a year is at risk from ${i.customers.segments["At risk"]} customer(s) ordering later than usual.`);
+    if (old > 0) risks.push(`₹${old.toLocaleString("en-IN")} has been unpaid for over two weeks.`);
+    const anomaly = i.anomalies[i.anomalies.length - 1];
+    if (anomaly) risks.push(`${anomaly.weekday} ${anomaly.date.slice(5)} had ${anomaly.actual} pickups against a usual ${anomaly.expected}: an unusual ${anomaly.direction}.`);
+    if (i.heatmap.peak) opportunities.unshift(`${i.heatmap.peak.share}% of pickups come ${i.heatmap.peak.weekday} ${i.heatmap.peak.from}:00–${i.heatmap.peak.to}:00: have drivers ready then.`);
+    if (i.areas[0] && i.areas[0].share >= 30) opportunities.push(`${i.areas[0].area} brings ${i.areas[0].share}% of pickups: a local promotion there pays off most.`);
+  }
 
   return {
     headline: k.orders30 ? `${k.orders30} pickups and ₹${k.revenue30} in the last 30 days (${pct(k.growthPct)})` : "No pickups yet: the forecast starts once orders come in",
     narrative: k.orders30
       ? `You handled ${k.orders30} pickups (${k.kg30} kg) in the last 30 days, ${pct(k.growthPct)} versus the 30 days before. ${k.collectionPct}% of completed pickups are paid and pickups take about ${k.avgPickupHrs} hours on average. ${k.activeCustomers} customers ordered recently and ${k.repeatPct}% of customers are repeat customers.`
       : "Once your baskets start placing orders, Toss AI forecasts busy days, spots customers who stop ordering and chases unpaid invoices for you.",
-    forecastNote: peak && peak.expectedOrders > 0 ? `Busiest day ahead: ${peak.weekday} ${peak.date.slice(5)} with about ${Math.round(peak.expectedOrders)} pickups.` : "Not enough history yet for a forecast.",
+    forecastNote:
+      peak && peak.expectedOrders > 0
+        ? `Busiest day ahead: ${peak.weekday} ${peak.date.slice(5)} with about ${Math.round(peak.expectedOrders)} pickups.${
+            i?.forecast.accuracyPct != null ? ` This forecast was ${i.forecast.accuracyPct}% accurate over the last two weeks.` : ""
+          }${i ? ` Next 30 days: about ₹${i.forecast.next30.revenue.toLocaleString("en-IN")} in revenue.` : ""}`
+        : "Not enough history yet for a forecast.",
     risks: risks.slice(0, 3),
     opportunities: opportunities.slice(0, 3),
   };

@@ -417,3 +417,37 @@ html[data-scrolled] .site-header {
   .scroll-progress { display: none !important; }
   .tilt { transform: none !important; }
 }
+
+/* ---------- "How it works" motion stage (components/how-motion.tsx) ----------
+   Kinetic storytelling: persistent glow blobs glide between scenes; each scene's
+   elements animate in on mount. .mg-paused freezes everything mid-motion. */
+.mg-paused, .mg-paused * { animation-play-state: paused !important; }
+.mg-blob { position: absolute; border-radius: 9999px; filter: blur(48px); transition: left 1.8s cubic-bezier(0.65, 0, 0.35, 1), top 1.8s cubic-bezier(0.65, 0, 0.35, 1), transform 1.8s cubic-bezier(0.65, 0, 0.35, 1), opacity 1.8s ease, background 1.8s ease; will-change: transform; }
+.mg-word { display: inline-block; opacity: 0; animation: mg-word 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.mg-key { background: linear-gradient(transparent 58%, rgb(250 204 21 / 0.55) 58%) no-repeat 0 0 / 0% 100%; animation: mg-word 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards, mg-sweep 0.6s ease-out forwards; color: #fde68a; }
+.mg-draw { animation: draw 1.6s cubic-bezier(0.65, 0, 0.35, 1) forwards; }
+.mg-pop { opacity: 0; animation: mg-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.mg-drop { opacity: 0; animation: mg-drop 0.9s cubic-bezier(0.34, 1.4, 0.64, 1) forwards; }
+.mg-rise { opacity: 0; animation: mg-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.mg-orbit { animation: mg-orbit 14s linear infinite; transform-origin: center; transform-box: fill-box; }
+.mg-orbit-rev { animation: mg-orbit 22s linear infinite reverse; transform-origin: center; transform-box: fill-box; }
+.mg-beam { animation: mg-beam 1.4s cubic-bezier(0.55, 0, 0.25, 1) forwards; }
+.mg-stamp { opacity: 0; animation: mg-stamp 0.55s cubic-bezier(0.3, 1.5, 0.5, 1) forwards; }
+.mg-burst { animation: mg-burst 1.6s ease-out forwards; }
+.mg-spin { animation: mg-orbit 9s linear infinite; transform-origin: center; }
+.mg-bob { animation: float 4s ease-in-out infinite; }
+@keyframes mg-word { from { opacity: 0; transform: translateY(0.45em); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes mg-sweep { to { background-size: 100% 100%; } }
+@keyframes mg-pop { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes mg-drop { from { opacity: 0; transform: translateY(-160%) rotate(-25deg); } to { opacity: 1; transform: none; } }
+@keyframes mg-rise { from { opacity: 0; transform: translateY(28px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes mg-orbit { to { transform: rotate(360deg); } }
+@keyframes mg-beam { 0% { transform: translateX(-30%) scaleX(0.2); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateX(240%) scaleX(1); opacity: 0; } }
+@keyframes mg-stamp { from { opacity: 0; transform: scale(2.4) rotate(-28deg); } to { opacity: 1; transform: scale(1) rotate(-12deg); } }
+@keyframes mg-burst { from { transform: scale(0.4); opacity: 0.9; } to { transform: scale(2.6); opacity: 0; } }
+@keyframes mg-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .mg-word, .mg-key, .mg-pop, .mg-drop, .mg-rise, .mg-stamp { opacity: 1; transform: none; filter: none; }
+  .mg-key { background-size: 100% 100%; }
+  .mg-blob { transition: none; }
+}

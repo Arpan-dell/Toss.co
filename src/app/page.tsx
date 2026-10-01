@@ -1,14 +1,9 @@
 import Link from "next/link";
 import { CountUp } from "@/components/count-up";
+import { HowMotion } from "@/components/how-motion";
 import { RevealText } from "@/components/reveal-text";
 import { Tilt } from "@/components/tilt";
 import { Logo } from "@/components/ui";
-
-const steps = [
-  { n: "01", icon: "⚖️", title: "The basket weighs itself", body: "A load cell under the basket tracks your laundry around the clock. No app to open, no button to press." },
-  { n: "02", icon: "📲", title: "It calls its own pickup", body: "The moment it hits your target weight, a driver gets the job on Telegram and accepts with one tap." },
-  { n: "03", icon: "💳", title: "Track it. Pay for it. Done.", body: "Watch the pickup in real time, then pay the invoice in a single click." },
-];
 
 const audiences = [
   { icon: "🏠", title: "Customers", body: "Zero effort. The basket handles scheduling while you get on with your day." },
@@ -208,26 +203,11 @@ export default function Home() {
           <h2 className="mt-3 max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
             <RevealText text="From full basket to picked up," /> <RevealText text="automatically." gradient />
           </h2>
-          <div className="relative mt-14 grid gap-4 md:grid-cols-3">
-            <div aria-hidden className="absolute top-12 right-[16%] left-[16%] hidden h-px bg-gradient-to-r from-accent/0 via-accent/50 to-accent-2/0 md:block" />
-            {steps.map((s, i) => (
-              <div key={s.n} data-reveal="up" data-reveal-delay={i * 140}>
-                <div className="glass glow-card h-full rounded-2xl p-6">
-                  <div className="flex items-center justify-between">
-                    <span
-                      className="grid size-12 place-items-center rounded-2xl text-xl shadow-[0_0_30px_-6px_rgb(139_123_255/0.8)]"
-                      style={{ background: "var(--gradient)" }}
-                      aria-hidden
-                    >
-                      {s.icon}
-                    </span>
-                    <span className="text-gradient font-mono text-sm font-semibold">{s.n}</span>
-                  </div>
-                  <h3 className="mt-6 text-lg font-medium">{s.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-secondary">{s.body}</p>
-                </div>
-              </div>
-            ))}
+          <p data-reveal="up" className="mt-4 max-w-xl text-secondary">
+            Thirty seconds, start to finish: watch a full basket turn into a picked-up, paid-for order. Tap the stage to pause, or jump to any step.
+          </p>
+          <div data-reveal="up" className="mt-10">
+            <HowMotion />
           </div>
         </section>
 

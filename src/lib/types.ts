@@ -24,6 +24,8 @@ export interface Tenant {
   winbackEnabled: boolean; // offer a discount to customers who stop ordering
   winbackDays: number; // …after this many days without a pickup
   winbackPct: number; // …of this many percent off their next pickup
+  closureRequestedAt?: string; // the manager asked Toss to remove the business
+  closureReason?: string;
 }
 
 // A discount waiting for a customer's next pickup (e.g. a win-back offer).

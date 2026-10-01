@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { geocodeStore } from "../dispatch/service";
+import { notifyClosureRequested, notifySubscriptionSubmitted } from "../email/notify";
 import { getSession } from "../session";
+import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
 import { isValidUpiId, normalizePaymentRef, normalizeUpiId } from "../upi";
 import { friendlyError, text, type FormState } from "./shared";
@@ -108,7 +110,7 @@ export async function setOrderAmount(_prev: FormState, formData: FormData): Prom
 
 // After paying the Toss owner's UPI ID, the manager submits the reference for approval.
 export async function submitSubscriptionPayment(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireManager();
+  const session = await requireManager();
   const months = Number(text(formData, "months"));
   const ref = normalizePaymentRef(text(formData, "ref"));
   if (!ref) return { error: friendlyError({ message: "invalid_reference" }) };
@@ -116,6 +118,23 @@ export async function submitSubscriptionPayment(_prev: FormState, formData: Form
   const supabase = await createClient();
   const { error } = await supabase.rpc("submit_subscription_payment", { p_months: months, p_ref: ref });
   if (error) return { error: friendlyError(error) };
+  await notifySubscriptionSubmitted(session.tenantId!, ref);
   done("/admin/billing");
-  return { message: "Payment submitted. Your plan is extended as soon as Toss confirms it." };
+  return { message: "Payment submitted. Your plan is extended as soon as Toss confirms it. We've emailed you a receipt." };
+}
+
+// The manager asks Toss to close their business. Recorded on the business and emailed to the owner,
+// who completes it; nothing is deleted automatically.
+export async function requestClosure(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireManager();
+  const reason = text(formData, "reason").slice(0, 500);
+  if (formData.get("confirm") !== "on") return { error: "Tick the box to confirm you want to close your business." };
+  const { error } = await supabaseAdmin()
+    .from("tenants")
+    .update({ closure_requested_at: new Date().toISOString(), closure_reason: reason || null })
+    .eq("id", session.tenantId!);
+  if (error) return { error: friendlyError(error) };
+  await notifyClosureRequested(session.tenantId!, reason);
+  done();
+  return { message: "Request sent. Toss will contact you by email to complete it." };
 }

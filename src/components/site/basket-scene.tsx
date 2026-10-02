@@ -71,7 +71,10 @@ const hamperY = transform([0.6, 0.72], [2.6, 0]);
 const hamperFade = transform([0.58, 0.66, 0.82, 1], [0, 1, 0.45, 0.35]);
 const portGlow = transform([0.42, 0.47, 0.55, 0.6], [0, 1, 1, 0]);
 
-function Box({ color, progress }: { color: string; progress: MotionValue<number> }) {
+// A pose set from outside (the order form's viewer): rotation and tilt, no scroll story.
+export type Pose = { ry: number; t: number };
+
+function Box({ color, progress, pose }: { color: string; progress?: MotionValue<number>; pose?: React.RefObject<Pose> }) {
   const group = useRef<THREE.Group>(null);
   const plate = useRef<THREE.Mesh>(null);
   const hamper = useRef<THREE.Group>(null);
@@ -85,17 +88,27 @@ function Box({ color, progress }: { color: string; progress: MotionValue<number>
   const wide = useThree((st) => st.size.width >= 900);
 
   useFrame((_, dt) => {
-    const p = progress.get();
     const k = 1 - Math.pow(0.0008, dt); // frame-rate independent smoothing
     const s = smooth.current;
-    s.ry += (rotY(p) - s.ry) * k;
-    s.x += ((wide ? posX(p) : 0) - s.x) * k;
-    s.t += (tilt(p) - s.t) * k;
-    s.s += (zoom(p) - s.s) * k;
-    s.py += (plateY(p) - s.py) * k;
-    s.hy += (hamperY(p) - s.hy) * k;
-    s.hf += (hamperFade(p) - s.hf) * k;
-    s.g += (portGlow(p) - s.g) * k;
+    if (pose?.current) {
+      // viewer: just the box, turned to the requested pose
+      s.ry += (pose.current.ry - s.ry) * k;
+      s.t += (pose.current.t - s.t) * k;
+      s.x += (0 - s.x) * k;
+      s.s += (1 - s.s) * k;
+      s.hf = 0;
+      s.g = 0;
+    } else {
+      const p = progress?.get() ?? 0;
+      s.ry += (rotY(p) - s.ry) * k;
+      s.x += ((wide ? posX(p) : 0) - s.x) * k;
+      s.t += (tilt(p) - s.t) * k;
+      s.s += (zoom(p) - s.s) * k;
+      s.py += (plateY(p) - s.py) * k;
+      s.hy += (hamperY(p) - s.hy) * k;
+      s.hf += (hamperFade(p) - s.hf) * k;
+      s.g += (portGlow(p) - s.g) * k;
+    }
     const g = group.current!;
     g.rotation.set(s.t, s.ry, 0);
     g.position.x = s.x;
@@ -192,12 +205,25 @@ function Box({ color, progress }: { color: string; progress: MotionValue<number>
   );
 }
 
-export default function BasketScene({ color, progress, active }: { color: string; progress: MotionValue<number>; active: boolean }) {
+export default function BasketScene({
+  color,
+  progress,
+  pose,
+  active,
+  near = false,
+}: {
+  color: string;
+  progress?: MotionValue<number>;
+  pose?: React.RefObject<Pose>;
+  active: boolean;
+  /** closer camera for the smaller viewer in the order form */
+  near?: boolean;
+}) {
   return (
     <Canvas
       frameloop={active ? "always" : "never"}
       dpr={[1, 1.75]}
-      camera={{ position: [0, 0.9, 3.1], fov: 34 }}
+      camera={{ position: near ? [0, 0.75, 2.5] : [0, 0.9, 3.1], fov: 34 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       onCreated={({ camera }) => camera.lookAt(0, 0.05, 0)}
       aria-hidden
@@ -212,7 +238,7 @@ export default function BasketScene({ color, progress, active }: { color: string
         <Lightformer form="rect" intensity={1} position={[-4, 1, 0]} rotation-y={Math.PI / 2} scale={[4, 2, 1]} />
         <Lightformer form="rect" intensity={1} position={[4, 1, 0]} rotation-y={-Math.PI / 2} scale={[4, 2, 1]} />
       </Environment>
-      <Box color={color} progress={progress} />
+      <Box color={color} progress={progress} pose={pose} />
       <ContactShadows position={[0, -0.2, 0]} opacity={0.42} scale={5} blur={2.6} far={1.6} resolution={512} />
     </Canvas>
   );

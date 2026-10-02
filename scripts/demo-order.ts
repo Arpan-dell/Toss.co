@@ -7,9 +7,10 @@
  */
 import { createHash, randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { need } from "./env";
 
 const SITE = process.env.TOSS_SITE ?? "https://toss-code-x-a24a.vercel.app";
-const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xysopyyujfgwpwfrhmei.supabase.co";
+const SB_URL = need("NEXT_PUBLIC_SUPABASE_URL");
 const SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!SECRET) throw new Error("Set SUPABASE_SERVICE_ROLE_KEY");
 const admin = createClient(SB_URL, SECRET, { auth: { persistSession: false, autoRefreshToken: false } });

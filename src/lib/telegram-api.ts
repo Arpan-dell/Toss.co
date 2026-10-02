@@ -11,8 +11,19 @@ export type ReplyKeyboard = {
   input_field_placeholder?: string;
 };
 
+// The bot token is part of every Bot API URL. A failed fetch can carry the request in its error, so network
+// failures are rethrown as a plain message: nothing that reaches a log can contain the token.
+async function call(token: string, method: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`https://api.telegram.org/bot${token}/${method}`, init);
+  } catch (err) {
+    const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+    throw new Error(`Telegram ${method}: ${timedOut ? "timed out" : "network error"}`);
+  }
+}
+
 export async function tg<T = unknown>(token: string, method: string, body: Record<string, unknown>): Promise<T> {
-  const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+  const res = await call(token, method, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -62,7 +73,7 @@ export async function sendDocument(token: string, chatId: string, bytes: Uint8Ar
   form.set("caption", caption);
   form.set("parse_mode", "HTML");
   form.set("document", new Blob([new Uint8Array(bytes)], { type: "application/pdf" }), filename);
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendDocument`, { method: "POST", body: form, signal: AbortSignal.timeout(15000) });
+  const res = await call(token, "sendDocument", { method: "POST", body: form, signal: AbortSignal.timeout(15000) });
   const json = (await res.json()) as { ok: boolean; description?: string };
   if (!json.ok) throw new Error(`Telegram sendDocument: ${json.description ?? res.status}`);
 }

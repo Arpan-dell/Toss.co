@@ -11,10 +11,11 @@
 import { randomBytes } from "node:crypto";
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { need } from "./env";
 
 const SITE = process.env.TOSS_SITE ?? "https://toss-code-x-a24a.vercel.app";
-const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xysopyyujfgwpwfrhmei.supabase.co";
-const PUB = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "sb_publishable_y8cOXBSAyWGE30HnmLRgKw_Rma309zC";
+const SB_URL = need("NEXT_PUBLIC_SUPABASE_URL");
+const PUB = need("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 const SECRET = must("SUPABASE_SERVICE_ROLE_KEY");
 const BRIDGE = must("TOSS_BRIDGE_KEY");
 

@@ -43,7 +43,9 @@ export function HeroReveal() {
       <div className="sticky top-0 h-[100dvh] overflow-hidden [perspective:1400px]">
         <motion.div style={{ scale, rotateX, rotateY, transformOrigin: "50% 80%" }} className="absolute inset-0 will-change-transform">
           <motion.div style={{ x: sketchX, y: sketchY }} className="absolute -inset-6">
-            <Image src="/brand/site/hero-sketch.webp" alt="" fill priority sizes="100vw" className="hero-sketch object-cover object-[60%_center]" />
+            {/* light theme gets a pre-inverted copy (navy ink on paper) rather than a live CSS filter */}
+            <Image src="/brand/site/hero-sketch.webp" alt="" fill priority sizes="100vw" className="object-cover object-[60%_center] light:hidden" />
+            <Image src="/brand/site/hero-sketch-light.webp" alt="" fill priority sizes="100vw" className="hidden object-cover object-[60%_center] light:block" />
           </motion.div>
           <motion.div style={{ clipPath }} className="absolute inset-0">
             <Image

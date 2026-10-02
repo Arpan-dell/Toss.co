@@ -153,7 +153,8 @@ function CustomerScene({ step }: { step: number }) {
             </linearGradient>
           </defs>
           <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="rgb(255 255 255 / 0.1)" strokeWidth="14" strokeLinecap="round" />
-          <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#hs-g)" strokeWidth="14" strokeLinecap="round" strokeDasharray="252" style={{ strokeDashoffset: "calc(252px * (1 - min(1, var(--p) * 1.25)))", filter: "drop-shadow(0 0 10px rgb(2 169 161 / 0.6))" }} />
+          <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="rgb(2 169 161 / 0.25)" strokeWidth="26" strokeLinecap="round" strokeDasharray="252" style={{ strokeDashoffset: "calc(252px * (1 - min(1, var(--p) * 1.25)))" }} />
+          <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#hs-g)" strokeWidth="14" strokeLinecap="round" strokeDasharray="252" style={{ strokeDashoffset: "calc(252px * (1 - min(1, var(--p) * 1.25)))" }} />
         </svg>
         <p className="-mt-14 text-4xl font-semibold tabular-nums text-fg">
           <ProgressNumber to={5} decimals={1} />
@@ -283,7 +284,8 @@ function DriverScene({ step }: { step: number }) {
             <path key={i} d={`M${i * 45 - 20} 0 L${i * 45 + 40} 330`} stroke="rgb(255 255 255 / 0.04)" strokeWidth="10" />
           ))}
           <path d={path} fill="none" stroke="rgb(255 255 255 / 0.1)" strokeWidth="7" strokeLinecap="round" />
-          <path d={path} fill="none" stroke="#5eead4" strokeWidth="5" strokeLinecap="round" strokeDasharray="520" style={{ strokeDashoffset: "calc(520px * (1 - min(1, var(--p) * 1.2)))", filter: "drop-shadow(0 0 6px #5eead4)" }} />
+          <path d={path} fill="none" stroke="rgb(94 234 212 / 0.25)" strokeWidth="13" strokeLinecap="round" strokeDasharray="520" style={{ strokeDashoffset: "calc(520px * (1 - min(1, var(--p) * 1.2)))" }} />
+          <path d={path} fill="none" stroke="#5eead4" strokeWidth="5" strokeLinecap="round" strokeDasharray="520" style={{ strokeDashoffset: "calc(520px * (1 - min(1, var(--p) * 1.2)))" }} />
           <text x="24" y="314" textAnchor="middle" fontSize="16">🚚</text>
           <text x="110" y="142" textAnchor="middle" fontSize="15">🏠</text>
           <text x="150" y="42" textAnchor="middle" fontSize="15">🏠</text>
@@ -494,7 +496,7 @@ function MotionLayer({ role, step }: { role: Role; step: number }) {
       {/* kinetic keyword, sliding with scroll */}
       <div key={`w-${role}-${step}`} className="absolute inset-x-0 top-[8%] overflow-hidden text-center">
         <span
-          className="hs-outline hs-word-in inline-block whitespace-nowrap leading-none font-black"
+          className="hs-outline hs-word-in inline-block whitespace-nowrap leading-none font-black will-change-transform"
           style={{ fontSize: `min(9.5rem, ${Math.round(118 / WORDS[role][step].length)}cqw)`, transform: "translateX(calc((0.5 - var(--p)) * 14%))" }}
         >
           {WORDS[role][step]}
@@ -503,7 +505,7 @@ function MotionLayer({ role, step }: { role: Role; step: number }) {
 
       {/* shape that morphs from step to step and turns with scroll */}
       <div
-        className="absolute aspect-square w-[52%] max-w-[440px] border-2 transition-[border-radius,border-color] duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)]"
+        className="absolute aspect-square w-[52%] max-w-[440px] border-2 will-change-transform transition-[border-radius,border-color] duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)]"
         style={{ borderRadius: SHAPES[step], borderColor: `${c1}55`, transform: `rotate(calc(${step * 45}deg + var(--p) * 90deg))`, boxShadow: `0 0 60px -20px ${c1}` }}
       />
 
@@ -523,11 +525,24 @@ function MotionLayer({ role, step }: { role: Role; step: number }) {
           r="170"
           fill="none"
           stroke={`url(#hs-ring-${role})`}
+          strokeOpacity="0.25"
+          strokeWidth="12"
+          strokeLinecap="round"
+          strokeDasharray="1068"
+          transform="rotate(-90 200 200)"
+          style={{ strokeDashoffset: "calc(1068px * (1 - var(--p)))" }}
+        />
+        <circle
+          cx="200"
+          cy="200"
+          r="170"
+          fill="none"
+          stroke={`url(#hs-ring-${role})`}
           strokeWidth="3"
           strokeLinecap="round"
           strokeDasharray="1068"
           transform="rotate(-90 200 200)"
-          style={{ strokeDashoffset: "calc(1068px * (1 - var(--p)))", filter: `drop-shadow(0 0 8px ${c1})` }}
+          style={{ strokeDashoffset: "calc(1068px * (1 - var(--p)))" }}
         />
       </svg>
 
@@ -553,9 +568,9 @@ function Satellites({ role, step, device }: { role: Role; step: number; device: 
   return (
     <div key={`s-${role}-${step}`} aria-hidden className="pointer-events-none absolute inset-0 z-20 hidden sm:block">
       {CHIPS[role][step].map(([icon, text], i) => (
-        <div key={text} className="absolute" style={{ ...CHIP_POS[device][i], transform: `translateY(calc((var(--p) - 0.5) * ${CHIP_DRIFT[i]}px))` }}>
+        <div key={text} className="absolute will-change-transform" style={{ ...CHIP_POS[device][i], transform: `translateY(calc((var(--p) - 0.5) * ${CHIP_DRIFT[i]}px))` }}>
           <div className="mg-pop" style={{ animationDelay: `${450 + i * 220}ms` }}>
-            <div className="mg-bob flex items-center gap-2 rounded-2xl border border-ink/15 bg-ink/[0.07] px-3 py-2 text-xs font-medium whitespace-nowrap text-fg shadow-[0_12px_40px_-12px_rgb(0_0_0/0.8)] backdrop-blur-md" style={{ animationDelay: `${i * 0.7}s` }}>
+            <div className="mg-bob flex items-center gap-2 rounded-2xl border border-ink/15 bg-surface-solid/90 px-3 py-2 text-xs font-medium whitespace-nowrap text-fg shadow-[0_12px_40px_-12px_rgb(0_0_0/0.8)]" style={{ animationDelay: `${i * 0.7}s` }}>
               <span className="grid size-6 place-items-center rounded-lg bg-ink/10 text-accent">{icon && (() => { const I = icon; return <I size={15} weight="bold" />; })()}</span>
               {text}
             </div>
@@ -620,7 +635,8 @@ export function HowScrolly() {
       const r = el.getBoundingClientRect();
       p = Math.min(1, Math.max(0, (mid - r.top) / Math.max(r.height, 1)));
     }
-    stage.current?.style.setProperty("--p", String(p));
+    // --p restyles the whole stage, so skip writes too small to see
+    if (Math.abs(p - lastP) > 0.002 || p === 0 || p === 1) stage.current?.style.setProperty("--p", p.toFixed(3));
     lastP = p;
     listeners.forEach((l) => l(p));
     setStep((s) => (s === active ? s : active));
@@ -628,14 +644,25 @@ export function HowScrolly() {
 
   useEffect(() => {
     let raf = 0;
+    let near = false;
     const onScroll = () => {
+      if (!near) return; // off screen: no measuring, no restyling
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(measure);
     };
+    const section = document.getElementById("how-steps");
+    const io = new IntersectionObserver(([e]) => {
+      near = e.isIntersecting;
+      // looping animations (SVG orbits run on the main thread) pause while the stage is off screen
+      stage.current?.toggleAttribute("data-paused", !near);
+      if (near) onScroll();
+    }, { rootMargin: "50% 0px" });
+    if (section) io.observe(section);
     raf = requestAnimationFrame(measure); // first measurement on the next frame
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
+      io.disconnect();
       cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
@@ -652,7 +679,7 @@ export function HowScrolly() {
     <div>
       {/* role switcher */}
       <div className="sticky top-3 z-30 flex justify-center py-3">
-        <div className="relative flex rounded-full border border-ink/10 bg-surface-solid/85 p-1 shadow-xl backdrop-blur" role="tablist" aria-label="Who are you?">
+        <div className="relative flex rounded-full border border-ink/10 bg-surface-solid/95 p-1 shadow-xl" role="tablist" aria-label="Who are you?">
           <span
             aria-hidden
             className="absolute inset-y-1 rounded-full bg-gradient-to-r from-accent to-accent-2 transition-all duration-500 ease-[cubic-bezier(0.65,0,0.35,1)]"
@@ -712,7 +739,7 @@ export function HowScrolly() {
               )}
               </div>
             </div>
-            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-[11px] text-ink/70 backdrop-blur">
+            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full bg-black/55 px-3 py-1 text-[11px] text-ink/70">
               <R.icon size={13} weight="bold" /> {R.label} · step {step + 1} of {R.steps.length}
             </div>
           </div>

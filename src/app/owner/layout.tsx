@@ -1,10 +1,11 @@
+import type { PortalNavItem } from "@/components/portal-dock";
 import { PortalShell } from "@/components/portal-shell";
 import { requireRole } from "@/lib/session";
 
-const nav = [
-  { href: "/owner", label: "Businesses" },
-  { href: "/owner/payments", label: "Subscription payments" },
-  { href: "/owner/settings", label: "Plan & UPI" },
+const nav: PortalNavItem[] = [
+  { href: "/owner", label: "Businesses", icon: "businesses" },
+  { href: "/owner/payments", label: "Subscription payments", icon: "subscriptions" },
+  { href: "/owner/settings", label: "Plan & UPI", icon: "plan" },
 ];
 
 export default async function OwnerLayout({ children }: LayoutProps<"/owner">) {

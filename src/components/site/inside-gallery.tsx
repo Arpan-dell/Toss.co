@@ -25,7 +25,7 @@ export function InsideGallery() {
       {SHOTS.map((s, i) => {
         const open = i === active;
         return (
-          <motion.button
+          <button
             key={s.src}
             type="button"
             onMouseEnter={() => setActive(i)}
@@ -33,8 +33,7 @@ export function InsideGallery() {
             onClick={() => setActive(i)}
             aria-pressed={open}
             aria-label={s.title}
-            animate={{ flex: open ? 4 : 0.8 }}
-            transition={reduce ? { duration: 0 } : { duration: 0.6, ease: EASE }}
+            style={{ flex: `${open ? 4 : 0.8} 1 0%`, transition: reduce ? "none" : "flex-grow 0.6s cubic-bezier(0.25, 1, 0.5, 1)" }}
             className="group relative min-h-0 min-w-0 overflow-hidden rounded-3xl border border-ink/10 bg-surface-solid text-left outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Image
@@ -55,7 +54,7 @@ export function InsideGallery() {
               <p className="text-2xl font-bold tracking-tight text-fg">{s.title}</p>
               <p className="mt-2 max-w-md text-sm leading-relaxed text-secondary">{s.body}</p>
             </motion.div>
-          </motion.button>
+          </button>
         );
       })}
     </div>

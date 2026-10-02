@@ -1,21 +1,22 @@
 import Link from "next/link";
 import { LiveRefresh } from "@/components/live-refresh";
+import type { PortalNavItem } from "@/components/portal-dock";
 import { PortalShell } from "@/components/portal-shell";
 import { getTenantById } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { planState } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
 
-const nav = [
-  { href: "/admin", label: "Live board" },
-  { href: "/admin/ai", label: "✨ Toss AI" },
-  { href: "/admin/payments", label: "Payments" },
-  { href: "/admin/customers", label: "Customers" },
-  { href: "/admin/fleet", label: "Fleet" },
-  { href: "/admin/orders", label: "Orders" },
-  { href: "/admin/analytics", label: "Analytics" },
-  { href: "/admin/business", label: "Business" },
-  { href: "/admin/billing", label: "Billing" },
+const nav: PortalNavItem[] = [
+  { href: "/admin", label: "Live board", icon: "live" },
+  { href: "/admin/ai", label: "Toss AI", icon: "ai" },
+  { href: "/admin/payments", label: "Payments", icon: "payments" },
+  { href: "/admin/customers", label: "Customers", icon: "customers" },
+  { href: "/admin/fleet", label: "Fleet", icon: "fleet" },
+  { href: "/admin/orders", label: "Orders", icon: "orders" },
+  { href: "/admin/analytics", label: "Analytics", icon: "analytics" },
+  { href: "/admin/business", label: "Business", icon: "business" },
+  { href: "/admin/billing", label: "Billing", icon: "billing" },
 ];
 
 export default async function ManagerLayout({ children }: LayoutProps<"/admin">) {

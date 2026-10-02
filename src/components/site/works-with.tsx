@@ -1,8 +1,5 @@
-"use client";
-
-import { motion, useReducedMotion } from "framer-motion";
-
 // The services Toss actually plugs into. One marquee on the page, logos only (Simple Icons, self-hosted).
+// A pure CSS animation (.marquee-track) so the endless scroll runs on the compositor, not in JS.
 const LOGOS = [
   { file: "telegram", name: "Telegram" },
   { file: "googlepay", name: "Google Pay" },
@@ -13,7 +10,6 @@ const LOGOS = [
 ];
 
 export function WorksWith() {
-  const reduce = useReducedMotion();
   const row = [...LOGOS, ...LOGOS, ...LOGOS];
   return (
     <section aria-label="Works with" className="relative border-y border-ink/5 py-14">
@@ -21,18 +17,14 @@ export function WorksWith() {
       <div className="relative mt-8 overflow-hidden">
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-32 bg-gradient-to-r from-bg to-transparent" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-32 bg-gradient-to-l from-bg to-transparent" />
-        <motion.ul
-          className="flex w-max items-center gap-20"
-          animate={reduce ? undefined : { x: ["0%", "-50%"] }}
-          transition={{ duration: 40, ease: "linear", repeat: Infinity }}
-        >
+        <ul className="marquee-track flex w-max items-center gap-20">
           {[...row, ...row].map((l, i) => (
             <li key={i} className="flex shrink-0 items-center gap-3 opacity-60 transition-opacity hover:opacity-100">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/brand/logos/${l.file}.svg`} alt={l.name} className="h-7 w-auto light:brightness-0" loading="lazy" />
             </li>
           ))}
-        </motion.ul>
+        </ul>
       </div>
     </section>
   );

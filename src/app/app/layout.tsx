@@ -1,12 +1,13 @@
+import type { PortalNavItem } from "@/components/portal-dock";
 import { PortalShell } from "@/components/portal-shell";
 import { TelegramMiniApp } from "@/components/telegram-miniapp";
 import { getCustomer } from "@/lib/data";
 import { requireRole } from "@/lib/session";
 
-const nav = [
-  { href: "/app", label: "Overview" },
-  { href: "/app/orders", label: "Order history" },
-  { href: "/app/settings", label: "Settings" },
+const nav: PortalNavItem[] = [
+  { href: "/app", label: "Overview", icon: "home" },
+  { href: "/app/orders", label: "Order history", icon: "history" },
+  { href: "/app/settings", label: "Settings", icon: "settings" },
 ];
 
 export default async function CustomerLayout({ children }: LayoutProps<"/app">) {

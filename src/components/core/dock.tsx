@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { createContext, useContext, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
@@ -16,6 +17,8 @@ import {
 // macOS-style dock: items grow as the pointer nears them. All sizing runs on motion values, so moving the
 // mouse along the dock never re-renders React.
 const BASE = 40;
+// in-app paths navigate client-side; anchors and external links stay plain <a>
+const MotionLink = motion.create(Link);
 
 type DockCtx = { mouseX: MotionValue<number>; spring: SpringOptions; magnification: number; distance: number };
 const DockContext = createContext<DockCtx | null>(null);
@@ -73,7 +76,14 @@ export function Dock({ children, className = "", spring = { mass: 0.1, stiffness
   );
 }
 
-type DockItemProps = { children: React.ReactNode; className?: string; href?: string; onClick?: (e: React.MouseEvent) => void; "aria-label"?: string };
+type DockItemProps = {
+  children: React.ReactNode;
+  className?: string;
+  href?: string;
+  onClick?: (e: React.MouseEvent) => void;
+  "aria-label"?: string;
+  "aria-current"?: "page";
+};
 
 export function DockItem({ children, className = "", href, onClick, ...rest }: DockItemProps) {
   const ref = useRef<HTMLAnchorElement & HTMLButtonElement>(null);
@@ -94,10 +104,15 @@ export function DockItem({ children, className = "", href, onClick, ...rest }: D
     onBlur: () => hovered.set(0),
     className: `relative inline-flex shrink-0 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`,
     "aria-label": rest["aria-label"],
+    "aria-current": rest["aria-current"],
   };
   return (
     <ItemContext.Provider value={ctx}>
-      {href ? (
+      {href?.startsWith("/") ? (
+        <MotionLink ref={ref} href={href} onClick={onClick} {...shared}>
+          {children}
+        </MotionLink>
+      ) : href ? (
         <motion.a ref={ref} href={href} onClick={onClick} {...shared}>
           {children}
         </motion.a>

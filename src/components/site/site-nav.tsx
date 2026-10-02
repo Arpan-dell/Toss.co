@@ -9,10 +9,10 @@ import { useDocked } from "./use-docked";
 import { Tip } from "@/components/ui";
 
 const LINKS = [
+  { label: "The basket", href: "#basket" },
   { label: "How it works", href: "#how" },
   { label: "Inside Toss", href: "#inside" },
   { label: "Who it's for", href: "#roles" },
-  { label: "Why Toss", href: "#why" },
   { label: "Find a laundry", href: "/laundries" },
 ];
 

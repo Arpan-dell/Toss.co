@@ -5,6 +5,8 @@ const COLUMNS = [
   {
     title: "Product",
     links: [
+      { label: "The Toss basket", href: "#basket" },
+      { label: "Get a basket", href: "#buy" },
       { label: "How it works", href: "#how" },
       { label: "Inside Toss", href: "#inside" },
       { label: "Who it's for", href: "#roles" },

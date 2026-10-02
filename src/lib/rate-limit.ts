@@ -18,6 +18,7 @@ export const LIMITS = {
   resetRequestIp: { limit: 3, windowSec: 60 * 60 }, // password reset emails: 3 per hour per IP
   resetRequestAccount: { limit: 3, windowSec: 60 * 60 }, // and per account
   resetSubmitIp: { limit: 10, windowSec: 60 * 60 },
+  basketRequestIp: { limit: 3, windowSec: 60 * 60 }, // "Get a basket" requests
 } as const;
 
 /** The caller's IP as seen by Vercel's edge (first x-forwarded-for hop). */

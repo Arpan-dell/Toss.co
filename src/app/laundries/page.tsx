@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SiteDock } from "@/components/site/site-dock";
 import { TelegramMiniApp } from "@/components/telegram-miniapp";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Logo, PageTitle } from "@/components/ui";
@@ -40,6 +41,9 @@ export default async function LaundriesPage() {
           <Link href="/" aria-label="Toss home">
             <Logo />
           </Link>
+          <Link href="/" className="group hidden items-center gap-1.5 text-sm text-secondary transition-colors hover:text-fg sm:inline-flex">
+            <span className="transition-transform group-hover:-translate-x-1">←</span> Back to home
+          </Link>
           <div className="ml-auto flex items-center gap-3 text-sm">
             <ThemeToggle className="size-9" />
             {session ? (
@@ -62,6 +66,7 @@ export default async function LaundriesPage() {
         </p>
         <LaundryFinder viewer={viewer} currentCode={currentCode} home={home} />
       </main>
+      <SiteDock page="laundries" />
       <TelegramMiniApp linked={viewer !== "customer" || telegramLinked} />
     </div>
   );

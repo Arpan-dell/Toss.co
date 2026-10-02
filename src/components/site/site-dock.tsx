@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Cube, House, MapPinArea, Moon, PlayCircle, SignIn, Sparkle, SquaresFour, Sun, TelegramLogo, UsersThree, type Icon } from "@phosphor-icons/react";
+import { Cube, House, MapPinArea, Moon, PlayCircle, SignIn, Sparkle, SquaresFour, Sun, UsersThree, type Icon } from "@phosphor-icons/react";
 import { Dock, DockIcon, DockItem, DockLabel } from "@/components/core/dock";
 import { switchTheme } from "@/components/theme-toggle";
 import { useDocked } from "./use-docked";
@@ -14,18 +14,22 @@ const ITEMS: { title: string; href: string; icon: Icon; section?: string; deskto
   { title: "Inside Toss", href: "#inside", icon: SquaresFour, section: "inside" },
   { title: "Who it's for", href: "#roles", icon: UsersThree, section: "roles" },
   { title: "Why Toss", href: "#why", icon: Sparkle, section: "why", desktopOnly: true },
-  { title: "Find a laundry", href: "/laundries", icon: MapPinArea },
-  { title: "Driver bot", href: "https://t.me/toss_driver_bot", icon: TelegramLogo, desktopOnly: true },
+  { title: "Find a laundry", href: "/laundries", icon: MapPinArea, section: "laundries" },
   { title: "Sign in", href: "/login", icon: SignIn },
 ];
 
 // Floating dock that replaces the top nav as soon as you scroll (see useDocked). The dot marks the section
 // in view; the last button switches the theme, since the top nav and its toggle are gone by then.
-export function SiteDock() {
-  const shown = useDocked();
-  const [active, setActive] = useState("top");
+// On another page (page="laundries") it is always shown, marks that page, and its section links lead back
+// to the landing page.
+export function SiteDock({ page }: { page?: "laundries" }) {
+  const docked = useDocked();
+  const shown = page ? true : docked;
+  const [scrolledTo, setActive] = useState("top");
+  const active = page ?? scrolledTo;
 
   useEffect(() => {
+    if (page) return;
     const els = ITEMS.flatMap((i) => (i.section && i.section !== "top" ? [document.getElementById(i.section)] : [])).filter(Boolean) as HTMLElement[];
     const io = new IntersectionObserver(
       (entries) => {
@@ -40,7 +44,7 @@ export function SiteDock() {
       io.disconnect();
       window.removeEventListener("scroll", top);
     };
-  }, []);
+  }, [page]);
 
   return (
     <AnimatePresence>
@@ -59,9 +63,9 @@ export function SiteDock() {
               return (
                 <DockItem
                   key={item.title}
-                  href={item.href}
+                  href={page && item.href.startsWith("#") ? `/${item.href}` : item.href}
                   aria-label={item.title}
-                  className={`aspect-square rounded-full transition-colors ${on ? "bg-accent/15 text-accent" : "bg-ink/[0.07] text-secondary hover:text-fg"} ${item.desktopOnly ? "max-sm:hidden" : ""}`}
+                  className={`aspect-square rounded-full transition-colors ${on ? "bg-accent/15 text-accent" : "bg-ink/[0.07] text-secondary hover:text-fg"} ${item.desktopOnly && !(page && item.section === "top") ? "max-sm:hidden" : ""}`}
                 >
                   <DockLabel>{item.title}</DockLabel>
                   <DockIcon>
@@ -71,7 +75,7 @@ export function SiteDock() {
                 </DockItem>
               );
             })}
-            <DockItem onClick={switchTheme} aria-label="Switch between light and dark theme" className="aspect-square rounded-full bg-ink/[0.07] text-secondary transition-colors hover:text-fg">
+            <DockItem onClick={switchTheme} aria-label="Switch between light and dark theme" className={`aspect-square rounded-full bg-ink/[0.07] text-secondary transition-colors hover:text-fg ${page ? "max-sm:hidden" : ""}`}>
               <DockLabel>Theme</DockLabel>
               <DockIcon>
                 <Sun size="100%" className="light:hidden" />

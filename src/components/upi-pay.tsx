@@ -6,7 +6,7 @@ import { burstFromEvent } from "@/lib/fx";
 import { detectUpiPlatform, upiAppLinks, type UpiPlatform } from "@/lib/upi";
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-white/[0.03] px-4 py-2.5 font-mono text-sm tracking-wide transition-shadow placeholder:font-sans placeholder:tracking-normal placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(139_123_255/0.2)] focus:outline-none";
+  "w-full rounded-xl border border-border bg-white/[0.03] px-4 py-2.5 font-mono text-sm tracking-wide transition-shadow placeholder:font-sans placeholder:tracking-normal placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
 
 const noopSubscribe = () => () => {};
 

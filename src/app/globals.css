@@ -1,20 +1,22 @@
 @import "tailwindcss";
 
-/* Design tokens — black-first brand theme. Components use these via Tailwind (bg-surface, text-muted, …). */
+/* Design tokens: midnight base, one aqua accent (from the Toss logo teal). Components use these via
+   Tailwind (bg-surface, text-muted, ...). --accent-rgb feeds every glow and tinted shadow. */
 :root {
   color-scheme: dark;
-  --bg: #050507;
-  --surface: rgb(255 255 255 / 0.035);
-  --surface-solid: #0e0e12;
+  --bg: #0c1128;
+  --surface: rgb(255 255 255 / 0.04);
+  --surface-solid: #121a3c;
   --surface-2: rgb(255 255 255 / 0.07);
-  --border: rgb(255 255 255 / 0.09);
-  --border-strong: rgb(255 255 255 / 0.16);
-  --text: #f5f5f7;
-  --text-secondary: #b4b4be;
-  --text-muted: #7c7c88;
-  --accent: #8b7bff;
-  --accent-2: #22d3ee;
-  --accent-contrast: #ffffff;
+  --border: rgb(255 255 255 / 0.1);
+  --border-strong: rgb(255 255 255 / 0.2);
+  --text: #f4f6ff;
+  --text-secondary: #c3c8da;
+  --text-muted: #8a93ae;
+  --accent: #2ee6d6;
+  --accent-rgb: 46 230 214;
+  --accent-2: #00b4ff;
+  --accent-contrast: #04131c;
   --good: #4ade80;
   --good-bg: rgb(74 222 128 / 0.12);
   --warn: #fbbf24;
@@ -26,7 +28,7 @@
   --series-1: #9085e9; /* validated dark-mode categorical slot */
   --series-1-wash: rgb(144 133 233 / 0.14);
   --grid: rgb(255 255 255 / 0.06);
-  --gradient: linear-gradient(135deg, #8b7bff 0%, #6d8bff 45%, #22d3ee 100%);
+  --gradient: linear-gradient(135deg, #2ee6d6 0%, #19cbe9 50%, #00b4ff 100%);
 }
 
 @theme inline {
@@ -50,7 +52,7 @@
   --color-critical-bg: var(--critical-bg);
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-outfit);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -60,7 +62,7 @@ body {
 }
 
 ::selection {
-  background: rgb(139 123 255 / 0.4);
+  background: rgb(var(--accent-rgb) / 0.4);
 }
 
 /* ---------- Background: drifting aurora + faint grid ---------- */
@@ -88,9 +90,9 @@ body {
   opacity: 0.35;
   animation: drift 22s ease-in-out infinite alternate;
 }
-.aurora span:nth-child(1) { width: 520px; height: 520px; background: #6d4bff; top: -180px; left: -120px; }
-.aurora span:nth-child(2) { width: 460px; height: 460px; background: #0891b2; top: -120px; right: -140px; animation-delay: -7s; opacity: 0.25; }
-.aurora span:nth-child(3) { width: 380px; height: 380px; background: #7c3aed; bottom: -200px; left: 35%; animation-delay: -14s; opacity: 0.18; }
+.aurora span:nth-child(1) { width: 560px; height: 560px; background: #2a3fd1; top: -180px; left: -120px; }
+.aurora span:nth-child(2) { width: 460px; height: 460px; background: #0f9fa3; top: -120px; right: -140px; animation-delay: -7s; opacity: 0.25; }
+.aurora span:nth-child(3) { width: 380px; height: 380px; background: #6b2fd6; bottom: -200px; left: 35%; animation-delay: -14s; opacity: 0.18; }
 
 @keyframes drift {
   0% { transform: translate(0, 0) scale(1); }
@@ -129,17 +131,13 @@ body {
 .glow-card:hover { transform: translateY(-2px); }
 
 .btn-primary {
-  background: var(--gradient);
-  background-size: 200% 200%;
-  color: #fff;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12) inset, 0 8px 30px -8px rgb(139 123 255 / 0.7);
-  transition: background-position 0.5s, box-shadow 0.3s, transform 0.2s;
+  background: #f4f6ff;
+  color: #0c1128;
+  box-shadow: 0 0 20px rgb(255 255 255 / 0.18);
+  transition: box-shadow 0.3s, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s;
 }
-.btn-primary:hover {
-  background-position: 100% 0;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.2) inset, 0 10px 40px -6px rgb(34 211 238 / 0.6);
-}
-.btn-primary:active { transform: scale(0.98); }
+.btn-primary:hover { background: #ffffff; box-shadow: 0 0 34px rgb(255 255 255 / 0.32), 0 0 60px -10px rgb(var(--accent-rgb) / 0.55); }
+.btn-primary:active { transform: scale(0.96); }
 
 .btn-ghost {
   border: 1px solid var(--border-strong);
@@ -149,7 +147,7 @@ body {
 .btn-ghost:hover { background: rgb(255 255 255 / 0.08); border-color: rgb(255 255 255 / 0.28); }
 
 .text-gradient {
-  background: linear-gradient(90deg, #c4b5fd, #8b7bff, #22d3ee, #c4b5fd);
+  background: linear-gradient(90deg, #e6fffb, #2ee6d6, #00b4ff, #e6fffb);
   background-size: 300% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -201,8 +199,8 @@ body {
   animation: pulse-ring 2s ease-out infinite;
 }
 @keyframes pulse-ring {
-  0% { box-shadow: 0 0 0 0 rgb(139 123 255 / 0.6); }
-  100% { box-shadow: 0 0 0 10px rgb(139 123 255 / 0); }
+  0% { box-shadow: 0 0 0 0 rgb(var(--accent-rgb) / 0.6); }
+  100% { box-shadow: 0 0 0 10px rgb(var(--accent-rgb) / 0); }
 }
 
 /* ---------- Data marks ---------- */
@@ -286,7 +284,7 @@ body {
     z-index: 60;
     background: var(--gradient);
     transform-origin: left;
-    box-shadow: 0 0 12px rgb(139 123 255 / 0.8);
+    box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.8);
     animation: progress linear both;
     animation-timeline: scroll(root);
   }
@@ -296,7 +294,7 @@ body {
 /* ---------- Sticky header that turns to glass on scroll ---------- */
 .site-header { transition: background 0.4s, border-color 0.4s, backdrop-filter 0.4s; border-bottom: 1px solid transparent; }
 html[data-scrolled] .site-header {
-  background: rgb(5 5 7 / 0.6);
+  background: rgb(12 17 40 / 0.6);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-color: var(--border);
@@ -308,7 +306,7 @@ html[data-scrolled] .site-header {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgb(139 123 255 / 0.13), transparent 45%);
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--accent-rgb) / 0.13), transparent 45%);
   opacity: 0;
   transition: opacity 0.4s;
   pointer-events: none;
@@ -332,12 +330,12 @@ html[data-scrolled] .site-header {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
+  background: linear-gradient(110deg, transparent 30%, rgb(var(--accent-rgb) / 0.35) 50%, transparent 70%);
   transform: translateX(-120%);
   pointer-events: none;
 }
 .btn-primary:hover::after { transition: transform 0.8s ease; transform: translateX(120%); }
-.btn-primary:hover { transform: translateY(-1px); }
+.btn-primary:hover { transform: scale(1.04); }
 
 /* ---------- 3D tilt ---------- */
 .tilt {

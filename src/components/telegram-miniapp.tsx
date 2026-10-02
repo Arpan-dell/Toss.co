@@ -25,8 +25,8 @@ export function TelegramMiniApp({ linked }: { linked: boolean }) {
     if (!app?.initData) return;
     app.ready();
     app.expand();
-    app.setHeaderColor?.("#050507");
-    app.setBackgroundColor?.("#050507");
+    app.setHeaderColor?.("#0c1128");
+    app.setBackgroundColor?.("#0c1128");
     if (linked || sent.current) return;
     sent.current = true;
 

@@ -157,7 +157,7 @@ export default async function TossAi() {
       </nav>
 
       {/* ---------- briefing ---------- */}
-      <section id="briefing" className="relative scroll-mt-24 overflow-hidden rounded-3xl bg-gradient-to-br from-accent/60 via-white/10 to-cyan-400/40 p-px shadow-[0_30px_80px_-30px_rgb(139_123_255/0.55)]">
+      <section id="briefing" className="relative scroll-mt-24 overflow-hidden rounded-3xl bg-gradient-to-br from-accent/60 via-white/10 to-cyan-400/40 p-px shadow-[0_30px_80px_-30px_rgb(var(--accent-rgb)/0.55)]">
         <div className="relative rounded-[calc(1.5rem-1px)] bg-surface-solid p-6 sm:p-8">
           <div className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-accent/20 blur-3xl" />
           {r ? (

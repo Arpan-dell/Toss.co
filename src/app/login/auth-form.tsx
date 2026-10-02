@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { signIn, signUp, type AuthState } from "./actions";
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-white/[0.03] px-4 py-2.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(139_123_255/0.2)] focus:outline-none";
+  "w-full rounded-xl border border-border bg-white/[0.03] px-4 py-2.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
 
 export function AuthForm({ notice }: { notice?: string }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -40,7 +40,7 @@ export function AuthForm({ notice }: { notice?: string }) {
         {mode === "signup" && (
           <>
             <input name="name" autoComplete="name" placeholder="Full name" required className={inputClass} />
-            <div className="flex overflow-hidden rounded-xl border border-border bg-white/[0.03] transition-shadow focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgb(139_123_255/0.2)]">
+            <div className="flex overflow-hidden rounded-xl border border-border bg-white/[0.03] transition-shadow focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)]">
               <span className="flex items-center border-r border-border px-3 text-sm text-muted">+91</span>
               <input
                 name="phone"

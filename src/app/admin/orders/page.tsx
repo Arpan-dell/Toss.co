@@ -56,7 +56,7 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
             name="q"
             defaultValue={q}
             placeholder="Search address, order or Telegram ID"
-            className="w-full rounded-full border border-border bg-white/[0.03] px-4 py-1.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(139_123_255/0.2)] focus:outline-none"
+            className="w-full rounded-full border border-border bg-white/[0.03] px-4 py-1.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none"
           />
         </form>
         <p className="text-sm text-muted">{orders.length} orders</p>

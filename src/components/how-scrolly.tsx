@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Basket, Bell, ChartBar, ChartLineUp, ChatCircleText, CheckCircle, Coins, CreditCard, DeviceMobile, EnvelopeSimple, FilePdf, FlagCheckered, Gift, Handshake, Heart, Heartbeat, House, IdentificationBadge, Lightning, MapPin, MapTrifold, Path, PhoneCall, Power, Receipt, Rocket, Scales, ShieldCheck, Sparkle, Storefront, SunHorizon, Target, Ticket, Timer, Truck, Users, Warning, WifiHigh, type Icon } from "@phosphor-icons/react";
 
 // "How it works" as scroll-driven motion graphics, one track per role (customer, driver, manager).
 // Steps scroll by on one side; a sticky device on the other morphs to match the active step, and
@@ -11,10 +12,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type Role = "customer" | "driver" | "manager";
 type Step = { title: string; body: string; tag: string };
 
-const ROLES: { id: Role; icon: string; label: string; short: string; device: "phone" | "window"; app: string; steps: Step[] }[] = [
+const ROLES: { id: Role; icon: Icon; label: string; short: string; device: "phone" | "window"; app: string; steps: Step[] }[] = [
   {
     id: "customer",
-    icon: "🏠",
+    icon: House,
     label: "Customer",
     short: "Customer",
     device: "phone",
@@ -29,7 +30,7 @@ const ROLES: { id: Role; icon: string; label: string; short: string; device: "ph
   },
   {
     id: "driver",
-    icon: "🚚",
+    icon: Truck,
     label: "Driver",
     short: "Driver",
     device: "phone",
@@ -44,7 +45,7 @@ const ROLES: { id: Role; icon: string; label: string; short: string; device: "ph
   },
   {
     id: "manager",
-    icon: "🏭",
+    icon: Storefront,
     label: "Laundry manager",
     short: "Manager",
     device: "window",
@@ -62,7 +63,7 @@ const ROLES: { id: Role; icon: string; label: string; short: string; device: "ph
 const BLOBS: Record<Role, string[]> = {
   customer: ["rgb(250 204 21 / 0.35)", "rgb(2 169 161 / 0.45)", "rgb(37 99 235 / 0.4)"],
   driver: ["rgb(42 171 238 / 0.45)", "rgb(2 169 161 / 0.4)", "rgb(250 204 21 / 0.3)"],
-  manager: ["rgb(139 123 255 / 0.5)", "rgb(34 211 238 / 0.35)", "rgb(2 169 161 / 0.35)"],
+  manager: ["rgb(var(--accent-rgb) / 0.5)", "rgb(34 211 238 / 0.35)", "rgb(2 169 161 / 0.35)"],
 };
 
 // ---------- scroll progress: listeners update text directly (no re-render per frame) ----------
@@ -401,7 +402,7 @@ function ManagerScene({ step }: { step: number }) {
           <p className="text-[9px] text-white/50">Health</p>
         </div>
         <p className="mg-rise col-span-5 rounded-xl border border-violet-400/30 bg-violet-400/10 p-2.5 text-[10px] text-white/90" style={{ animationDelay: "500ms" }}>
-          ✨ “Saturday 4–7 pm brings 31% of pickups. Two regulars are overdue: ₹18,400 a year at risk.”
+          ✨ “Saturday 4-7 pm brings 31% of pickups. Two regulars are overdue: ₹18,400 a year at risk.”
         </p>
       </div>
     );
@@ -440,28 +441,28 @@ const WORDS: Record<Role, string[]> = {
   driver: ["CONNECT", "ONLINE", "NEAREST", "ROUTE", "DONE"],
   manager: ["LAUNCH", "LIVE", "PAID", "FORECAST", "AUTOPILOT"],
 };
-const RING: Record<Role, [string, string]> = { customer: ["#facc15", "#02a9a1"], driver: ["#2AABEE", "#5eead4"], manager: ["#8b7bff", "#22d3ee"] };
-const CHIPS: Record<Role, [string, string][][]> = {
+const RING: Record<Role, [string, string]> = { customer: ["#facc15", "#02a9a1"], driver: ["#2AABEE", "#5eead4"], manager: ["#7aa2ff", "#2ee6d6"] };
+const CHIPS: Record<Role, [Icon, string][][]> = {
   customer: [
-    [["📱", "+91 98765 43210"], ["🏷️", "B-E2ZRFP"], ["✅", "Connected"]],
-    [["⚖️", "Live weight"], ["📡", "Basket online"], ["🎯", "Target 5 kg"]],
-    [["🚚", "Driver assigned"], ["⏱️", "ETA 18 min"], ["💬", "Telegram alert"]],
-    [["💳", "₹450 paid"], ["⚡", "UPI in 2 taps"], ["📄", "PDF invoice"]],
-    [["🎁", "15% off"], ["✨", "Toss AI"], ["💜", "Welcome back"]],
+    [[DeviceMobile, "+91 98765 43210"], [IdentificationBadge, "B-E2ZRFP"], [CheckCircle, "Connected"]],
+    [[Scales, "Live weight"], [WifiHigh, "Basket online"], [Target, "Target 5 kg"]],
+    [[Truck, "Driver assigned"], [Timer, "ETA 18 min"], [ChatCircleText, "Telegram alert"]],
+    [[CreditCard, "₹450 paid"], [Lightning, "UPI in 2 taps"], [FilePdf, "PDF invoice"]],
+    [[Gift, "15% off"], [Sparkle, "Toss AI"], [Heart, "Welcome back"]],
   ],
   driver: [
-    [["📞", "Phone verified"], ["🤝", "Fresh"], ["✅", "Connected"]],
-    [["🟢", "Online"], ["📍", "Live location"], ["📡", "Nearest jobs"]],
-    [["🔔", "New pickup"], ["📍", "1.2 km away"], ["⚖️", "5.0 kg"]],
-    [["🗺️", "Google Maps"], ["🛣️", "2 stops"], ["🏁", "Ends at store"]],
-    [["✅", "Picked up"], ["📊", "6 today"], ["🏁", "Delivered"]],
+    [[PhoneCall, "Phone verified"], [Handshake, "Fresh"], [CheckCircle, "Connected"]],
+    [[Power, "Online"], [MapPin, "Live location"], [WifiHigh, "Nearest jobs"]],
+    [[Bell, "New pickup"], [MapPin, "1.2 km away"], [Scales, "5.0 kg"]],
+    [[MapTrifold, "Google Maps"], [Path, "2 stops"], [FlagCheckered, "Ends at store"]],
+    [[CheckCircle, "Picked up"], [ChartBar, "6 today"], [FlagCheckered, "Delivered"]],
   ],
   manager: [
-    [["🏷️", "Business ID"], ["🎟️", "Free trial"], ["👥", "48 customers"]],
-    [["⚡", "Live updates"], ["🚚", "Auto-assigned"], ["🧺", "52 baskets"]],
-    [["💰", "96% collected"], ["📧", "Invoice emailed"], ["🧾", "UPI verified"]],
-    [["📈", "86% accurate"], ["❤️", "Health 82"], ["⚠️", "₹18k at risk"]],
-    [["🚀", "Autopilot"], ["🛡️", "Your limits"], ["☀️", "Every morning"]],
+    [[IdentificationBadge, "Business ID"], [Ticket, "Free trial"], [Users, "48 customers"]],
+    [[Lightning, "Live updates"], [Truck, "Auto-assigned"], [Basket, "52 baskets"]],
+    [[Coins, "96% collected"], [EnvelopeSimple, "Invoice emailed"], [Receipt, "UPI verified"]],
+    [[ChartLineUp, "86% accurate"], [Heartbeat, "Health 82"], [Warning, "₹18k at risk"]],
+    [[Rocket, "Autopilot"], [ShieldCheck, "Your limits"], [SunHorizon, "Every morning"]],
   ],
 };
 const CHIP_POS: Record<"phone" | "window", React.CSSProperties[]> = {
@@ -555,7 +556,7 @@ function Satellites({ role, step, device }: { role: Role; step: number; device: 
         <div key={text} className="absolute" style={{ ...CHIP_POS[device][i], transform: `translateY(calc((var(--p) - 0.5) * ${CHIP_DRIFT[i]}px))` }}>
           <div className="mg-pop" style={{ animationDelay: `${450 + i * 220}ms` }}>
             <div className="mg-bob flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.07] px-3 py-2 text-xs font-medium whitespace-nowrap text-white shadow-[0_12px_40px_-12px_rgb(0_0_0/0.8)] backdrop-blur-md" style={{ animationDelay: `${i * 0.7}s` }}>
-              <span className="grid size-6 place-items-center rounded-lg bg-white/10 text-sm">{icon}</span>
+              <span className="grid size-6 place-items-center rounded-lg bg-white/10 text-[#2ee6d6]">{icon && (() => { const I = icon; return <I size={15} weight="bold" />; })()}</span>
               {text}
             </div>
           </div>
@@ -654,7 +655,7 @@ export function HowScrolly() {
         <div className="relative flex rounded-full border border-white/10 bg-surface-solid/85 p-1 shadow-xl backdrop-blur" role="tablist" aria-label="Who are you?">
           <span
             aria-hidden
-            className="absolute inset-y-1 rounded-full bg-gradient-to-r from-[#8b7bff] to-[#22d3ee] transition-all duration-500 ease-[cubic-bezier(0.65,0,0.35,1)]"
+            className="absolute inset-y-1 rounded-full bg-gradient-to-r from-[#2ee6d6] to-[#00b4ff] transition-all duration-500 ease-[cubic-bezier(0.65,0,0.35,1)]"
             style={{ left: `calc(${ROLES.findIndex((r) => r.id === role)} * (100% - 8px) / 3 + 4px)`, width: "calc((100% - 8px) / 3)" }}
           />
           {ROLES.map((r) => (
@@ -664,9 +665,9 @@ export function HowScrolly() {
               role="tab"
               aria-selected={role === r.id}
               onClick={() => pick(r.id)}
-              className={`relative z-10 w-[6.6rem] whitespace-nowrap rounded-full px-2 py-2 text-xs font-medium transition-colors sm:w-44 sm:px-3 sm:text-sm ${role === r.id ? "text-white" : "text-secondary hover:text-fg"}`}
+              className={`relative z-10 w-[6.6rem] whitespace-nowrap rounded-full px-2 py-2 text-xs font-medium transition-colors sm:w-44 sm:px-3 sm:text-sm ${role === r.id ? "text-[#04131c]" : "text-secondary hover:text-fg"}`}
             >
-              {r.icon} <span className="sm:hidden">{r.short}</span>
+              <r.icon size={16} weight="bold" className="mr-1 inline -translate-y-px" /> <span className="sm:hidden">{r.short}</span>
               <span className="hidden sm:inline">{r.label}</span>
             </button>
           ))}
@@ -676,7 +677,7 @@ export function HowScrolly() {
       <div id="how-steps" className="relative grid scroll-mt-32 gap-8 lg:grid-cols-2 lg:gap-14">
         {/* sticky stage (on top on phones, on the right on desktop) */}
         <div className="sticky top-28 z-10 -mx-4 h-[50vh] bg-[var(--bg)] px-4 pb-3 lg:top-32 lg:order-2 lg:mx-0 lg:h-[calc(100vh-9rem)] lg:bg-transparent lg:px-0 lg:pb-0">
-          <div ref={stage} className="relative grid h-full place-items-center overflow-hidden rounded-[2rem] border border-white/10 bg-[#04060a] [container-type:inline-size]" style={{ ["--p" as string]: 0 } as React.CSSProperties}>
+          <div ref={stage} className="relative grid h-full place-items-center overflow-hidden rounded-[2rem] border border-white/10 bg-[#080d22] [container-type:inline-size]" style={{ ["--p" as string]: 0 } as React.CSSProperties}>
             {BLOBS[role].map((c, i) => (
               <span
                 key={i}
@@ -712,7 +713,7 @@ export function HowScrolly() {
               </div>
             </div>
             <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-[11px] text-white/70 backdrop-blur">
-              {R.icon} {R.label} · step {step + 1} of {R.steps.length}
+              <R.icon size={13} weight="bold" /> {R.label} · step {step + 1} of {R.steps.length}
             </div>
           </div>
         </div>
@@ -731,7 +732,7 @@ export function HowScrolly() {
               <span
                 aria-hidden
                 className={`absolute top-1/2 left-0 grid size-8 -translate-y-1/2 place-items-center rounded-full border font-mono text-xs transition-all duration-500 ${
-                  i === step ? "scale-110 border-transparent bg-gradient-to-br from-[#8b7bff] to-[#22d3ee] text-white shadow-[0_0_24px_rgb(139_123_255/0.6)]" : i < step ? "border-[#02a9a1]/60 bg-[#02a9a1]/15 text-[#5eead4]" : "border-white/15 bg-surface-solid text-muted"
+                  i === step ? "scale-110 border-transparent bg-gradient-to-br from-[#2ee6d6] to-[#00b4ff] font-bold text-[#04131c] shadow-[0_0_24px_rgb(var(--accent-rgb)/0.6)]" : i < step ? "border-[#02a9a1]/60 bg-[#02a9a1]/15 text-[#5eead4]" : "border-white/15 bg-surface-solid text-muted"
                 }`}
               >
                 {i < step ? "✓" : i + 1}

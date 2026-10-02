@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRef } from "react";
 import { motion, useMotionTemplate, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 import { ArrowRight } from "@phosphor-icons/react";
+import { MainCta } from "./main-cta";
 
 // Scroll-masked hero. A 300vh runway pins a full-screen stage; as you scroll, a circle grows from the
 // basket and swaps the blueprint sketch (the idea) for the real photo (the reality). The image plane
@@ -91,14 +91,14 @@ export function HeroReveal() {
               initial={reduce ? false : { opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-9 flex flex-wrap items-center gap-3"
+              className="mt-9 flex flex-wrap items-center gap-4"
             >
-              <Link href="/login" className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-base font-semibold">
+              <MainCta href="/login" glow className="btn-primary rounded-full px-7 py-3.5 text-base font-semibold">
                 Get started <ArrowRight size={18} weight="bold" />
-              </Link>
-              <a href="#how" className="btn-ghost rounded-full px-7 py-3.5 text-base font-medium text-white">
+              </MainCta>
+              <MainCta href="#how" className="btn-ghost rounded-full px-7 py-3.5 text-base font-medium text-white">
                 See how it works
-              </a>
+              </MainCta>
             </motion.div>
           </div>
         </div>

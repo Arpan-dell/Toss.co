@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { MainCta } from "./main-cta";
 import { Reveal } from "./reveal";
 
 const COLUMNS = [
@@ -35,9 +35,9 @@ export function SiteFooter({ logo }: { logo: React.ReactNode }) {
           Make laundry disappear.
         </Reveal>
         <Reveal delay={0.1} className="mt-10">
-          <Link href="/login" className="btn-primary inline-flex rounded-full px-9 py-4 text-lg font-semibold">
+          <MainCta href="/login" glow className="btn-primary rounded-full px-9 py-4 text-lg font-semibold">
             Get started
-          </Link>
+          </MainCta>
         </Reveal>
 
         <div className="mt-28 grid gap-12 border-t border-white/10 pt-14 sm:grid-cols-2 lg:grid-cols-4">

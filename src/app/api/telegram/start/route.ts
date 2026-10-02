@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSession } from "@/lib/session";
 import { OIDC_COOKIE, buildAuthorizeUrl, createPkce, getTelegramOidcConfig } from "@/lib/telegram-oidc";
+import { allow, clientIp } from "@/lib/rate-limit";
 
 // Starts "Log in with Telegram": stores state + PKCE verifier in a short-lived httpOnly cookie,
 // then sends the browser to Telegram's authorization page.
@@ -10,6 +11,10 @@ export async function GET(request: NextRequest) {
 
   if (!(await getSession())) {
     url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+  if (!(await allow("oauthStartIp", await clientIp()))) {
+    url.pathname = "/app/settings";
     return NextResponse.redirect(url);
   }
   const cfg = getTelegramOidcConfig();

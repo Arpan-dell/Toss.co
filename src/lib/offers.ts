@@ -2,6 +2,7 @@ import "server-only";
 import { formatINR } from "./format";
 import { supabaseAdmin } from "./supabase/admin";
 import { esc, sendMessage, type InlineButton } from "./telegram-api";
+import { logError } from "@/lib/log";
 
 // Win-back discounts. A daily job offers a discount to customers who have gone quiet for longer than
 // their laundry's win-back window; the next pickup they place gets it automatically. Both steps are
@@ -20,7 +21,7 @@ export async function tellCustomer(chatId: string, html: string) {
     await sendMessage(token, chatId, html, { inline: OPEN_TOSS });
     return true;
   } catch (err) {
-    console.error("offer message failed", err instanceof Error ? err.message : err);
+    logError("offer message failed", err);
     return false;
   }
 }
@@ -72,7 +73,7 @@ export async function applyOfferToOrder(orderId: string): Promise<{ percent: num
     }
     return applied;
   } catch (err) {
-    console.error("applying offer failed", err);
+    logError("applying offer failed", err);
     return null;
   }
 }

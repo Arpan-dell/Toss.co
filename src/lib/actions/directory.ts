@@ -5,6 +5,7 @@ import { geocode } from "../dispatch/geocode";
 import { getSession } from "../session";
 import { createClient } from "../supabase/server";
 import { friendlyError, text, type FormState } from "./shared";
+import { allow, clientIp } from "../rate-limit";
 
 // The public "Find a laundry" directory: anyone can search, signed-in customers can connect.
 
@@ -29,6 +30,7 @@ const validPoint = (lat: number, lng: number) => Number.isFinite(lat) && Number.
 /** Businesses whose service area covers this point, nearest first. */
 export async function findLaundries(lat: number, lng: number): Promise<{ laundries?: Laundry[]; error?: string }> {
   if (!validPoint(lat, lng)) return { error: "That location doesn't look right. Try again." };
+  if (!(await allow("directoryIp", await clientIp()))) return { error: "Too many attempts. Wait a minute and try again." };
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("nearby_businesses", { p_lat: lat, p_lng: lng });
   if (error) return { error: friendlyError(error) };
@@ -55,6 +57,7 @@ export async function findLaundries(lat: number, lng: number): Promise<{ laundri
 export async function locatePlace(query: string): Promise<{ lat?: number; lng?: number; error?: string }> {
   const q = query.trim().slice(0, 200);
   if (q.length < 3) return { error: "Type your area or address, like Saket, New Delhi." };
+  if (!(await allow("geocodeIp", await clientIp()))) return { error: "Too many attempts. Wait a minute and try again." };
   const hit = await geocode(q);
   return hit ? { lat: hit.lat, lng: hit.lng } : { error: "We couldn't find that place. Try your area and city." };
 }

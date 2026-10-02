@@ -170,7 +170,7 @@ export default async function Fleet() {
                     .join(" · ")}
                 </p>
                 <div className="mt-2">
-                  <BasketEditor device={d} />
+                  <BasketEditor device={{ deviceId: d.deviceId, area: d.area, address: d.address, targetKg: d.targetKg }} />
                 </div>
               </div>
             );

@@ -6,6 +6,7 @@ import { getTenantById } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { planState } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
+import { createClient } from "@/lib/supabase/server";
 
 const nav: PortalNavItem[] = [
   { href: "/admin", label: "Live board", icon: "live" },
@@ -23,12 +24,14 @@ export default async function ManagerLayout({ children }: LayoutProps<"/admin">)
   const session = await requireRole("MANAGER");
   const tenant = await getTenantById(session.tenantId);
   const plan = tenant ? planState(tenant) : undefined;
+  // short-lived access token for the live board's realtime subscription (session cookies are HttpOnly)
+  const token = (await (await createClient()).auth.getSession()).data.session?.access_token;
 
   return (
     <PortalShell badge="Manager" subtitle={tenant?.name ?? ""} nav={nav}>
       {tenant && (
         <div className="mb-4 flex justify-end">
-          <LiveRefresh tenantId={tenant.id} />
+          {token && <LiveRefresh tenantId={tenant.id} token={token} />}
         </div>
       )}
       {plan && plan.state !== "ACTIVE" && (

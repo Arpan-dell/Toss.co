@@ -4,6 +4,8 @@ import { createClient as createPlainClient } from "@supabase/supabase-js";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import type { FormState } from "./shared";
+import { logError } from "@/lib/log";
+import { allow } from "../rate-limit";
 
 // Changes the signed-in user's password after checking their current one. Works for every role.
 // The current password is checked with a separate, cookie-less sign-in so the browser session is
@@ -21,6 +23,8 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
   if (next !== confirm) return { error: "The new passwords don't match." };
   if (next === current) return { error: "Choose a password different from your current one." };
 
+  // counts only real attempts at the current password (the guessable step), not form mistakes
+  if (!(await allow("passwordChange", session.userId))) return { error: "Too many password changes. Try again in an hour." };
   const check = createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
@@ -32,7 +36,7 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
 
   const { error: updateError } = await supabaseAdmin().auth.admin.updateUserById(session.userId, { password: next });
   if (updateError) {
-    console.error("password change failed", updateError);
+    logError("password change failed", updateError);
     return { error: updateError.code === "weak_password" ? "That password is too weak. Try a longer one." : "Couldn't change your password. Please try again." };
   }
   return { message: "Password changed. Use your new password next time you sign in." };

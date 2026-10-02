@@ -6,6 +6,7 @@ import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
 import { friendlyError, text, type FormState } from "./shared";
+import { logError } from "@/lib/log";
 
 // Toss AI actions for a business manager. Runs and executions use the service role (they reach
 // customers, drivers and prices), so each one first checks the caller manages this business.
@@ -41,7 +42,7 @@ export async function runAiNow(): Promise<FormState> {
       message: `${r.by === "ai" ? "Toss AI" : "The rules engine"} found ${r.actions} action${r.actions === 1 ? "" : "s"}${r.executed ? `; the autopilot already did ${r.executed}` : ""}.`,
     };
   } catch (err) {
-    console.error("manual AI run failed", err);
+    logError("manual AI run failed", err);
     return { error: "The analysis failed. Please try again in a minute." };
   }
 }
@@ -110,7 +111,7 @@ export async function askToss(_prev: FormState & { answer?: string; question?: s
   try {
     return { question, answer: await askAi(tenantId, question) };
   } catch (err) {
-    console.error("ask failed", err);
+    logError("ask failed", err);
     return { error: "Toss AI couldn't answer right now. Please try again." };
   }
 }

@@ -69,6 +69,19 @@ Your job:
 3. In the briefing, refer to customers only by their codes. Messages that customers receive must NEVER contain a customer code or name: speak to them as "you" (e.g. "Your basket is almost full!").
 4. Write money in Indian format with ₹ (₹70,470; ₹1,20,000). Plain text only, no markdown, no emojis in the briefing.`;
 
+// What a candidate action looks like to the model: no names, internal IDs, phone numbers, emails or Telegram
+// IDs. Customers stay as codes (C-XXXXXX); drivers become "a driver". Decisions are matched back to the full
+// candidate by id on our side, so the model never needs the rest.
+const PRIVATE_PARAM = /(^|[a-z])(id|Id|ID)$|name|Name|phone|email|telegram|Telegram|chat|Chat|address|Address/;
+export function modelSafeCandidate(c: Candidate) {
+  const params = Object.fromEntries(Object.entries(c.params ?? {}).filter(([k]) => k === "customerCode" || !PRIVATE_PARAM.test(k)));
+  const summary =
+    c.type === "set_max_jobs"
+      ? `Let a driver carry ${String(c.params?.to)} pickups at once (now ${String(c.params?.from)})`
+      : c.label;
+  return { id: c.id, type: c.type, summary, params, why: c.reason };
+}
+
 export function brainPrompt(
   a: Analysis,
   ctx: { business: string; pricePerKg: number; maxDiscount: number; priceStepPct: number; autopilot: string[]; analytics?: object },
@@ -84,7 +97,7 @@ export function brainPrompt(
     autopilotRunsAutomatically: ctx.autopilot,
     analytics: ctx.analytics, // segments, revenue at risk, forecast accuracy, aging, areas, drivers, anomalies
   };
-  const candidates = a.candidates.map((c: Candidate) => ({ id: c.id, type: c.type, summary: c.label, params: c.params, why: c.reason }));
+  const candidates = a.candidates.map(modelSafeCandidate);
   return `BUSINESS FACTS (JSON):\n${JSON.stringify(facts)}\n\nCANDIDATE ACTIONS (JSON):\n${JSON.stringify(candidates)}\n\nReturn the JSON briefing and your decisions.`;
 }
 

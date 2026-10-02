@@ -7,6 +7,7 @@ import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
 import { friendlyError, text, type FormState } from "./shared";
+import { logError } from "@/lib/log";
 
 // Day-to-day operations for a manager: customers, drivers, baskets and order overrides.
 // Everything runs as the manager, so RLS keeps it inside their business and column grants
@@ -120,7 +121,7 @@ export async function assignDriver(formData: FormData) {
   // Tell the driver on Telegram, with the pickup pin and map buttons (no-op without the driver bot).
   if (chatId) {
     const { data: full } = await supabaseAdmin().from("orders").select("*").eq("id", orderId).maybeSingle();
-    if (full) await notifyAssignment(full, chatId).catch((e) => console.error("notify failed", e));
+    if (full) await notifyAssignment(full, chatId).catch((e) => logError("notify failed", e));
   }
   refresh();
 }

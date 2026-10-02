@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { sessionCookie } from "./cookies";
 
 // Refreshes the Supabase session cookie on every request and applies optimistic route guards.
 // The authoritative checks are requireRole() in the portal layouts and RLS in Postgres.
@@ -14,7 +15,7 @@ export async function updateSession(request: NextRequest) {
       setAll(cookiesToSet, headers) {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, sessionCookie(options)));
         Object.entries(headers ?? {}).forEach(([key, value]) => response.headers.set(key, value));
       },
     },

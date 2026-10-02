@@ -10,7 +10,7 @@ import { esc, type InlineButton } from "../telegram-api";
 // must never stop an assignment, a hand-over or a pickup from being recorded.
 const safe = <A extends unknown[]>(fn: (...args: A) => Promise<unknown>) => (...args: A) =>
   fn(...args).catch((err) => {
-    console.error("telegram send failed", err instanceof Error ? err.message : err);
+    logError("telegram send failed", err);
     return undefined;
   });
 const sendMessage = safe(api.sendMessage);
@@ -20,6 +20,7 @@ const answerCallback = safe(api.answerCallback);
 const sendPhoto = safe(api.sendPhoto);
 import { chooseDriver, directionsUrl, routeUrl, searchUrl, type DriverCandidate, type LatLng } from "./core";
 import { geocode } from "./geocode";
+import { logError } from "@/lib/log";
 
 // Automatic pickup dispatch over the driver bot. Runs server-side with the service role:
 // it crosses customers, baskets and drivers inside one business, and is triggered by trusted events
@@ -141,9 +142,9 @@ export async function dispatchOrder(orderId: string): Promise<DispatchResult> {
   if (!won?.length) return { assigned: false, reason: "assigned concurrently" };
   await db().from("drivers").update({ status: "ON_JOB" }).eq("id", choice.driver.id);
 
-  await notifyAssignment(o as Row, choice.driver.chatId, pickup).catch((e) => console.error("driver notify failed", e));
+  await notifyAssignment(o as Row, choice.driver.chatId, pickup).catch((e) => logError("driver notify failed", e));
   await notifyCustomer(o as Row, `🚚 <b>${esc(choice.driver.name)}</b> is on the way to pick up your laundry (order #${o.device_order_id}).`).catch(
-    (e) => console.error("customer notify failed", e),
+    (e) => logError("customer notify failed", e),
   );
   return { assigned: true, driver: choice.driver.name, distanceKm: choice.distanceKm };
 }

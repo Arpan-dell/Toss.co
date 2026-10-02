@@ -3,6 +3,7 @@ import { reminderFor } from "../plan";
 import { supabaseAdmin } from "../supabase/admin";
 import { emailEnabled, ownerEmail, sendEmail } from "./mailer";
 import * as t from "./templates";
+import { logError } from "@/lib/log";
 
 // Business events → emails to the Toss owner and the business's manager. Every function is
 // best-effort and never throws: the action that triggered it has already succeeded.
@@ -37,7 +38,7 @@ const safely = async (what: string, fn: () => Promise<unknown>) => {
   try {
     await fn();
   } catch (err) {
-    console.error(`notify ${what} failed`, err);
+    logError(`notify ${what} failed`, err);
   }
 };
 

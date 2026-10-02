@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { normalizePhone } from "@/lib/phone";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { allow, clientIp } from "@/lib/rate-limit";
 
 export interface AuthState {
   error?: string;
@@ -39,6 +40,9 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const email = text(formData, "email");
   const password = String(formData.get("password") ?? "");
   if (!email || !password) return { error: "Enter your email and password." };
+  if (!(await allow("signInIp", await clientIp())) || !(await allow("signInAccount", email))) {
+    return { error: "Too many sign-in attempts. Wait a minute and try again." };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -59,6 +63,8 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   if (!name || !email) return { error: "Enter your name and email." };
   if (!phone) return { error: "Enter a valid mobile number, like 98765 43210." };
   if (password.length < 8) return { error: "Use a password of at least 8 characters." };
+  if (password.length > 72) return { error: "Use a password of at most 72 characters." };
+  if (!(await allow("signUpIp", await clientIp()))) return { error: "Too many sign-ups from this network. Try again later." };
   if (await phoneTaken(phone)) return { error: "That mobile number already has a Toss account. Sign in instead." };
 
   const supabase = await createClient();

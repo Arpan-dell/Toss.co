@@ -3,6 +3,7 @@ import { handleIngest } from "@/lib/ingest/handle";
 import { SupabaseStore } from "@/lib/ingest/supabase-store";
 import { applyOfferToOrder } from "@/lib/offers";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
+import { logError } from "@/lib/log";
 
 // Device ingest endpoint. Called by the Apps Script bridge (firmware v1) and firmware v2.
 // Auth: `x-device-key` header, either the bridge key or the device's own key.
@@ -27,14 +28,14 @@ export async function POST(request: Request) {
     if (res.status === 200 && body.changed && body.status === "PENDING" && body.id) await applyOfferToOrder(body.id);
     if (res.status === 200 && body.changed && body.status === "PENDING" && body.id && dispatchEnabled()) {
       const dispatch = await dispatchOrder(body.id).catch((err) => {
-        console.error("dispatch failed", err);
+        logError("dispatch failed", err);
         return { assigned: false, reason: "dispatch error" };
       });
       return Response.json({ ...res.body, dispatch }, { status: res.status });
     }
     return Response.json(res.body, { status: res.status });
   } catch (err) {
-    console.error("ingest failed", err);
-    return Response.json({ error: "Internal error" }, { status: 500 });
+    const ref = logError("ingest failed", err);
+    return Response.json({ error: "Internal error", ref }, { status: 500 });
   }
 }

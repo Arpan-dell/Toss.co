@@ -6,7 +6,8 @@ import { getSession } from "@/lib/session";
 // the customer sees their orders, a manager their business's, the owner all. Only then is the
 // invoice assembled server-side.
 export async function GET(request: Request, ctx: RouteContext<"/invoice/[id]">) {
-  if (!(await getSession())) return Response.redirect(new URL("/login", request.url), 303);
+  const session = await getSession();
+  if (!session) return Response.redirect(new URL("/login", request.url), 303);
 
   const { id: raw } = await ctx.params;
   const id = raw.includes("%") ? decodeURIComponent(raw) : raw;
@@ -14,7 +15,8 @@ export async function GET(request: Request, ctx: RouteContext<"/invoice/[id]">) 
   if (!order) return new Response("Invoice not found", { status: 404 });
   if (order.paymentStatus !== "PAID") return new Response("This order isn't paid yet, so it has no invoice.", { status: 409 });
 
-  const inv = await loadInvoice(id);
+  // managers and the owner get the business copy, without the customer's email and phone
+  const inv = await loadInvoice(id, session.role === "CUSTOMER" ? "customer" : "business");
   if (!inv) return new Response("Invoice not found", { status: 404 });
   const pdf = await invoicePdf(inv.data);
   return new Response(new Uint8Array(pdf), {

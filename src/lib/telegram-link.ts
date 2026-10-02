@@ -1,5 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "./supabase/admin";
+import { logError } from "@/lib/log";
 
 export type LinkResult = "linked" | "taken" | "error";
 
@@ -11,7 +12,7 @@ export async function attachTelegram(customerId: string, telegramId: string, ver
   const { error } = await admin.rpc("link_telegram", { p_customer: customerId, p_telegram_id: telegramId });
   if (error) {
     if (error.message.includes("telegram_already_linked")) return "taken";
-    console.error("link_telegram failed", error);
+    logError("link_telegram failed", error);
     return "error";
   }
 
@@ -21,7 +22,7 @@ export async function attachTelegram(customerId: string, telegramId: string, ver
       .update({ phone: verifiedPhone, phone_verified: true })
       .eq("id", customerId);
     // 23505: the number belongs to another account. Linking still succeeded; keep their typed number.
-    if (phoneError && phoneError.code !== "23505") console.error("saving verified phone failed", phoneError);
+    if (phoneError && phoneError.code !== "23505") logError("saving verified phone failed", phoneError);
   }
   return "linked";
 }

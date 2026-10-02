@@ -6,6 +6,7 @@ import { formatPhone } from "../phone";
 import { supabaseAdmin } from "../supabase/admin";
 import { sendDocument } from "../telegram-api";
 import { renderInvoicePdf, type InvoiceData } from "./pdf";
+import { logError } from "@/lib/log";
 
 // Invoices for paid pickups. Server-side with the service role: an invoice joins the business,
 // its manager, the customer and the driver, which no single client role may read together
@@ -27,8 +28,12 @@ async function logoPng(): Promise<Uint8Array | undefined> {
 
 export const invoiceFileName = (number: string) => `Toss-invoice-${number}.pdf`;
 
-/** Gives a paid order its invoice number and gathers everything printed on it. Null if not paid. */
-export async function loadInvoice(orderId: string): Promise<{ data: InvoiceData; customerEmail?: string; customerTelegram?: string } | null> {
+/**
+ * Gives a paid order its invoice number and gathers everything printed on it. Null if not paid.
+ * `audience` decides whose copy it is: the customer's own copy shows their email and phone; the business copy
+ * (manager or owner downloading it) doesn't, because managers may not see customers' contact details.
+ */
+export async function loadInvoice(orderId: string, audience: "customer" | "business" = "customer"): Promise<{ data: InvoiceData; customerEmail?: string; customerTelegram?: string } | null> {
   const db = supabaseAdmin();
   const { data: number, error } = await db.rpc("issue_invoice", { p_order: orderId });
   if (error) throw error;
@@ -59,8 +64,8 @@ export async function loadInvoice(orderId: string): Promise<{ data: InvoiceData;
     customer: {
       name: u((c as Row | null)?.name),
       code: ((c as Row | null)?.customer_code as string) ?? "-",
-      email: u((c as Row | null)?.email),
-      phone: (c as Row | null)?.phone ? formatPhone((c as Row).phone as string) : undefined,
+      email: audience === "customer" ? u((c as Row | null)?.email) : undefined,
+      phone: audience === "customer" && (c as Row | null)?.phone ? formatPhone((c as Row).phone as string) : undefined,
     },
     order: {
       label: dev?.area ? `${dev.area as string} · ${label}` : label,
@@ -122,13 +127,13 @@ export async function sendInvoice(orderId: string): Promise<{ email: boolean; te
       )
         .then(() => true)
         .catch((err) => {
-          console.error("invoice telegram failed", err instanceof Error ? err.message : err);
+          logError("invoice telegram failed", err);
           return false;
         });
     }
     return { email, telegram };
   } catch (err) {
-    console.error("sending invoice failed", err);
+    logError("sending invoice failed", err);
     return null;
   }
 }

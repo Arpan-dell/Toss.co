@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { handleDriverUpdate } from "@/lib/dispatch/service";
+import { logError } from "@/lib/log";
 
 // Telegram calls this for every message/button/location sent to the driver bot (set with setWebhook).
 // Telegram echoes our secret in X-Telegram-Bot-Api-Secret-Token, so nobody else can post fake updates.
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
     await handleDriverUpdate(await request.json());
   } catch (err) {
     // Always 200: a failing update would otherwise be retried by Telegram over and over.
-    console.error("driver webhook failed", err);
+    logError("driver webhook failed", err);
   }
   return Response.json({ ok: true });
 }

@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import { GoogleLogo } from "@phosphor-icons/react";
 
-// "Continue with Google": Supabase sends the browser to Google and back to /auth/callback. Signing in and
+// "Continue with Google": /auth/google sends the browser to Google, which returns to /auth/callback. Signing in and
 // signing up are the same tap; a new Google account becomes a customer and adds its mobile number after.
 export function GoogleButton({ next }: { next?: string }) {
   const [busy, setBusy] = useState(false);
@@ -23,16 +22,10 @@ export function GoogleButton({ next }: { next?: string }) {
       setBusy(false);
       return setError("Google sign-in isn't switched on yet. Use your email for now.");
     }
-    const callback = new URL("/auth/callback", window.location.origin);
-    if (next) callback.searchParams.set("next", next);
-    const { error } = await createBrowserClient(url, key).auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: callback.toString(), queryParams: { prompt: "select_account" } },
-    });
-    if (error) {
-      setBusy(false);
-      setError("Couldn't reach Google. Try again.");
-    }
+    // The sign-in starts on the server so its PKCE cookie is HttpOnly. /auth/google is a route handler that
+    // redirects to Google, so this has to be a full page navigation, not a client-side route change.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    window.location.assign(`/auth/google${next ? `?next=${encodeURIComponent(next)}` : ""}`);
   };
 
   return (

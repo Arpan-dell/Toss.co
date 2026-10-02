@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { sessionCookie } from "./cookies";
 
 // Per-request client that acts as the signed-in user, so Postgres RLS applies.
 export async function createClient() {
@@ -12,7 +13,7 @@ export async function createClient() {
       },
       setAll(cookiesToSet) {
         try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, sessionCookie(options)));
         } catch {
           // Called from a Server Component, which can't write cookies. proxy.ts refreshes sessions instead.
         }

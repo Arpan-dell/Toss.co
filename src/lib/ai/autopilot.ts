@@ -5,10 +5,11 @@ import { tellCustomer } from "../offers";
 import { isUsable, planState } from "../plan";
 import { supabaseAdmin } from "../supabase/admin";
 import { esc, sendMessage } from "../telegram-api";
-import { ASK_SYSTEM, BRAIN_SCHEMA, BRAIN_SYSTEM, brainPrompt, cleanBriefing, rulesBriefing, type BrainAnswer, type Report } from "./brain";
+import { ASK_SYSTEM, BRAIN_SCHEMA, BRAIN_SYSTEM, brainPrompt, cleanBriefing, modelSafeCandidate, rulesBriefing, type BrainAnswer, type Report } from "./brain";
 import { CATEGORY_OF, analyze, applyDecisions, type ActionType, type Candidate, type Category, type EngineInput } from "./engine";
 import { geminiEnabled, geminiJson, geminiText } from "./gemini";
 import { computeInsights, insightsSummary, type Insights } from "./insights";
+import { logError, redact } from "@/lib/log";
 
 // Toss AI orchestration (service role). A run: load the business → engine → Gemini briefing and
 // decisions → save the report and action queue → the autopilot executes the categories the manager
@@ -192,8 +193,8 @@ export async function runAnalysis(tenantId: string, trigger: "daily" | "manual")
       by = "ai";
       model = used;
     } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
-      console.error("Toss AI: Gemini failed, using rules", error);
+      error = redact(err instanceof Error ? err.message : String(err));
+      logError("Toss AI: Gemini failed, using rules", error);
     }
   }
 
@@ -247,7 +248,7 @@ export async function executeAction(actionId: number, o: { auto: boolean; tenant
   try {
     ({ ok, result } = await perform(a, ctx));
   } catch (err) {
-    result = err instanceof Error ? err.message : String(err);
+    result = redact(err instanceof Error ? err.message : String(err));
   }
   await db()
     .from("ai_actions")
@@ -351,7 +352,7 @@ export async function runAutopilotAll(budgetMs = 45_000): Promise<{ businesses: 
       businesses++;
       executed += r?.executed ?? 0;
     } catch (err) {
-      console.error("Toss AI daily run failed", t.id, err);
+      logError("Toss AI daily run failed", err);
     }
   }
   return { businesses, executed };
@@ -373,7 +374,7 @@ export async function askAi(tenantId: string, question: string): Promise<string>
       kpis: a.kpis,
       health: a.health,
       forecast: a.forecast,
-      pendingActions: a.candidates.map((c) => c.label),
+      pendingActions: a.candidates.map((c) => modelSafeCandidate(c).summary),
       analytics: insightsSummary(await businessInsights(tenantId)),
       drivers: ctx.input.drivers.map((d) => ({ connected: d.connected, maxJobs: d.maxJobs })),
     };

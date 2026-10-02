@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { isSupabaseConfigured } from "@/lib/supabase/admin";
 import { attachTelegram } from "@/lib/telegram-link";
 import { OIDC_COOKIE, type TelegramIdentity, exchangeCode, getTelegramOidcConfig, verifyIdToken } from "@/lib/telegram-oidc";
+import { logError } from "@/lib/log";
 
 // Telegram redirects here with ?code&state after the user approves. We check state against the
 // cookie, exchange the code (PKCE + client secret), verify the signed ID token, then link the
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
     });
     identity = await verifyIdToken(idToken, cfg.clientId);
   } catch (err) {
-    console.error("telegram login failed", err);
+    logError("telegram login failed", err);
     return back("invalid");
   }
 

@@ -65,8 +65,10 @@ export function AddDriverForm() {
   );
 }
 
-// Inline editor for a basket's label, address and target weight.
-export function BasketEditor({ device }: { device: Device }) {
+// Inline editor for a basket's label, address and target weight. Takes only the fields it edits, so the
+// owner's Telegram ID and other basket internals never reach the browser.
+export type EditableBasket = Pick<Device, "deviceId" | "area" | "address" | "targetKg">;
+export function BasketEditor({ device }: { device: EditableBasket }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState<FormState, FormData>(updateBasket, {});
   if (!open) {

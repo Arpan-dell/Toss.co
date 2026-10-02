@@ -1,6 +1,6 @@
 "use client";
 
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Tip } from "./ui";
@@ -8,13 +8,35 @@ import { Tip } from "./ui";
 // Re-renders the current page whenever this business's orders, baskets or drivers change
 // (a basket fills, a driver taps Accept, a customer reports a payment…). Supabase Realtime
 // applies RLS, so a manager only ever receives their own business's rows.
-export function LiveRefresh({ tenantId }: { tenantId: string }) {
+// Session cookies are HttpOnly, so the server passes the manager's short-lived access token for the
+// subscription. The page refreshes every 20 minutes, which hands over a fresh token before it expires;
+// the refresh token never reaches the browser.
+const TOKEN_REFRESH_MS = 20 * 60_000;
+
+export function LiveRefresh({ tenantId, token }: { tenantId: string; token: string }) {
   const router = useRouter();
   const [status, setStatus] = useState<"connecting" | "live" | "offline">("connecting");
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const tokenRef = useRef(token);
+  const realtime = useRef<{ setAuth: (token: string) => unknown } | null>(null);
+
+  // a re-render brings a fresh token: hand it to the open subscription
+  useEffect(() => {
+    tokenRef.current = token;
+    realtime.current?.setAuth(token);
+  }, [token]);
+
+  // refresh the page (and so the token) well before the 1-hour access token expires
+  useEffect(() => {
+    const id = setInterval(() => router.refresh(), TOKEN_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [router]);
 
   useEffect(() => {
-    const supabase = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!);
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    supabase.realtime.setAuth(tokenRef.current);
     // Several rows often change together (order + basket); refresh once per burst.
     const refresh = () => {
       clearTimeout(timer.current);
@@ -28,8 +50,10 @@ export function LiveRefresh({ tenantId }: { tenantId: string }) {
       .on("postgres_changes", { event: "*", schema: "public", table: "drivers", filter }, refresh)
       .subscribe((s) => setStatus(s === "SUBSCRIBED" ? "live" : s === "CHANNEL_ERROR" || s === "TIMED_OUT" ? "offline" : "connecting"));
 
+    realtime.current = supabase.realtime;
     return () => {
       clearTimeout(timer.current);
+      realtime.current = null;
       supabase.removeChannel(channel);
     };
   }, [tenantId, router]);

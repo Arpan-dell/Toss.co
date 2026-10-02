@@ -1,6 +1,7 @@
 import "server-only";
 import nodemailer, { type Transporter } from "nodemailer";
 import type { Email } from "./templates";
+import { logError } from "@/lib/log";
 
 export type Attachment = { filename: string; content: Buffer; contentType: string };
 
@@ -44,7 +45,7 @@ export async function sendEmail(
     });
     return true;
   } catch (err) {
-    console.error("email failed", email.subject, err instanceof Error ? err.message : err);
+    logError("email failed", err);
     return false;
   }
 }

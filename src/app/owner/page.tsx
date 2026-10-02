@@ -7,6 +7,8 @@ import { formatDate, formatINR } from "@/lib/format";
 import { planState, type PlanState } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
 import { OptimisticForm } from "@/components/optimistic";
+import { formatPhone } from "@/lib/phone";
+import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Businesses" };
 
@@ -25,6 +27,10 @@ export default async function OwnerHome() {
     listSubscriptionPayments({ status: "PENDING" }),
   ]);
   const stats = await listTenantStats(tenants);
+  // "Get a Toss basket" requests from the website (server-only table; the owner sees them all)
+  const { data: requests } = isSupabaseConfigured()
+    ? await supabaseAdmin().from("basket_requests").select("id, name, phone, email, city, colour, quantity, message, created_at").order("created_at", { ascending: false }).limit(20)
+    : { data: [] };
   const rows = tenants.map((t) => ({ t, plan: planState(t), s: stats.get(t.id) }));
   const paying = rows.filter((r) => r.plan.state === "ACTIVE").length;
 
@@ -95,6 +101,43 @@ export default async function OwnerHome() {
               </tbody>
             </table>
           </div>
+        )}
+      </Card>
+
+      <Card title="Basket requests" action={requests?.length ? <Badge tone="info">{requests.length} recent</Badge> : undefined}>
+        {!requests?.length ? (
+          <EmptyState>No requests yet. They come from &quot;Get a Toss basket&quot; on the home page, and each one is emailed to you too.</EmptyState>
+        ) : (
+          <ul className="divide-y divide-border">
+            {requests.map((r) => (
+              <li key={r.id as number} className="flex flex-wrap items-start gap-x-6 gap-y-1 py-3 text-sm first:pt-0 last:pb-0">
+                <div className="min-w-[200px] flex-1">
+                  <p className="font-medium">
+                    {r.name as string}
+                    {r.city ? <span className="text-secondary"> · {r.city as string}</span> : null}
+                  </p>
+                  <p className="text-secondary">
+                    {r.phone ? (
+                      <a href={`tel:${r.phone as string}`} className="hover:underline">
+                        {formatPhone(r.phone as string)}
+                      </a>
+                    ) : null}
+                    {r.phone && r.email ? " · " : null}
+                    {r.email ? (
+                      <a href={`mailto:${r.email as string}`} className="hover:underline">
+                        {r.email as string}
+                      </a>
+                    ) : null}
+                  </p>
+                  {r.message ? <p className="mt-1 text-xs text-muted italic">“{r.message as string}”</p> : null}
+                </div>
+                <p className="font-mono text-xs tabular-nums">
+                  {r.quantity as number} × {r.colour as string}
+                </p>
+                <p className="w-24 text-right text-xs text-muted">{formatDate(r.created_at as string)}</p>
+              </li>
+            ))}
+          </ul>
         )}
       </Card>
     </div>

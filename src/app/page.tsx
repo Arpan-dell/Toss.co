@@ -1,4 +1,7 @@
 import { HowScrolly } from "@/components/how-scrolly";
+import { BasketShowcase } from "@/components/site/basket-showcase";
+import { BotDemo } from "@/components/site/bot-demo";
+import { GetBasket } from "@/components/site/get-basket";
 import { HeroReveal } from "@/components/site/hero-reveal";
 import { InsideGallery } from "@/components/site/inside-gallery";
 import { Manifesto } from "@/components/site/manifesto";
@@ -21,6 +24,22 @@ export default function Home() {
         <HeroReveal />
 
         <WorksWith />
+
+        <BasketShowcase />
+
+        <section id="control" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
+          <Reveal as="p" className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">
+            Toss Control on Telegram
+          </Reveal>
+          <Reveal as="h2" delay={0.05} className="mt-3 max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1.05] font-black tracking-tight">
+            Your basket, in your chats.
+          </Reveal>
+          <Reveal as="p" delay={0.1} className="mt-5 mb-12 max-w-[60ch] text-lg leading-relaxed font-light text-secondary">
+            No app to install. The basket talks to you through a Telegram bot: check how full it is, zero the scale, change when it calls a
+            pickup, or ask for one now. Tap the buttons on the phone to try it.
+          </Reveal>
+          <BotDemo />
+        </section>
 
         <section id="how" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
           <Reveal as="h2" className="max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1.05] font-black tracking-tight">
@@ -60,6 +79,19 @@ export default function Home() {
 
         <section id="why" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
           <Manifesto />
+        </section>
+
+        <section id="buy" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
+          <Reveal as="p" className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">
+            Get a Toss basket
+          </Reveal>
+          <Reveal as="h2" delay={0.05} className="mt-3 mb-4 max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1.05] font-black tracking-tight">
+            Want one? Pick a colour.
+          </Reveal>
+          <Reveal as="p" delay={0.1} className="mb-12 max-w-[56ch] text-lg leading-relaxed font-light text-secondary">
+            Each box is printed to order. Leave your details and we&apos;ll get back to you about availability, price and delivery.
+          </Reveal>
+          <GetBasket />
         </section>
       </main>
 

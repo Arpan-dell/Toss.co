@@ -302,3 +302,39 @@ export const passwordResetEmail = (p: { link: string; minutes: number }) =>
       cta: { label: "Choose a new password", url: p.link },
     }),
   );
+
+// ---------- "Get a Toss basket" requests ----------
+
+export const ownerBasketRequest = (r: { name: string; phone?: string; email?: string; city?: string; colour: string; quantity: number; message?: string }) =>
+  mail(
+    `Basket request: ${r.name}${r.city ? ` (${r.city})` : ""}`,
+    layout({
+      preheader: `${r.name} wants ${r.quantity} Toss basket${r.quantity > 1 ? "s" : ""} in ${r.colour}.`,
+      heading: "Someone wants a Toss basket",
+      paragraphs: [
+        `${e(r.name)} asked whether a Toss basket is available. Reply to this email${r.email ? "" : " or call them"} to confirm availability, price and delivery.`,
+        ...(r.message ? [`<i>“${e(r.message)}”</i>`] : []),
+      ],
+      rows: [
+        ["Name", r.name],
+        ...(r.phone ? ([["Mobile", r.phone]] as Row[]) : []),
+        ...(r.email ? ([["Email", r.email]] as Row[]) : []),
+        ...(r.city ? ([["City / area", r.city]] as Row[]) : []),
+        ["Colour", r.colour],
+        ["How many", String(r.quantity)],
+      ],
+    }),
+  );
+
+export const customerBasketRequestReceived = (r: { name: string; colour: string; quantity: number }) =>
+  mail(
+    "We got your Toss basket request",
+    layout({
+      preheader: "We'll get back to you about availability soon.",
+      heading: `Thanks, ${r.name.split(" ")[0]}!`,
+      paragraphs: [
+        `We've got your request for ${r.quantity} Toss basket${r.quantity > 1 ? "s" : ""} in <b>${e(r.colour)}</b>. We'll reply to this email (or call you) about availability, price and delivery.`,
+        "Questions in the meantime? Just reply to this email.",
+      ],
+    }),
+  );

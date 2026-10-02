@@ -26,7 +26,7 @@ export function StatusTimeline({ order }: { order: Order }) {
             aria-hidden
             className={`relative z-10 mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[10px] ${
               s.done
-                ? "text-white shadow-[0_0_14px_-2px_rgb(139_123_255/0.9)]"
+                ? "text-[#04131c] font-bold shadow-[0_0_14px_-2px_rgb(var(--accent-rgb)/0.9)]"
                 : i === current
                   ? "pulse-ring border-2 border-accent bg-bg"
                   : "border-2 border-border bg-bg"

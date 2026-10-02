@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AnimatePresence, motion, useMotionTemplate, useScroll, useTransform } from "framer-motion";
 import { List, X } from "@phosphor-icons/react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useDocked } from "./use-docked";
 
 const LINKS = [
   { label: "How it works", href: "#how" },
@@ -13,10 +14,12 @@ const LINKS = [
   { label: "Why Toss", href: "#why" },
 ];
 
-// Floating glass pill. Over the first 50px of scroll the glass thickens (more tint, more blur) so the
-// nav stays readable over the hero photo without a heavy bar at the top of the page.
+// Floating glass pill for the top of the page. Once you scroll, it slides up out of view and the bottom
+// dock (SiteDock) takes over, so there is only ever one menu on screen.
 export function SiteNav({ logo }: { logo: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const docked = useDocked();
+  const hidden = docked && !open;
   const { scrollY } = useScroll();
   const tint = useTransform(scrollY, [0, 50], [0.02, 0.08]);
   const blur = useTransform(scrollY, [0, 50], [8, 24]);
@@ -24,7 +27,13 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
   const backdropFilter = useMotionTemplate`blur(${blur}px) saturate(160%)`;
 
   return (
-    <header className="fixed inset-x-0 top-6 z-50 px-4">
+    <motion.header
+      initial={false}
+      animate={{ y: hidden ? -120 : 0, opacity: hidden ? 0 : 1 }}
+      transition={{ type: "spring", stiffness: 260, damping: 30 }}
+      inert={hidden}
+      className={`fixed inset-x-0 top-6 z-50 px-4 ${hidden ? "pointer-events-none" : ""}`}
+    >
       <motion.nav
         aria-label="Main"
         style={{ background, backdropFilter, WebkitBackdropFilter: backdropFilter }}
@@ -84,6 +93,6 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
           )}
         </AnimatePresence>
       </motion.nav>
-    </header>
+    </motion.header>
   );
 }

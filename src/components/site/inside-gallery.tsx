@@ -4,7 +4,9 @@ import Image from "next/image";
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
-// Real screens from Toss (demo business data). Hover, focus or tap a panel and it expands while the
+// Real screens from Toss (demo business data). The screenshots are of the dark dashboard, so the gallery
+// stays a dark island (data-theme="dark") in both themes to keep captions and screens readable.
+// Hover, focus or tap a panel and it expands while the
 // others shrink; the open panel says what you're looking at.
 const SHOTS = [
   { src: "/brand/site/shot-customer.webp", title: "Your laundry, at a glance", body: "Customers see the active pickup, their basket's fill level and any invoice to pay." },
@@ -19,7 +21,7 @@ export function InsideGallery() {
   const [active, setActive] = useState(2);
   const reduce = useReducedMotion();
   return (
-    <div className="flex h-[640px] flex-col gap-3 md:h-[440px] md:flex-row">
+    <div data-theme="dark" className="flex h-[640px] flex-col gap-3 md:h-[440px] md:flex-row">
       {SHOTS.map((s, i) => {
         const open = i === active;
         return (

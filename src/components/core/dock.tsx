@@ -65,7 +65,7 @@ export function Dock({ children, className = "", spring = { mass: 0.1, stiffness
           mouseX.set(Infinity);
         }}
         style={{ height: panelHeight }}
-        className={`mx-auto flex w-fit gap-3 px-3 sm:gap-4 sm:px-4 ${className}`}
+        className={`mx-auto flex w-fit gap-2.5 px-3 sm:gap-4 sm:px-4 ${className}`}
       >
         <DockContext.Provider value={ctx}>{children}</DockContext.Provider>
       </motion.div>
@@ -73,7 +73,7 @@ export function Dock({ children, className = "", spring = { mass: 0.1, stiffness
   );
 }
 
-type DockItemProps = { children: React.ReactNode; className?: string; href?: string; onClick?: () => void; "aria-label"?: string };
+type DockItemProps = { children: React.ReactNode; className?: string; href?: string; onClick?: (e: React.MouseEvent) => void; "aria-label"?: string };
 
 export function DockItem({ children, className = "", href, onClick, ...rest }: DockItemProps) {
   const ref = useRef<HTMLAnchorElement & HTMLButtonElement>(null);

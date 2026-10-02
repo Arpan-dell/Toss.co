@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "framer-motion";
-import { House, PlayCircle, SignIn, Sparkle, SquaresFour, TelegramLogo, UsersThree, type Icon } from "@phosphor-icons/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { House, Moon, PlayCircle, SignIn, Sparkle, SquaresFour, Sun, TelegramLogo, UsersThree, type Icon } from "@phosphor-icons/react";
 import { Dock, DockIcon, DockItem, DockLabel } from "@/components/core/dock";
+import { switchTheme } from "@/components/theme-toggle";
+import { useDocked } from "./use-docked";
 
 const ITEMS: { title: string; href: string; icon: Icon; section?: string; desktopOnly?: boolean }[] = [
   { title: "Home", href: "#top", icon: House, section: "top" },
@@ -15,12 +17,11 @@ const ITEMS: { title: string; href: string; icon: Icon; section?: string; deskto
   { title: "Sign in", href: "/login", icon: SignIn },
 ];
 
-// Floating dock that takes over navigation once the hero is behind you. The dot marks the section in view.
+// Floating dock that replaces the top nav as soon as you scroll (see useDocked). The dot marks the section
+// in view; the last button switches the theme, since the top nav and its toggle are gone by then.
 export function SiteDock() {
-  const { scrollY } = useScroll();
-  const [shown, setShown] = useState(false);
+  const shown = useDocked();
   const [active, setActive] = useState("top");
-  useMotionValueEvent(scrollY, "change", (y) => setShown(y > window.innerHeight * 0.6));
 
   useEffect(() => {
     const els = ITEMS.flatMap((i) => (i.section && i.section !== "top" ? [document.getElementById(i.section)] : [])).filter(Boolean) as HTMLElement[];
@@ -50,7 +51,7 @@ export function SiteDock() {
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
           className="fixed bottom-3 left-1/2 z-40 max-w-full -translate-x-1/2"
         >
-          <Dock className="items-end rounded-2xl border border-ink/10 bg-surface-solid/75 pb-2.5 shadow-[0_20px_50px_-15px_rgb(0_0_0/0.7),inset_0_1px_0_rgb(255_255_255/0.08)] light:shadow-[0_18px_40px_-18px_rgb(11_20_48/0.35)] backdrop-blur-xl">
+          <Dock className="items-end rounded-2xl border border-ink/15 bg-surface-solid/95 pb-2.5 shadow-[0_20px_50px_-15px_rgb(0_0_0/0.8),inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-xl light:shadow-[0_2px_4px_rgb(11_20_48/0.06),0_20px_44px_-14px_rgb(11_20_48/0.4)]">
             {ITEMS.map((item) => {
               const on = item.section === active;
               return (
@@ -68,6 +69,13 @@ export function SiteDock() {
                 </DockItem>
               );
             })}
+            <DockItem onClick={switchTheme} aria-label="Switch between light and dark theme" className="aspect-square rounded-full bg-ink/[0.07] text-secondary transition-colors hover:text-fg">
+              <DockLabel>Theme</DockLabel>
+              <DockIcon>
+                <Sun size="100%" className="light:hidden" />
+                <Moon size="100%" className="hidden light:block" />
+              </DockIcon>
+            </DockItem>
           </Dock>
         </motion.nav>
       )}

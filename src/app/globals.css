@@ -17,10 +17,6 @@
   --btn-glow: rgb(255 255 255 / 0.18);
   --btn-glow-hover: rgb(255 255 255 / 0.32);
   --header-bg: rgb(12 17 40 / 0.6);
-  --aurora-1: #2a3fd1;
-  --aurora-2: #0f9fa3;
-  --aurora-3: #6b2fd6;
-  --aurora-opacity: 1;
   --bg: #0c1128;
   --surface: rgb(255 255 255 / 0.04);
   --surface-solid: #121a3c;
@@ -82,10 +78,6 @@
   --btn-glow: rgb(31 94 255 / 0.25);
   --btn-glow-hover: rgb(31 94 255 / 0.4);
   --header-bg: rgb(255 255 255 / 0.75);
-  --aurora-1: #93b4ff;
-  --aurora-2: #8ee3f5;
-  --aurora-3: #c4b5fd;
-  --aurora-opacity: 0.55;
 }
 
 @theme inline {
@@ -123,73 +115,6 @@ html[data-theme] { background-color: var(--bg); }
 ::selection {
   background: rgb(var(--accent-rgb) / 0.4);
 }
-
-/* ---------- Background: drifting aurora + faint grid ---------- */
-.aurora {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-.aurora::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgb(var(--ink-rgb) / 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(var(--ink-rgb) / 0.035) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
-}
-.aurora { opacity: var(--aurora-opacity); }
-/* the landing paints its own full background over it, so don't keep animating something nobody sees */
-body:has(> #top) > .aurora { display: none; }
-/* Soft radial gradients instead of filter: blur() on big moving layers, which cost a repaint per frame. */
-.aurora span {
-  position: absolute;
-  border-radius: 9999px;
-  opacity: 0.35;
-  animation: drift 22s ease-in-out infinite alternate;
-  will-change: transform;
-}
-.aurora span:nth-child(1) { width: 900px; height: 900px; background: radial-gradient(closest-side, var(--aurora-1), transparent); top: -380px; left: -320px; }
-.aurora span:nth-child(2) { width: 760px; height: 760px; background: radial-gradient(closest-side, var(--aurora-2), transparent); top: -270px; right: -290px; animation-delay: -7s; opacity: 0.25; }
-.aurora span:nth-child(3) { width: 680px; height: 680px; background: radial-gradient(closest-side, var(--aurora-3), transparent); bottom: -350px; left: 30%; animation-delay: -14s; opacity: 0.18; }
-
-@keyframes drift {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(60px, 40px) scale(1.12); }
-  100% { transform: translate(-40px, 80px) scale(0.95); }
-}
-
-/* ---------- Surfaces ---------- */
-.glass {
-  background: linear-gradient(180deg, rgb(var(--ink-rgb) / 0.05), rgb(var(--ink-rgb) / 0.02));
-  border: 1px solid var(--border);
-}
-
-/* Gradient hairline that lights up on hover. */
-.glow-card {
-  position: relative;
-  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.35s;
-}
-.glow-card::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: var(--gradient);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.35s;
-  pointer-events: none;
-}
-.glow-card:hover::before { opacity: 0.8; }
-.glow-card:hover { transform: translateY(-2px); }
 
 .btn-primary {
   background: var(--btn-bg);
@@ -236,26 +161,6 @@ body:has(> #top) > .aurora { display: none; }
 .stagger > *:nth-child(n + 7) { animation-delay: 0.44s; }
 
 /* ---------- Live indicators ---------- */
-.live-dot {
-  position: relative;
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  border-radius: 9999px;
-  background: currentColor;
-}
-.live-dot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: currentColor;
-  animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-@keyframes ping {
-  75%, 100% { transform: scale(2.6); opacity: 0; }
-}
-
 .pulse-ring {
   animation: pulse-ring 2s ease-out infinite;
 }
@@ -263,25 +168,6 @@ body:has(> #top) > .aurora { display: none; }
   0% { box-shadow: 0 0 0 0 rgb(var(--accent-rgb) / 0.6); }
   100% { box-shadow: 0 0 0 10px rgb(var(--accent-rgb) / 0); }
 }
-
-/* ---------- Data marks ---------- */
-.fill-bar {
-  background: var(--gradient);
-  transform-origin: left;
-  animation: grow-x 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  position: relative;
-  overflow: hidden;
-}
-.fill-bar::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.45), transparent);
-  transform: translateX(-100%);
-  animation: sweep 2.8s ease-in-out 1.2s infinite;
-}
-@keyframes grow-x { from { transform: scaleX(0); } }
-@keyframes sweep { to { transform: translateX(100%); } }
 
 .grow-y {
   transform-origin: bottom;
@@ -352,28 +238,6 @@ body:has(> #top) > .aurora { display: none; }
 }
 @keyframes progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
-/* ---------- Sticky header that turns to glass on scroll ---------- */
-.site-header { transition: background 0.4s, border-color 0.4s, backdrop-filter 0.4s; border-bottom: 1px solid transparent; }
-html[data-scrolled] .site-header {
-  background: var(--header-bg);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-color: var(--border);
-}
-
-/* ---------- Cursor spotlight on cards ---------- */
-.glow-card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgb(var(--accent-rgb) / 0.13), transparent 45%);
-  opacity: 0;
-  transition: opacity 0.4s;
-  pointer-events: none;
-}
-.glow-card:hover::after { opacity: 1; }
-
 /* ---------- Click ripple + button sheen ---------- */
 .btn-primary, .btn-ghost, [data-ripple] { position: relative; overflow: hidden; isolation: isolate; }
 .ripple {
@@ -398,53 +262,7 @@ html[data-scrolled] .site-header {
 .btn-primary:hover::after { transition: transform 0.8s ease; transform: translateX(120%); }
 .btn-primary:hover { transform: scale(1.04); }
 
-/* ---------- 3D tilt ---------- */
-.tilt {
-  transform: perspective(1000px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  transition: transform 0.25s ease-out;
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-.tilt-glare {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 0%), rgb(255 255 255 / 0.12), transparent 55%);
-  pointer-events: none;
-}
-
-/* ---------- Rotating gradient border ---------- */
-@property --angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-.spin-border { position: relative; border-radius: 1.6rem; padding: 1px; }
-.spin-border::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: conic-gradient(from var(--angle), transparent 0deg, #8b7bff 70deg, #22d3ee 140deg, transparent 200deg);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: spin-angle 5s linear infinite;
-  pointer-events: none;
-}
-@keyframes spin-angle { to { --angle: 360deg; } }
-
 .marquee:hover .marquee-track { animation-play-state: paused; }
-
-/* ---------- Gradient orb that follows the section ---------- */
-.orb {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(80px);
-  pointer-events: none;
-  animation: drift 18s ease-in-out infinite alternate;
-}
 
 /* ---------- Logo: the shirt waves like cloth in a breeze ---------- */
 /* Rotation sways the whole shirt from where it leaves the "O"; skew and a slight squash bend
@@ -476,7 +294,6 @@ html[data-scrolled] .site-header {
   }
   .draw-line { stroke-dashoffset: 0; }
   .scroll-progress { display: none !important; }
-  .tilt { transform: none !important; }
 }
 
 /* ---------- "How it works" motion stage (components/how-motion.tsx) ----------
@@ -545,6 +362,12 @@ html[data-scrolled] .site-header {
   .hs-twinkle { animation: none; opacity: 0.4; }
 }
 
+/* ---------- Dashboard system: skeletons and live tags (opacity only, so they stay on the compositor) ---------- */
+.skeleton { animation: skeleton-pulse 1.4s ease-in-out infinite; }
+@keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.tag-live { animation: tag-live 1.6s ease-in-out infinite; }
+@keyframes tag-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
 /* Button glow (core/glow-effect, colorShift): two blurred gradient layers cross-fade on the compositor. */
 @keyframes glow-swap { from { opacity: 0; } to { opacity: 1; } }
 
@@ -554,6 +377,5 @@ html[data-scrolled] .site-header {
 
 /* ---------- Light theme touches ---------- */
 [data-theme="light"] .text-gradient:not([data-theme="dark"] *) { background-image: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #0b1430); }
-[data-theme="light"] .glass:not([data-theme="dark"] *) { background: rgb(255 255 255 / 0.8); box-shadow: 0 1px 2px rgb(11 20 48 / 0.04), 0 12px 32px -18px rgb(11 20 48 / 0.18); }
 /* framer-motion writes the nav glass inline; light mode needs a much denser white to stay legible */
 [data-theme="light"] .nav-glass { background: rgb(255 255 255 / 0.82) !important; box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 18px 40px -22px rgb(11 20 48 / 0.35) !important; }

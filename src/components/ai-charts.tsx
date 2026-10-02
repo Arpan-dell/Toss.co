@@ -188,7 +188,7 @@ export function SegmentBar({ segments }: { segments: { name: string; count: numb
             key={s.name}
             onMouseEnter={() => setHover(i)}
             onMouseLeave={() => setHover(null)}
-            className={`rounded-xl border p-2.5 transition ${hover === i ? "border-border-strong bg-ink/[0.05]" : "border-border bg-ink/[0.02]"}`}
+            className={`rounded-[8px] border p-2.5 transition ${hover === i ? "border-border-strong bg-ink/[0.05]" : "border-border bg-ink/[0.02]"}`}
           >
             <p className="flex items-center gap-1.5 text-xs text-secondary">
               <span className="size-2.5 rounded-sm" style={{ background: VIZ.seg[i] }} />

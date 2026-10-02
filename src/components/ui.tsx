@@ -1,7 +1,10 @@
 import Image from "next/image";
 import type { OrderStatus, PaymentStatus } from "@/lib/types";
 import { CountUp } from "./count-up";
-import { Tilt } from "./tilt";
+
+// Dashboard visual system ("dispatch ledger"): flat solid panels with hairline borders, monospace labels
+// with a dotted leader like a laundry ticket, figures in mono on a heavy top rule, and square-cornered status
+// tags. Shape rule: panels 10px, inputs 8px, tags 4px; only buttons are pills. No glass, glow or gradients.
 
 export function Card({ title, action, children, className = "" }: {
   title?: string;
@@ -10,10 +13,11 @@ export function Card({ title, action, children, className = "" }: {
   className?: string;
 }) {
   return (
-    <section className={`glass glow-card rounded-2xl p-5 ${className}`}>
+    <section className={`rounded-[10px] border border-border bg-surface-solid p-5 ${className}`}>
       {(title || action) && (
-        <header className="mb-4 flex items-center justify-between gap-3">
-          {title && <h2 className="text-xs font-medium tracking-[0.14em] text-muted uppercase">{title}</h2>}
+        <header className="mb-4 flex items-center gap-3">
+          {title && <h2 className="shrink-0 font-mono text-[11px] font-medium tracking-[0.12em] text-secondary uppercase">{title}</h2>}
+          <span aria-hidden className="h-px flex-1 border-t border-dotted border-border-strong" />
           {action}
         </header>
       )}
@@ -24,33 +28,28 @@ export function Card({ title, action, children, className = "" }: {
 
 export function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <Tilt max={8}>
-      <div className="glass glow-card group relative overflow-hidden rounded-2xl p-5">
-        <div
-          aria-hidden
-          className="absolute -top-12 -right-12 size-32 rounded-full bg-accent/20 opacity-50 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
-        />
-        <p className="text-xs tracking-[0.14em] text-muted uppercase">{label}</p>
-        <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums text-fg">
-          <CountUp value={value} />
-        </p>
-        {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
-      </div>
-    </Tilt>
+    <div className="border-t-2 border-fg pt-3">
+      <p className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">{label}</p>
+      <p className="mt-1.5 font-mono text-[1.75rem] leading-none font-semibold tracking-tight tabular-nums text-fg">
+        <CountUp value={value} />
+      </p>
+      {hint && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
+    </div>
   );
 }
 
 type Tone = "good" | "warn" | "critical" | "info" | "neutral";
 const toneClass: Record<Tone, string> = {
-  good: "bg-good-bg text-good ring-good/25",
-  warn: "bg-warn-bg text-warn ring-warn/25",
-  critical: "bg-critical-bg text-critical ring-critical/25",
-  info: "bg-info-bg text-info ring-info/25",
-  neutral: "bg-surface-2 text-secondary ring-ink/10",
+  good: "text-good border-good/35",
+  warn: "text-warn border-warn/40",
+  critical: "text-critical border-critical/35",
+  info: "text-info border-info/35",
+  neutral: "text-secondary border-border-strong",
 };
 
-// Status is never color-alone: every badge carries an icon (or live dot) + label.
-export function Badge({ tone, icon, live = false, children }: {
+// Status is never color-alone: every tag carries a label, and live states pulse their marker.
+// `icon` is accepted for older call sites but the marker square replaces it.
+export function Badge({ tone, live = false, children }: {
   tone: Tone;
   icon?: string;
   live?: boolean;
@@ -58,10 +57,33 @@ export function Badge({ tone, icon, live = false, children }: {
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap ring-1 ring-inset ${toneClass[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-[4px] border px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-wide whitespace-nowrap uppercase ${toneClass[tone]}`}
     >
-      {live ? <span className="live-dot" aria-hidden /> : icon && <span aria-hidden>{icon}</span>}
+      <span aria-hidden className={`size-1.5 shrink-0 bg-current ${live ? "tag-live" : ""}`} />
       {children}
+    </span>
+  );
+}
+
+// Pulsing placeholder in the shape of the content it stands in for.
+export function Skeleton({ className = "", style }: { className?: string; style?: React.CSSProperties }) {
+  return <span aria-hidden style={style} className={`skeleton block rounded-[6px] bg-ink/[0.07] ${className}`} />;
+}
+
+// Tooltip for icon-only controls: shows on hover and on keyboard focus. Wrap the control; `label` should
+// match its aria-label.
+export function Tip({ label, children, side = "bottom" }: { label: string; children: React.ReactNode; side?: "top" | "bottom" }) {
+  return (
+    <span className="group/tip relative inline-flex">
+      {children}
+      <span
+        role="tooltip"
+        className={`pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 rounded-[6px] border border-border bg-surface-solid px-2 py-1 font-mono text-[11px] whitespace-nowrap text-fg opacity-0 shadow-lg transition-[opacity,translate] duration-150 group-hover/tip:opacity-100 group-has-[:focus-visible]/tip:opacity-100 ${
+          side === "top" ? "bottom-full mb-2 translate-y-1 group-hover/tip:translate-y-0" : "top-full mt-2 -translate-y-1 group-hover/tip:translate-y-0"
+        }`}
+      >
+        {label}
+      </span>
     </span>
   );
 }
@@ -108,14 +130,14 @@ export function FillBar({ weightKg, targetKg }: { weightKg?: number; targetKg?: 
   return (
     <div>
       <div
-        className="h-2 w-full overflow-hidden rounded-full bg-ink/[0.06]"
+        className="h-2 w-full overflow-hidden rounded-[2px] bg-ink/[0.07]"
         role="meter"
         aria-valuenow={pct}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label="Basket fill"
       >
-        <div className="fill-bar h-full rounded-full" style={{ width: `${Math.max(pct, 2)}%` }} />
+        <div className="h-full bg-accent" style={{ width: `${Math.max(pct, 2)}%` }} />
       </div>
       <p className="mt-1.5 text-xs tabular-nums text-muted">
         {weightKg.toFixed(1)} / {targetKg} kg · <span className="text-secondary">{pct}%</span>
@@ -131,8 +153,13 @@ export function EmptyState({ children }: { children: React.ReactNode }) {
 export function PageTitle({ children, kicker }: { children: React.ReactNode; kicker?: string }) {
   return (
     <div>
-      {kicker && <p className="text-xs tracking-[0.18em] text-accent uppercase">{kicker}</p>}
-      <h1 className="mt-1 text-3xl font-semibold tracking-tight">{children}</h1>
+      {kicker && (
+        <p className="flex items-center gap-2 font-mono text-[11px] tracking-[0.14em] text-muted uppercase">
+          <span aria-hidden className="size-1.5 bg-accent" />
+          {kicker}
+        </p>
+      )}
+      <h1 className="mt-2 text-[2.1rem] leading-tight font-bold tracking-tight">{children}</h1>
     </div>
   );
 }

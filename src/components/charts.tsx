@@ -76,17 +76,16 @@ export function ColumnChart({ data, unit, height = 220 }: { data: Datum[]; unit:
                   </span>
                 )}
                 <div
-                  className="grow-y w-full max-w-6 rounded-t transition-[opacity,box-shadow] duration-300"
+                  className="grow-y w-full max-w-6 rounded-t-[2px] transition-opacity duration-300"
                   style={{
                     height: `${(d.value / top) * 100}%`,
-                    background: "linear-gradient(to top, rgb(144 133 233 / 0.55), var(--series-1))",
+                    background: "var(--series-1)",
                     opacity: hover === null || hover === i ? 1 : 0.4,
-                    boxShadow: hover === i ? "0 0 24px -4px rgb(144 133 233 / 0.9)" : "none",
                     animationDelay: `${i * 70}ms`,
                   }}
                 />
                 {hover === i && (
-                  <div className="pointer-events-none absolute bottom-full z-10 mb-6 whitespace-nowrap rounded-lg border border-border-strong bg-surface-solid/95 px-3 py-2 text-xs shadow-2xl backdrop-blur">
+                  <div className="pointer-events-none absolute bottom-full z-10 mb-6 whitespace-nowrap rounded-[6px] border border-border-strong bg-surface-solid px-3 py-2 text-xs shadow-xl">
                     <p className="font-medium text-fg">{d.label}</p>
                     <p className="tabular-nums text-secondary">
                       {fmt(d.value)} {unit}

@@ -67,8 +67,8 @@ export function Simulator({ base }: { base: SimBase }) {
   return (
     <div className="grid gap-6 lg:grid-cols-5">
       <div className="space-y-5 lg:col-span-3">
-        <div className="space-y-3 rounded-2xl border border-border bg-ink/[0.02] p-4">
-          <p className="text-sm font-medium">💹 Change your price</p>
+        <div className="space-y-3 rounded-[10px] border border-border bg-ink/[0.02] p-4">
+          <p className="text-sm font-medium">Change your price</p>
           <Slider label={`Price per kg (now ₹${base.price})`} value={price} min={-20} max={20} suffix="%" onChange={setPrice} />
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="text-muted">How price-sensitive are your customers?</span>
@@ -90,8 +90,8 @@ export function Simulator({ base }: { base: SimBase }) {
           </p>
         </div>
 
-        <div className="space-y-3 rounded-2xl border border-border bg-ink/[0.02] p-4">
-          <p className="text-sm font-medium">🎁 Win back at-risk customers ({base.atRiskCustomers})</p>
+        <div className="space-y-3 rounded-[10px] border border-border bg-ink/[0.02] p-4">
+          <p className="text-sm font-medium">Win back at-risk customers ({base.atRiskCustomers})</p>
           <Slider label="Share you win back" value={winback} min={0} max={100} step={5} suffix="%" onChange={setWinback} />
           <Slider label="Discount on their comeback pickup" value={discount} min={0} max={30} suffix="%" onChange={setDiscount} />
           <p className="text-xs text-muted">
@@ -100,19 +100,19 @@ export function Simulator({ base }: { base: SimBase }) {
         </div>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <div className="space-y-3 rounded-2xl border border-border bg-ink/[0.02] p-4">
-            <p className="text-sm font-medium">🧾 Collect unpaid invoices</p>
+          <div className="space-y-3 rounded-[10px] border border-border bg-ink/[0.02] p-4">
+            <p className="text-sm font-medium">Collect unpaid invoices</p>
             <Slider label={`Of ${inr(base.outstanding)} outstanding`} value={collect} min={0} max={100} step={5} suffix="%" onChange={setCollect} />
           </div>
-          <div className="space-y-3 rounded-2xl border border-border bg-ink/[0.02] p-4">
-            <p className="text-sm font-medium">🚚 Add drivers</p>
+          <div className="space-y-3 rounded-[10px] border border-border bg-ink/[0.02] p-4">
+            <p className="text-sm font-medium">Add drivers</p>
             <Slider label={`Now ${base.connected} connected`} value={extraDrivers} min={0} max={5} suffix="" onChange={setExtraDrivers} />
           </div>
         </div>
       </div>
 
       <div className="lg:col-span-2">
-        <div className="sticky top-24 space-y-4 rounded-3xl border border-accent/30 bg-gradient-to-b from-accent/10 to-transparent p-5">
+        <div className="sticky top-24 space-y-4 rounded-[10px] border border-t-2 border-border border-t-accent bg-surface-solid p-5">
           <div>
             <p className="text-xs tracking-[0.14em] text-muted uppercase">Next 30 days, projected</p>
             <p className="mt-1 text-4xl font-semibold tabular-nums">{inr(total)}</p>

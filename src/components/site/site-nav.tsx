@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useMotionTemplate, useScroll, useTransform } f
 import { List, X } from "@phosphor-icons/react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useDocked } from "./use-docked";
+import { Tip } from "@/components/ui";
 
 const LINKS = [
   { label: "How it works", href: "#how" },
@@ -61,15 +62,19 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
             <Link href="/login" className="btn-primary rounded-full px-5 py-2.5 text-sm font-semibold">
               Get started
             </Link>
-            <button
-              type="button"
-              onClick={() => setOpen((o) => !o)}
-              aria-label={open ? "Close menu" : "Open menu"}
-              aria-expanded={open}
-              className="grid size-10 place-items-center rounded-full text-fg md:hidden"
-            >
-              {open ? <X size={22} weight="bold" /> : <List size={22} weight="bold" />}
-            </button>
+            <span className="md:hidden">
+              <Tip label={open ? "Close menu" : "Menu"}>
+                <button
+                  type="button"
+                  onClick={() => setOpen((o) => !o)}
+                  aria-label={open ? "Close menu" : "Open menu"}
+                  aria-expanded={open}
+                  className="grid size-10 place-items-center rounded-full text-fg"
+                >
+                  {open ? <X size={22} weight="bold" /> : <List size={22} weight="bold" />}
+                </button>
+              </Tip>
+            </span>
           </div>
         </div>
         <AnimatePresence initial={false}>

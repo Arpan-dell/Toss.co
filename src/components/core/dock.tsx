@@ -81,11 +81,13 @@ type DockItemProps = {
   className?: string;
   href?: string;
   onClick?: (e: React.MouseEvent) => void;
+  /** called when the pointer or focus lands on the item: a cue to prefetch */
+  onIntent?: () => void;
   "aria-label"?: string;
   "aria-current"?: "page";
 };
 
-export function DockItem({ children, className = "", href, onClick, ...rest }: DockItemProps) {
+export function DockItem({ children, className = "", href, onClick, onIntent, ...rest }: DockItemProps) {
   const ref = useRef<HTMLAnchorElement & HTMLButtonElement>(null);
   const { mouseX, spring, magnification, distance } = useDock();
   const hovered = useMotionValue(0);
@@ -98,9 +100,15 @@ export function DockItem({ children, className = "", href, onClick, ...rest }: D
 
   const shared = {
     style: { width },
-    onHoverStart: () => hovered.set(1),
+    onHoverStart: () => {
+      hovered.set(1);
+      onIntent?.();
+    },
     onHoverEnd: () => hovered.set(0),
-    onFocus: () => hovered.set(1),
+    onFocus: () => {
+      hovered.set(1);
+      onIntent?.();
+    },
     onBlur: () => hovered.set(0),
     className: `relative inline-flex shrink-0 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`,
     "aria-label": rest["aria-label"],

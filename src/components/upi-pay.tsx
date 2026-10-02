@@ -6,7 +6,7 @@ import { burstFromEvent } from "@/lib/fx";
 import { detectUpiPlatform, upiAppLinks, type UpiPlatform } from "@/lib/upi";
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-ink/[0.03] px-4 py-2.5 font-mono text-sm tracking-wide transition-shadow placeholder:font-sans placeholder:tracking-normal placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
+  "w-full rounded-[8px] border border-border bg-ink/[0.03] px-4 py-2.5 font-mono text-sm tracking-wide transition-shadow placeholder:font-sans placeholder:tracking-normal placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
 
 const noopSubscribe = () => () => {};
 
@@ -67,7 +67,7 @@ export function UpiPay({
 
   const qr = (
     <div
-      className="mx-auto w-44 overflow-hidden rounded-xl bg-white p-2 [&>svg]:h-auto [&>svg]:w-full"
+      className="mx-auto w-44 overflow-hidden rounded-[8px] bg-white p-2 [&>svg]:h-auto [&>svg]:w-full"
       aria-label={`UPI QR code to pay ${amountLabel} to ${payeeName}`}
       role="img"
       dangerouslySetInnerHTML={{ __html: qrSvg }}
@@ -75,7 +75,7 @@ export function UpiPay({
   );
 
   return (
-    <div className="w-full rounded-2xl border border-border bg-ink/[0.03] p-4" style={{ animation: "fade-up 0.4s ease both" }}>
+    <div className="w-full rounded-[10px] border border-border bg-ink/[0.03] p-4" style={{ animation: "fade-up 0.4s ease both" }}>
       {/* What's being paid, to whom: exactly what the UPI app will show pre-filled. */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -95,7 +95,8 @@ export function UpiPay({
               /* clipboard blocked: the UPI ID is visible to copy by hand */
             }
           }}
-          className="rounded-lg border border-border px-2.5 py-1 font-mono text-xs text-secondary hover:text-fg"
+          title="Copy UPI ID"
+          className="rounded-[6px] border border-border px-2.5 py-1 font-mono text-xs text-secondary hover:text-fg"
           aria-label={`Copy UPI ID ${payeeUpiId}`}
         >
           {payeeUpiId} · {copied ? "copied ✓" : "copy"}
@@ -111,7 +112,7 @@ export function UpiPay({
                 key={app.id}
                 href={app.href}
                 data-ripple
-                className="flex items-center gap-2.5 rounded-xl border border-border bg-ink/[0.04] px-3 py-2.5 text-sm font-medium transition-colors hover:border-border-strong hover:bg-ink/[0.08]"
+                className="flex items-center gap-2.5 rounded-[8px] border border-border bg-ink/[0.04] px-3 py-2.5 text-sm font-medium transition-colors hover:border-border-strong hover:bg-ink/[0.08]"
               >
                 <span
                   aria-hidden
@@ -140,7 +141,7 @@ export function UpiPay({
       )}
 
       {state.message ? (
-        <p role="status" className="mt-4 rounded-xl border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
+        <p role="status" className="mt-4 rounded-[8px] border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
           {state.message}
         </p>
       ) : (

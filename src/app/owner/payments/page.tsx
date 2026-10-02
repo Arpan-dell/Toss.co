@@ -4,6 +4,7 @@ import { reviewSubscriptionPayment } from "@/lib/actions/owner";
 import { listSubscriptionPayments, listTenants } from "@/lib/data";
 import { formatDateTime, formatINR } from "@/lib/format";
 import { requireRole } from "@/lib/session";
+import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
 
 export const metadata: Metadata = { title: "Subscription payments" };
 
@@ -24,7 +25,7 @@ export default async function OwnerPayments() {
         ) : (
           <ul className="divide-y divide-border">
             {pending.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
+              <OptimisticRow key={p.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-[240px] flex-1 text-sm">
                   <p className="font-medium">
                     {formatINR(p.amount)} for {p.months} month{p.months > 1 ? "s" : ""}
@@ -35,18 +36,18 @@ export default async function OwnerPayments() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <form action={reviewSubscriptionPayment}>
+                  <OptimisticForm action={reviewSubscriptionPayment} hide>
                     <input type="hidden" name="id" value={p.id} />
                     <input type="hidden" name="decision" value="approve" />
-                    <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">✓ Received</button>
-                  </form>
-                  <form action={reviewSubscriptionPayment}>
+                    <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">Received</button>
+                  </OptimisticForm>
+                  <OptimisticForm action={reviewSubscriptionPayment} hide>
                     <input type="hidden" name="id" value={p.id} />
                     <input type="hidden" name="decision" value="reject" />
                     <button className="btn-ghost rounded-full px-4 py-1.5 text-sm text-critical">Not received</button>
-                  </form>
+                  </OptimisticForm>
                 </div>
-              </li>
+              </OptimisticRow>
             ))}
           </ul>
         )}

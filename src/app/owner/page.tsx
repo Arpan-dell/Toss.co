@@ -6,6 +6,7 @@ import { getPlatformSettings, listSubscriptionPayments, listTenantStats, listTen
 import { formatDate, formatINR } from "@/lib/format";
 import { planState, type PlanState } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
+import { OptimisticForm } from "@/components/optimistic";
 
 export const metadata: Metadata = { title: "Businesses" };
 
@@ -32,7 +33,7 @@ export default async function OwnerHome() {
       <PageTitle kicker="Toss platform">Businesses</PageTitle>
 
       {!platform.ownerUpiId && (
-        <p role="alert" className="rounded-xl border border-warn/30 bg-warn-bg px-4 py-3 text-sm text-warn">
+        <p role="alert" className="rounded-[8px] border border-warn/30 bg-warn-bg px-4 py-3 text-sm text-warn">
           Add your UPI ID under <Link href="/owner/settings" className="underline">Plan &amp; UPI</Link> so businesses can pay
           their subscription.
         </p>
@@ -69,7 +70,7 @@ export default async function OwnerHome() {
                       <p className="font-mono text-xs text-muted">{t.joinCode}</p>
                       {t.closureRequestedAt && (
                         <p className="mt-1 text-xs text-warn" title={t.closureReason ?? undefined}>
-                          ⚠️ Asked to be removed{t.closureReason ? `: “${t.closureReason}”` : ""}
+                          Asked to be removed{t.closureReason ? `: “${t.closureReason}”` : ""}
                         </p>
                       )}
                     </td>
@@ -81,13 +82,13 @@ export default async function OwnerHome() {
                       {plan.until && <span className="ml-2 text-xs text-muted">until {formatDate(plan.until)}</span>}
                     </td>
                     <td className="px-5 py-2.5 text-right">
-                      <form action={setBusinessSuspended}>
+                      <OptimisticForm action={setBusinessSuspended} done={plan.state === "SUSPENDED" ? "Reactivated" : "Suspended"}>
                         <input type="hidden" name="tenantId" value={t.id} />
                         <input type="hidden" name="suspend" value={plan.state === "SUSPENDED" ? "0" : "1"} />
                         <button className={`text-xs ${plan.state === "SUSPENDED" ? "text-good" : "text-critical"} hover:underline`}>
                           {plan.state === "SUSPENDED" ? "Reactivate" : "Suspend"}
                         </button>
-                      </form>
+                      </OptimisticForm>
                     </td>
                   </tr>
                 ))}

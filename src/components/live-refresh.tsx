@@ -3,6 +3,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Tip } from "./ui";
 
 // Re-renders the current page whenever this business's orders, baskets or drivers change
 // (a basket fills, a driver taps Accept, a customer reports a payment…). Supabase Realtime
@@ -34,12 +35,11 @@ export function LiveRefresh({ tenantId }: { tenantId: string }) {
   }, [tenantId, router]);
 
   return (
-    <span
-      className="inline-flex items-center gap-1.5 text-xs text-muted"
-      title={status === "live" ? "This page updates by itself" : status === "offline" ? "Live updates unavailable: refresh to see changes" : "Connecting…"}
-    >
-      <span className={`live-dot ${status === "live" ? "text-good" : status === "offline" ? "text-critical" : "text-warn"}`} aria-hidden />
-      {status === "live" ? "Live" : status === "offline" ? "Offline" : "Connecting"}
-    </span>
+    <Tip label={status === "live" ? "This page updates by itself" : status === "offline" ? "Live updates off: refresh to see changes" : "Connecting…"}>
+      <span tabIndex={0} className="inline-flex items-center gap-1.5 rounded-[4px] font-mono text-[11px] tracking-wide text-muted uppercase outline-none focus-visible:ring-2 focus-visible:ring-accent">
+        <span className={`size-1.5 tag-live bg-current ${status === "live" ? "text-good" : status === "offline" ? "text-critical" : "text-warn"}`} aria-hidden />
+        {status === "live" ? "Live" : status === "offline" ? "Offline" : "Connecting"}
+      </span>
+    </Tip>
   );
 }

@@ -20,10 +20,10 @@ export function RunNow({ first = false }: { first?: boolean }) {
   return (
     <form action={action} className="space-y-2">
       <PendingButton
-        pendingText="✨ Analysing your business…"
+        pendingText="Analysing your business…"
         className={`btn-primary inline-flex items-center gap-2 rounded-full font-medium ${first ? "px-6 py-3 text-base" : "px-4 py-2 text-sm"}`}
       >
-        ✨ {first ? "Run my first analysis" : "Re-analyse now"}
+        {first ? "Run my first analysis" : "Re-analyse now"}
       </PendingButton>
       {state.error && <p className="text-xs text-critical">{state.error}</p>}
       {state.message && <p className="text-xs text-good">{state.message}</p>}
@@ -63,7 +63,7 @@ export function AskToss() {
       </div>
       {state.error && <p className="text-sm text-critical">{state.error}</p>}
       {state.answer && (
-        <div className="rounded-2xl border border-accent/30 bg-accent/[0.06] p-4">
+        <div className="rounded-[10px] border border-accent/30 bg-accent/[0.06] p-4">
           <p className="mb-1 text-xs text-muted">You asked: {state.question}</p>
           <p className="text-sm leading-relaxed whitespace-pre-line text-fg">{state.answer}</p>
         </div>

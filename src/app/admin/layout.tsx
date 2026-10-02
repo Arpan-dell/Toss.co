@@ -34,7 +34,7 @@ export default async function ManagerLayout({ children }: LayoutProps<"/admin">)
       {plan && plan.state !== "ACTIVE" && (
         <div
           role="status"
-          className={`mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm ${
+          className={`mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border px-4 py-3 text-sm ${
             plan.state === "TRIAL" ? "border-accent/30 bg-accent/[0.07] text-secondary" : "border-critical/30 bg-critical-bg text-critical"
           }`}
         >

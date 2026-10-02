@@ -4,7 +4,6 @@ import { useEffect } from "react";
 
 // Global interaction layer, mounted once in the root layout:
 // - scroll reveal for any element with [data-reveal]
-// - cursor spotlight on .glow-card
 // - click ripple on .btn-primary, .btn-ghost and [data-ripple]
 // - html[data-scrolled] once the page has scrolled (sticky header styling)
 export function Effects() {
@@ -41,15 +40,6 @@ export function Effects() {
     });
     mo.observe(document.body, { childList: true, subtree: true });
 
-    // ---- Spotlight ----
-    const onMove = (e: PointerEvent) => {
-      const card = (e.target as Element).closest?.<HTMLElement>(".glow-card");
-      if (!card) return;
-      const r = card.getBoundingClientRect();
-      card.style.setProperty("--mx", `${e.clientX - r.left}px`);
-      card.style.setProperty("--my", `${e.clientY - r.top}px`);
-    };
-
     // ---- Ripple ----
     const onDown = (e: PointerEvent) => {
       if (reduce) return;
@@ -73,14 +63,12 @@ export function Effects() {
     };
     onScroll();
 
-    document.addEventListener("pointermove", onMove, { passive: true });
     document.addEventListener("pointerdown", onDown);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       io.disconnect();
       mo.disconnect();
       cancelAnimationFrame(queued);
-      document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerdown", onDown);
       window.removeEventListener("scroll", onScroll);
     };

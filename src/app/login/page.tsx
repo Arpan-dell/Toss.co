@@ -18,8 +18,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <Link href="/" className="mb-8 flex justify-center">
           <Logo variant="full" className="h-28" />
         </Link>
-        <div className="glass relative overflow-hidden rounded-3xl p-7 shadow-2xl">
-          <div aria-hidden className="absolute -top-20 left-1/2 size-48 -translate-x-1/2 rounded-full bg-accent/30 blur-3xl" />
+        <div className="relative rounded-[10px] border border-t-2 border-border border-t-accent bg-surface-solid p-7">
           <h1 className="relative text-2xl font-semibold tracking-tight">Welcome to Toss</h1>
           <p className="relative mt-1.5 mb-6 text-sm text-secondary">Track your pickups and pay invoices in one place.</p>
           <AuthForm notice={typeof notice === "string" ? NOTICES[notice] : undefined} />

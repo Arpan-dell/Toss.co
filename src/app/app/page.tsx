@@ -47,14 +47,14 @@ export default async function CustomerOverview() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Overview">Hi, {firstName} 👋</PageTitle>
+      <PageTitle kicker="Overview">Hi, {firstName}</PageTitle>
 
       {offer && business && (
         <div
           role="status"
-          className="relative overflow-hidden rounded-2xl border border-good/30 bg-gradient-to-r from-good-bg via-ink/[0.03] to-transparent p-5"
+          className="relative rounded-[10px] border border-l-4 border-border border-l-good bg-surface-solid p-5"
         >
-          <p className="text-xs tracking-[0.14em] text-good uppercase">🎁 We miss you</p>
+          <p className="font-mono text-[11px] tracking-[0.14em] text-good uppercase">We miss you</p>
           <p className="mt-1 text-xl font-semibold">
             {offer.percent}% off your next pickup from {business.name}
           </p>
@@ -142,7 +142,7 @@ export default async function CustomerOverview() {
       <Card title="Invoices due">
         {unpaid.length === 0 && verifying.length === 0 && <EmptyState>You&apos;re all paid up.</EmptyState>}
         {unpaid.length > 0 && !canPay && (
-          <p className="mb-4 rounded-xl border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
+          <p className="mb-4 rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
             {business
               ? `${business.name} hasn't set up UPI payments yet. Pay them directly, and they'll mark it paid.`
               : "Connect to your laundry above to pay these invoices."}

@@ -22,8 +22,8 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
       <PageTitle kicker="Your business">{tenant.name}</PageTitle>
 
       {params.welcome && (
-        <p role="status" className="rounded-xl border border-good/30 bg-good-bg px-4 py-3 text-sm text-good">
-          🎉 Your business is live. Share your Business ID with customers so they can connect to you.
+        <p role="status" className="rounded-[8px] border border-good/30 bg-good-bg px-4 py-3 text-sm text-good">
+          Your business is live. Share your Business ID with customers so they can connect to you.
         </p>
       )}
 
@@ -70,7 +70,7 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
           </Field>
         </ActionForm>
       </Card>
-      <Card title="🎁 Win back quiet customers">
+      <Card title="Win back quiet customers">
         <p className="mb-4 text-sm text-secondary">
           When a customer hasn&apos;t had a pickup for a while, Toss sends them a discount in the Toss Control bot and on their dashboard. It&apos;s
           applied to their next pickup automatically, valid for 14 days.
@@ -99,7 +99,7 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
 
       <Card title="Close your business">
         {tenant.closureRequestedAt ? (
-          <p className="rounded-xl border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
+          <p className="rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
             You asked Toss to close this business on {formatDate(tenant.closureRequestedAt)}. We&apos;ll contact you by email to complete it.
           </p>
         ) : (

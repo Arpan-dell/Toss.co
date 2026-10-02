@@ -1,10 +1,56 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useOptimistic, useState, useTransition } from "react";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import type { FormState } from "@/lib/actions/shared";
-import { addDriver, updateBasket } from "@/lib/actions/manager-ops";
-import type { Device } from "@/lib/types";
+import { Badge } from "@/components/ui";
+import { addDriver, setDriverStatus, updateBasket } from "@/lib/actions/manager-ops";
+import type { Device, DriverStatus } from "@/lib/types";
+
+const STATUS: Record<DriverStatus, { tone: "good" | "info" | "neutral"; label: string; live?: boolean }> = {
+  AVAILABLE: { tone: "good", label: "Available", live: true },
+  ON_JOB: { tone: "info", label: "On a job" },
+  OFFLINE: { tone: "neutral", label: "Offline" },
+};
+
+// Driver status switch. The tag changes the moment you pick a status; the save runs behind it and the tag
+// falls back (with a note) if it fails.
+export function DriverStatusControl({ driverId, name, status }: { driverId: string; name: string; status: DriverStatus }) {
+  const [shown, setShown] = useOptimistic(status);
+  const [, start] = useTransition();
+  const [error, setError] = useState<string>();
+  const s = STATUS[shown];
+  return (
+    <div className="flex items-center gap-2">
+      <Badge tone={s.tone} live={s.live}>{s.label}</Badge>
+      <select
+        value={shown}
+        aria-label={`Change ${name}'s status`}
+        onChange={(e) => {
+          const next = e.target.value as DriverStatus;
+          start(async () => {
+            setError(undefined);
+            setShown(next);
+            const fd = new FormData();
+            fd.set("driverId", driverId);
+            fd.set("status", next);
+            try {
+              await setDriverStatus(fd);
+            } catch {
+              setError("Not saved");
+            }
+          });
+        }}
+        className="rounded-[6px] border border-border bg-surface-solid px-2 py-1 text-xs"
+      >
+        <option value="AVAILABLE">Available</option>
+        <option value="ON_JOB">On a job</option>
+        <option value="OFFLINE">Offline</option>
+      </select>
+      {error && <span role="alert" className="text-xs text-critical">{error}</span>}
+    </div>
+  );
+}
 
 export function AddDriverForm() {
   return (

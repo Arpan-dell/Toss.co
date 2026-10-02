@@ -18,7 +18,7 @@ export function IdChip({ value, label }: { value: string; label: string }) {
           /* clipboard blocked: the ID is still visible to copy by hand */
         }
       }}
-      className="group inline-flex items-center gap-3 rounded-xl border border-accent/30 bg-accent/[0.07] px-4 py-2 text-left transition-colors hover:border-accent/60"
+      className="group inline-flex items-center gap-3 rounded-[8px] border border-accent/30 bg-accent/[0.07] px-4 py-2 text-left transition-colors hover:border-accent/60"
       aria-label={`${label} ${value}. Click to copy.`}
     >
       <span>

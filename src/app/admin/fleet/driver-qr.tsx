@@ -6,11 +6,11 @@ export async function DriverBotQr({ username }: { username: string }) {
   const link = `https://t.me/${username}`;
   const svg = await qrSvg(link);
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-border bg-ink/[0.03] p-3 sm:flex-col sm:items-center sm:gap-2 sm:p-4">
+    <div className="flex items-center gap-4 rounded-[10px] border border-border bg-ink/[0.03] p-3 sm:flex-col sm:items-center sm:gap-2 sm:p-4">
       <div
         role="img"
         aria-label={`QR code for @${username}`}
-        className="size-28 shrink-0 overflow-hidden rounded-xl bg-white p-1.5 shadow-[0_0_30px_-8px_rgb(2_169_161/0.6)] sm:size-36 [&>svg]:size-full"
+        className="size-28 shrink-0 overflow-hidden rounded-[8px] bg-white p-1.5 shadow-[0_0_30px_-8px_rgb(2_169_161/0.6)] sm:size-36 [&>svg]:size-full"
         dangerouslySetInnerHTML={{ __html: svg }}
       />
       <div className="space-y-1 text-xs sm:text-center">

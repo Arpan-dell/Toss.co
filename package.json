@@ -13,6 +13,7 @@
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "framer-motion": "^13.5.0",
     "jose": "^6.2.12",
     "next": "16.3.7",
     "nodemailer": "^10.0.13",

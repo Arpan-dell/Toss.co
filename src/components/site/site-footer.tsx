@@ -28,7 +28,7 @@ const COLUMNS = [
 
 export function SiteFooter({ logo }: { logo: React.ReactNode }) {
   return (
-    <footer className="relative overflow-hidden border-t border-ink/5 pt-32 pb-10">
+    <footer className="relative overflow-hidden border-t border-ink/5 pt-32 pb-28">
       <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 size-[720px] -translate-x-1/2 rounded-full bg-accent/[0.06] blur-[140px]" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal as="h2" className="max-w-4xl text-[clamp(3rem,9vw,7.5rem)] leading-[0.95] font-black tracking-tight">

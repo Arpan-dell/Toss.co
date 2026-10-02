@@ -651,7 +651,7 @@ export function HowScrolly() {
   return (
     <div>
       {/* role switcher */}
-      <div className="sticky top-[6.25rem] z-30 flex justify-center py-3">
+      <div className="sticky top-3 z-30 flex justify-center py-3">
         <div className="relative flex rounded-full border border-ink/10 bg-surface-solid/85 p-1 shadow-xl backdrop-blur" role="tablist" aria-label="Who are you?">
           <span
             aria-hidden
@@ -674,9 +674,9 @@ export function HowScrolly() {
         </div>
       </div>
 
-      <div id="how-steps" className="relative grid scroll-mt-44 gap-8 lg:grid-cols-2 lg:gap-14">
+      <div id="how-steps" className="relative grid scroll-mt-24 gap-8 lg:grid-cols-2 lg:gap-14">
         {/* sticky stage (on top on phones, on the right on desktop) */}
-        <div className="sticky top-44 z-10 -mx-4 h-[46vh] bg-[var(--bg)] px-4 pb-3 lg:top-44 lg:order-2 lg:mx-0 lg:h-[calc(100vh-12rem)] lg:bg-transparent lg:px-0 lg:pb-0">
+        <div className="sticky top-[5.5rem] z-10 -mx-4 h-[46vh] bg-[var(--bg)] px-4 pb-3 lg:top-[5.5rem] lg:order-2 lg:mx-0 lg:h-[calc(100vh-11rem)] lg:bg-transparent lg:px-0 lg:pb-0">
           <div ref={stage} data-theme="dark" className="relative grid h-full place-items-center overflow-hidden rounded-[2rem] border border-ink/10 bg-[#080d22] [container-type:inline-size]" style={{ ["--p" as string]: 0 } as React.CSSProperties}>
             {BLOBS[role].map((c, i) => (
               <span

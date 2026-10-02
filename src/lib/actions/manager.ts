@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { geocodeStore } from "../dispatch/service";
+import { parseKg, repriceForWeight } from "../dispatch/weighing";
 import { notifyClosureRequested, notifySubscriptionSubmitted } from "../email/notify";
 import { sendInvoice } from "../invoice/service";
 import { getSession } from "../session";
@@ -77,6 +78,67 @@ export async function updateServiceArea(_prev: FormState, formData: FormData): P
       ? `Saved. Customers within ${radius} km of your store can find you under Find a laundry.`
       : `Saved. You pick up within ${radius} km and stay hidden from Find a laundry.`,
   };
+}
+
+// Weigh at pickup: when on, drivers must enter the scale reading before a pickup completes, and that weight is
+// billed. Off: "Picked up" completes with the basket's own reading.
+export async function updateWeighing(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireManager();
+  const on = formData.get("weighAtPickup") === "on";
+  // not in the manager's column grants: written server-side after the role check
+  const { error } = await supabaseAdmin().from("tenants").update({ weigh_at_pickup: on }).eq("id", session.tenantId);
+  if (error) return { error: friendlyError(error) };
+  done();
+  return { message: on ? "Saved. Drivers will weigh every bag at pickup." : "Saved. Pickups use the basket's reading." };
+}
+
+// The manager confirms or corrects an unpaid order's weight (e.g. weighed again at the store). Re-priced at
+// the order's own rate, discount re-applied; the basket's original reading is kept.
+export async function confirmOrderWeight(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireManager();
+  const orderId = text(formData, "orderId");
+  const kg = parseKg(text(formData, "kg"));
+  if (kg === null || kg === "range") return { error: "Enter the weight in kg, between 0.2 and 60." };
+
+  // read through RLS first: only an order of this manager's own business is found
+  const supabase = await createClient();
+  const { data: o } = await supabase
+    .from("orders")
+    .select("id, weight_kg, amount_due, amount_before_discount, discount_pct, payment_status, reported_weight_kg, tenant_id")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (!o || o.tenant_id !== session.tenantId) return { error: "Order not found in your business." };
+  if (o.payment_status !== "UNPAID") return { error: "This order is already paid or being paid, so its amount is fixed." };
+  const { data: t } = await supabase.from("tenants").select("price_per_kg").eq("id", session.tenantId).maybeSingle();
+
+  const priced = repriceForWeight(
+    {
+      weightKg: Number(o.weight_kg) || 0,
+      amountDue: Number(o.amount_due) || 0,
+      amountBeforeDiscount: o.amount_before_discount as number | null,
+      discountPct: o.discount_pct as number | null,
+    },
+    kg,
+    Number(t?.price_per_kg) || 0,
+  );
+  const { data: saved, error } = await supabaseAdmin()
+    .from("orders")
+    .update({
+      weight_kg: kg,
+      weighed_kg: kg,
+      weighed_at: new Date().toISOString(),
+      weight_source: "manager",
+      reported_weight_kg: o.reported_weight_kg ?? o.weight_kg,
+      amount_due: priced.amountDue,
+      amount_before_discount: priced.amountBeforeDiscount,
+    })
+    .eq("id", orderId)
+    .eq("tenant_id", session.tenantId)
+    .eq("payment_status", "UNPAID")
+    .select("id");
+  if (error || !saved?.length) return { error: error ? friendlyError(error) : "This order can't be changed anymore." };
+  done();
+  return { message: `Weight confirmed: ${kg} kg, ₹${priced.amountDue}.` };
 }
 
 // Win-back offers: after `days` without a pickup, the customer gets `pct`% off their next one.

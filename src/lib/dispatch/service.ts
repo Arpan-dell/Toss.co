@@ -20,6 +20,7 @@ const answerCallback = safe(api.answerCallback);
 const sendPhoto = safe(api.sendPhoto);
 import { chooseDriver, directionsUrl, routeUrl, searchUrl, type DriverCandidate, type LatLng } from "./core";
 import { geocode } from "./geocode";
+import { MAX_KG, MIN_KG, parseKg, repriceForWeight } from "./weighing";
 import { logError } from "@/lib/log";
 
 // Automatic pickup dispatch over the driver bot. Runs server-side with the service role:
@@ -87,7 +88,7 @@ async function candidates(tenantId: string): Promise<DriverCandidate[]> {
 async function driverByChat(chatId: string) {
   const { data } = await db()
     .from("drivers")
-    .select("id, tenant_id, name, telegram_chat_id, status, last_lat, last_lng, location_at, route_token")
+    .select("id, tenant_id, name, telegram_chat_id, status, last_lat, last_lng, location_at, route_token, weighing_order_id")
     .eq("telegram_chat_id", chatId)
     .maybeSingle();
   return data as Row | null;
@@ -383,6 +384,26 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
   }
 
   const text = (msg.text ?? "").trim();
+
+  // Mid weigh-in: a number is the bag's weight. Anything else (menu buttons) works as usual.
+  if (driver.weighing_order_id && update.message) {
+    const kg = parseKg(text);
+    if (kg === "range") {
+      await sendMessage(token, chatId, `⚖️ That doesn't look right. Send the weight in kg between ${MIN_KG} and ${MAX_KG}, like <code>6.4</code>.`);
+      return;
+    }
+    if (kg !== null) {
+      const { data: o } = await db().from("orders").select("*").eq("id", driver.weighing_order_id as string).maybeSingle();
+      if (!o || o.driver_id !== chatId || !ACTIVE.includes(o.status as string)) {
+        await db().from("drivers").update({ weighing_order_id: null }).eq("id", driver.id as string);
+        await sendMessage(token, chatId, "This pickup isn't yours anymore.", { keyboard: MENU });
+        return;
+      }
+      await finishPickup(token, driver, o as Row, kg, "driver");
+      return;
+    }
+  }
+
   if (text === "/start" || text === "/help") {
     await sendBanner(token, chatId, WELCOME(driver.name as string), MENU);
   } else if (text === "🟢 Online" || text === "/online") {
@@ -430,6 +451,66 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
   }
 }
 
+// Completes a pickup with the weight that will be billed: the driver's scale reading ("driver") or the
+// basket's own ("basket"). An unpaid order is re-priced at its own rate per kg (discount re-applied); the
+// basket's original reading is kept for comparison. Only the driver holding the pickup gets here, and the
+// update only applies while it's still open, so a double tap can't complete it twice.
+async function finishPickup(token: string, driver: Row, o: Row, kg: number, source: "driver" | "basket", msg?: { chat: { id: number }; message_id: number }) {
+  const chatId = driver.telegram_chat_id as string;
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> = {
+    status: "COMPLETED",
+    completed_at: now,
+    weight_source: source,
+    reported_weight_kg: o.reported_weight_kg ?? o.weight_kg,
+  };
+  if (source === "driver") Object.assign(patch, { weight_kg: kg, weighed_kg: kg, weighed_at: now });
+  if (source === "driver" && o.payment_status === "UNPAID") {
+    const { data: t } = await db().from("tenants").select("price_per_kg").eq("id", o.tenant_id as string).maybeSingle();
+    const priced = repriceForWeight(
+      {
+        weightKg: Number(o.weight_kg) || 0,
+        amountDue: Number(o.amount_due) || 0,
+        amountBeforeDiscount: o.amount_before_discount as number | null,
+        discountPct: o.discount_pct as number | null,
+      },
+      kg,
+      Number(t?.price_per_kg) || 0,
+    );
+    Object.assign(patch, { amount_due: priced.amountDue, amount_before_discount: priced.amountBeforeDiscount });
+  }
+  const { data: done } = await db().from("orders").update(patch).eq("id", o.id as string).eq("driver_id", chatId).in("status", ACTIVE).select("amount_due");
+  await db().from("drivers").update({ weighing_order_id: null }).eq("id", driver.id as string);
+  if (!done?.length) {
+    await sendMessage(token, chatId, "This pickup was already closed.", { keyboard: MENU });
+    return;
+  }
+  const amount = Math.round(Number(done[0].amount_due) || 0);
+  const weighed = source === "driver" ? `⚖️ ${kg} kg weighed` : `⚖️ ${kg} kg (basket reading)`;
+  if (msg) await editMessage(token, String(msg.chat.id), msg.message_id, `✅ <b>Picked up</b> · #${o.device_order_id}\n<s>${esc((o.address as string) || "")}</s>`);
+  await sendMessage(token, chatId, `✅ <b>Picked up</b> · #${o.device_order_id}\n${weighed} · ₹${amount}`, { keyboard: MENU });
+  await notifyCustomer(
+    o,
+    `✅ Your laundry has been picked up (order #${o.device_order_id}).\n${source === "driver" ? `⚖️ Weighed at pickup: <b>${kg} kg</b>` : `⚖️ ${kg} kg`} · <b>₹${amount}</b>\nThank you!`,
+  ).catch(() => {});
+
+  const r = await currentRoute(driver);
+  if (r.url) {
+    await sendMessage(token, chatId, `👍 Nice! <b>${r.stops} more pickup${r.stops > 1 ? "s" : ""}</b> to go.`, {
+      inline: [[{ text: "🛣 Continue route", url: routeLink(driver) }]],
+    });
+  } else {
+    const store = await storeOf(driver.tenant_id as string);
+    await db().from("drivers").update({ status: "AVAILABLE" }).eq("id", driver.id as string).neq("status", "OFFLINE");
+    await sendMessage(
+      token,
+      chatId,
+      `🏁 <b>All pickups done!</b>\n━━━━━━━━━━━━━━\nDeliver the laundry to <b>${esc(store.name)}</b>.`,
+      store.place ? { inline: [[{ text: "🗺 Navigate to the store", url: directionsUrl({ destination: store.place }) }]] } : {},
+    );
+  }
+}
+
 async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_query"]>) {
   const chatId = String(cb.from.id);
   const [action, orderId] = (cb.data ?? "").split(/:(.+)/);
@@ -443,25 +524,27 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
   const msg = cb.message;
 
   if (action === "done") {
-    await db().from("orders").update({ status: "COMPLETED", completed_at: new Date().toISOString() }).eq("id", orderId);
-    await answerCallback(token, cb.id, "Marked as picked up ✅");
-    if (msg) await editMessage(token, String(msg.chat.id), msg.message_id, `✅ <b>Picked up</b> · #${o.device_order_id}\n<s>${esc((o.address as string) || "")}</s>`);
-    await notifyCustomer(o as Row, `✅ Your laundry has been picked up (order #${o.device_order_id}). Thank you!`).catch(() => {});
-    const r = await currentRoute(driver);
-    if (r.url) {
-      await sendMessage(token, chatId, `👍 Nice! <b>${r.stops} more pickup${r.stops > 1 ? "s" : ""}</b> to go.`, {
-        inline: [[{ text: "🛣 Continue route", url: routeLink(driver) }]],
-      });
-    } else {
-      const store = await storeOf(driver.tenant_id as string);
-      await db().from("drivers").update({ status: "AVAILABLE" }).eq("id", driver.id as string).neq("status", "OFFLINE");
-      await sendMessage(
-        token,
-        chatId,
-        `🏁 <b>All pickups done!</b>\n━━━━━━━━━━━━━━\nDeliver the laundry to <b>${esc(store.name)}</b>.`,
-        store.place ? { inline: [[{ text: "🗺 Navigate to the store", url: directionsUrl({ destination: store.place }) }]] } : {},
-      );
+    const reported = Number(o.weight_kg) || 0;
+    const { data: t } = await db().from("tenants").select("weigh_at_pickup").eq("id", o.tenant_id as string).maybeSingle();
+    if (t?.weigh_at_pickup === false) {
+      // the business doesn't weigh at pickup: the basket's reading stands
+      await answerCallback(token, cb.id, "Marked as picked up ✅");
+      await finishPickup(token, driver, o as Row, reported, "basket", msg);
+      return;
     }
+    // weigh-in: the next number this driver sends is the bag's weight
+    await db().from("drivers").update({ weighing_order_id: orderId }).eq("id", driver.id as string);
+    await answerCallback(token, cb.id, "Weigh the bag ⚖️");
+    if (msg) await editMessage(token, String(msg.chat.id), msg.message_id, `⚖️ <b>Weighing</b> · #${o.device_order_id}\n${esc((o.address as string) || "")}`);
+    await sendMessage(
+      token,
+      chatId,
+      `⚖️ <b>Weigh the bag</b> · #${o.device_order_id}\n${LINE}\nSend the weight on your scale in kg, like <code>6.4</code>.\nThe basket reported <b>${reported} kg</b>.`,
+      { inline: [[{ text: `No scale: use the basket's ${reported} kg`, callback_data: `basket:${orderId}` }]] },
+    );
+  } else if (action === "basket") {
+    await answerCallback(token, cb.id, "Using the basket's reading");
+    await finishPickup(token, driver, o as Row, Number(o.weight_kg) || 0, "basket", msg);
   } else if (action === "decline") {
     await db()
       .from("orders")

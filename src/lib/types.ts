@@ -22,6 +22,7 @@ export interface Tenant {
   storeLng?: number;
   serviceRadiusKm: number; // the business picks up within this distance of its store (1-20 km)
   listed: boolean; // shown in the public "Find a laundry" directory
+  weighAtPickup: boolean; // drivers must enter the scale reading when they pick up
   planStatus: "TRIAL" | "ACTIVE" | "SUSPENDED";
   trialEndsAt?: string;
   paidUntil?: string;
@@ -145,6 +146,9 @@ export interface Order {
   invoiceNumber?: string; // set once the order is paid and its invoice is issued
   discountPct?: number; // a customer offer applied to this pickup
   amountBeforeDiscount?: number;
+  reportedWeightKg?: number; // what the basket said, kept once the weight is confirmed at pickup
+  weighedKg?: number; // the driver's (or manager's) scale reading
+  weightSource?: "driver" | "basket" | "manager"; // where the billed weight came from
   createdAt: string; // when the order was placed (orders.placed_at)
   acceptedAt?: string;
   completedAt?: string;

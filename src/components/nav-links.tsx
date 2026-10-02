@@ -8,7 +8,7 @@ export function NavLinks({ items }: { items: { href: string; label: string }[] }
   // The portal root (/app, /admin) should only match exactly; sub-pages match by prefix.
   const rootHref = items[0]?.href;
   return (
-    <nav className="flex gap-1 overflow-x-auto rounded-full border border-border bg-white/[0.03] p-1 text-sm">
+    <nav className="flex gap-1 overflow-x-auto rounded-full border border-border bg-ink/[0.03] p-1 text-sm">
       {items.map((item) => {
         const active = item.href === rootHref ? pathname === item.href : pathname.startsWith(item.href);
         return (
@@ -19,7 +19,7 @@ export function NavLinks({ items }: { items: { href: string; label: string }[] }
             data-ripple
             className={`rounded-full px-3.5 py-1 whitespace-nowrap transition-colors duration-300 ${
               active
-                ? "bg-white/10 font-medium text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12),0_0_20px_-6px_rgb(var(--accent-rgb)/0.8)]"
+                ? "bg-ink/10 font-medium text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12),0_0_20px_-6px_rgb(var(--accent-rgb)/0.8)]"
                 : "text-muted hover:text-fg"
             }`}
           >

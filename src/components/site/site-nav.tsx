@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { AnimatePresence, motion, useMotionTemplate, useScroll, useTransform } from "framer-motion";
 import { List, X } from "@phosphor-icons/react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const LINKS = [
   { label: "How it works", href: "#how" },
@@ -27,24 +28,25 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
       <motion.nav
         aria-label="Main"
         style={{ background, backdropFilter, WebkitBackdropFilter: backdropFilter }}
-        className={`mx-auto max-w-5xl border border-white/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_20px_50px_-20px_rgb(0_0_0/0.6)] transition-[border-radius] duration-300 ${open ? "rounded-3xl" : "rounded-full"}`}
+        className={`nav-glass mx-auto max-w-5xl border border-ink/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_20px_50px_-20px_rgb(0_0_0/0.6)] transition-[border-radius] duration-300 ${open ? "rounded-3xl" : "rounded-full"}`}
       >
         <div className="flex h-16 items-center justify-between gap-4 pr-2 pl-5">
           <Link href="/" aria-label="Toss home" className="shrink-0">
             {logo}
           </Link>
-          <ul className="hidden items-center gap-7 text-sm text-gray-300 md:flex">
+          <ul className="hidden items-center gap-7 text-sm text-secondary md:flex">
             {LINKS.map((l) => (
               <li key={l.href}>
-                <a href={l.href} className="group relative py-1 transition-colors hover:text-white">
+                <a href={l.href} className="group relative py-1 transition-colors hover:text-fg">
                   {l.label}
-                  <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-white transition-all duration-300 group-hover:w-full" />
+                  <span className="absolute -bottom-0.5 left-0 h-px w-0 bg-fg transition-all duration-300 group-hover:w-full" />
                 </a>
               </li>
             ))}
           </ul>
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="hidden rounded-full px-4 py-2 text-sm text-gray-300 transition-colors hover:text-white sm:block">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <ThemeToggle />
+            <Link href="/login" className="hidden rounded-full px-4 py-2 text-sm text-secondary transition-colors hover:text-fg sm:block">
               Sign in
             </Link>
             <Link href="/login" className="btn-primary rounded-full px-5 py-2.5 text-sm font-semibold">
@@ -55,7 +57,7 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
               onClick={() => setOpen((o) => !o)}
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
-              className="grid size-10 place-items-center rounded-full text-white md:hidden"
+              className="grid size-10 place-items-center rounded-full text-fg md:hidden"
             >
               {open ? <X size={22} weight="bold" /> : <List size={22} weight="bold" />}
             </button>
@@ -71,8 +73,8 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
               className="overflow-hidden px-5 md:hidden"
             >
               {[...LINKS, { label: "Sign in", href: "/login" }].map((l) => (
-                <li key={l.label} className="border-t border-white/10 first:border-0">
-                  <a href={l.href} onClick={() => setOpen(false)} className="block py-3.5 text-lg font-medium text-white">
+                <li key={l.label} className="border-t border-ink/10 first:border-0">
+                  <a href={l.href} onClick={() => setOpen(false)} className="block py-3.5 text-lg font-medium text-fg">
                     {l.label}
                   </a>
                 </li>

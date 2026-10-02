@@ -50,7 +50,7 @@ export function SiteDock() {
           transition={{ type: "spring", stiffness: 260, damping: 26 }}
           className="fixed bottom-3 left-1/2 z-40 max-w-full -translate-x-1/2"
         >
-          <Dock className="items-end rounded-2xl border border-white/10 bg-[#121a3c]/75 pb-2.5 shadow-[0_20px_50px_-15px_rgb(0_0_0/0.7),inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-xl">
+          <Dock className="items-end rounded-2xl border border-ink/10 bg-surface-solid/75 pb-2.5 shadow-[0_20px_50px_-15px_rgb(0_0_0/0.7),inset_0_1px_0_rgb(255_255_255/0.08)] light:shadow-[0_18px_40px_-18px_rgb(11_20_48/0.35)] backdrop-blur-xl">
             {ITEMS.map((item) => {
               const on = item.section === active;
               return (
@@ -58,13 +58,13 @@ export function SiteDock() {
                   key={item.title}
                   href={item.href}
                   aria-label={item.title}
-                  className={`aspect-square rounded-full transition-colors ${on ? "bg-[#2ee6d6]/15 text-[#2ee6d6]" : "bg-white/[0.07] text-gray-300 hover:text-white"} ${item.desktopOnly ? "max-sm:hidden" : ""}`}
+                  className={`aspect-square rounded-full transition-colors ${on ? "bg-accent/15 text-accent" : "bg-ink/[0.07] text-secondary hover:text-fg"} ${item.desktopOnly ? "max-sm:hidden" : ""}`}
                 >
                   <DockLabel>{item.title}</DockLabel>
                   <DockIcon>
                     <item.icon size="100%" weight={on ? "fill" : "regular"} />
                   </DockIcon>
-                  {on && <motion.span layoutId="dock-dot" className="absolute -bottom-2 size-1 rounded-full bg-[#2ee6d6]" />}
+                  {on && <motion.span layoutId="dock-dot" className="absolute -bottom-2 size-1 rounded-full bg-accent" />}
                 </DockItem>
               );
             })}

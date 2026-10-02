@@ -88,7 +88,7 @@ export default async function Fleet() {
                   const today = all.filter((o) => mine(o) && o.completedAt?.startsWith(todayKey)).length;
                   const s = STATUS[drv.status];
                   return (
-                    <tr key={drv.id} className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.03]">
+                    <tr key={drv.id} className="border-b border-border transition-colors last:border-0 hover:bg-ink/[0.03]">
                       <td className="px-5 py-2.5">
                         <p className="font-medium">{drv.name}</p>
                         {drv.phone ? (
@@ -170,7 +170,7 @@ export default async function Fleet() {
           {devices.map((d) => {
             const c = d.customerId ? owner.get(d.customerId) : undefined;
             return (
-              <div key={d.deviceId} className="glow-card rounded-xl border border-border bg-white/[0.02] p-4">
+              <div key={d.deviceId} className="glow-card rounded-xl border border-border bg-ink/[0.02] p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{deviceLabel(d)}</p>

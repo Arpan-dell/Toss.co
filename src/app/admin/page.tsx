@@ -53,7 +53,7 @@ export default async function LiveBoard() {
               const ageMins = (current.getTime() - new Date(o.createdAt).getTime()) / 60_000;
               const stale = o.status === "PENDING" && ageMins > STALE_PENDING_MINS;
               return (
-                <li key={o.id} className="-mx-2 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl px-2 py-3 transition-colors hover:bg-white/[0.03]">
+                <li key={o.id} className="-mx-2 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl px-2 py-3 transition-colors hover:bg-ink/[0.03]">
                   <div className="min-w-[200px] flex-1">
                     <p className="text-sm font-medium">
                       {deviceArea(o.deviceId)}{" "}

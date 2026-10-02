@@ -95,17 +95,17 @@ function ProgressNumber({ to, decimals = 0, prefix = "", suffix = "" }: { to: nu
 
 // ---------- tiny UI pieces used inside the devices ----------
 const Bubble = ({ children, me = false, delay = 0, accent = false }: { children: React.ReactNode; me?: boolean; delay?: number; accent?: boolean }) => (
-  <div className={`mg-rise max-w-[85%] rounded-2xl px-3 py-2 text-[11px] leading-snug shadow ${me ? "ml-auto rounded-br-md bg-[#2b5278] text-white" : accent ? "rounded-bl-md border border-white/10 bg-[#182533] text-white" : "rounded-bl-md bg-[#182533] text-white/90"}`} style={{ animationDelay: `${delay}ms` }}>
+  <div className={`mg-rise max-w-[85%] rounded-2xl px-3 py-2 text-[11px] leading-snug shadow ${me ? "ml-auto rounded-br-md bg-[#2b5278] text-fg" : accent ? "rounded-bl-md border border-ink/10 bg-[#182533] text-fg" : "rounded-bl-md bg-[#182533] text-ink/90"}`} style={{ animationDelay: `${delay}ms` }}>
     {children}
   </div>
 );
 const Btn = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
-  <span className="mg-pop block rounded-lg bg-[#2AABEE]/25 py-1.5 text-center text-[10px] text-white" style={{ animationDelay: `${delay}ms` }}>
+  <span className="mg-pop block rounded-lg bg-[#2AABEE]/25 py-1.5 text-center text-[10px] text-fg" style={{ animationDelay: `${delay}ms` }}>
     {children}
   </span>
 );
 const Row = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => (
-  <div className="mg-rise flex items-center justify-between gap-2 rounded-lg border border-white/8 bg-white/[0.04] px-2.5 py-2 text-[10px]" style={{ animationDelay: `${delay}ms` }}>
+  <div className="mg-rise flex items-center justify-between gap-2 rounded-lg border border-ink/8 bg-ink/[0.04] px-2.5 py-2 text-[10px]" style={{ animationDelay: `${delay}ms` }}>
     {children}
   </div>
 );
@@ -128,17 +128,17 @@ function CustomerScene({ step }: { step: number }) {
   if (step === 0)
     return (
       <div className="space-y-3 p-4">
-        <p className="mg-rise text-sm font-semibold text-white">Create your account</p>
-        <div className="mg-rise rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-white/80" style={{ animationDelay: "200ms" }}>
-          <p className="text-[9px] text-white/40">Mobile number</p>
+        <p className="mg-rise text-sm font-semibold text-fg">Create your account</p>
+        <div className="mg-rise rounded-xl border border-ink/10 bg-ink/[0.04] px-3 py-2 text-[11px] text-ink/80" style={{ animationDelay: "200ms" }}>
+          <p className="text-[9px] text-ink/40">Mobile number</p>
           <TypeLine text="+91 98765 43210" delay={500} />
         </div>
-        <div className="mg-rise rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] text-white/80" style={{ animationDelay: "350ms" }}>
-          <p className="text-[9px] text-white/40">Your laundry&apos;s Business ID</p>
+        <div className="mg-rise rounded-xl border border-ink/10 bg-ink/[0.04] px-3 py-2 text-[11px] text-ink/80" style={{ animationDelay: "350ms" }}>
+          <p className="text-[9px] text-ink/40">Your laundry&apos;s Business ID</p>
           <TypeLine text="B-E2ZRFP" delay={1500} />
         </div>
         <div className="mg-pop flex items-center gap-2 rounded-xl bg-emerald-400/15 px-3 py-2 text-[11px] text-emerald-300" style={{ animationDelay: "2300ms" }}>
-          ✓ Connected to <b className="text-white">Fresh</b> · ₹100/kg
+          ✓ Connected to <b className="text-fg">Fresh</b> · ₹100/kg
         </div>
       </div>
     );
@@ -155,12 +155,12 @@ function CustomerScene({ step }: { step: number }) {
           <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="rgb(255 255 255 / 0.1)" strokeWidth="14" strokeLinecap="round" />
           <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#hs-g)" strokeWidth="14" strokeLinecap="round" strokeDasharray="252" style={{ strokeDashoffset: "calc(252px * (1 - min(1, var(--p) * 1.25)))", filter: "drop-shadow(0 0 10px rgb(2 169 161 / 0.6))" }} />
         </svg>
-        <p className="-mt-14 text-4xl font-semibold tabular-nums text-white">
+        <p className="-mt-14 text-4xl font-semibold tabular-nums text-fg">
           <ProgressNumber to={5} decimals={1} />
-          <span className="text-base text-white/50"> kg</span>
+          <span className="text-base text-ink/50"> kg</span>
         </p>
-        <p className="text-[11px] text-white/50">Auto-pickup at 5.0 kg</p>
-        <div className="mt-2 flex w-full justify-between rounded-xl bg-white/[0.04] px-3 py-2 text-[10px] text-white/60">
+        <p className="text-[11px] text-ink/50">Auto-pickup at 5.0 kg</p>
+        <div className="mt-2 flex w-full justify-between rounded-xl bg-ink/[0.04] px-3 py-2 text-[10px] text-ink/60">
           <span>📡 Basket online</span>
           <span>Wi-Fi strong</span>
         </div>
@@ -169,14 +169,14 @@ function CustomerScene({ step }: { step: number }) {
   if (step === 2)
     return (
       <div className="flex h-full flex-col gap-2 bg-[#0e1621] p-3">
-        <p className="mg-rise text-center text-[10px] text-white/40">Toss Control · today</p>
+        <p className="mg-rise text-center text-[10px] text-ink/40">Toss Control · today</p>
         <Bubble delay={200}>🚚 <b>Pickup requested!</b><br />Order #104 · 5.0 kg</Bubble>
         <Bubble delay={900} accent>🙋 <b>Vikram</b> is on the way<br />ETA about 18 min</Bubble>
         <div className="mg-rise relative mt-1 h-24 overflow-hidden rounded-xl bg-[#13202c]" style={{ animationDelay: "1500ms" }}>
           <svg viewBox="0 0 220 96" className="absolute inset-0 size-full">
             <path d="M15 80 C60 20 110 90 160 40 S205 20 210 18" fill="none" stroke="#5eead4" strokeWidth="3" strokeDasharray="4 5" opacity="0.7" />
           </svg>
-          <span className="hs-follow absolute size-3 rounded-full bg-white shadow-[0_0_10px_#fff]" style={{ offsetPath: "path('M15 80 C60 20 110 90 160 40 S205 20 210 18')" }} />
+          <span className="hs-follow absolute size-3 rounded-full bg-fg shadow-[0_0_10px_#fff]" style={{ offsetPath: "path('M15 80 C60 20 110 90 160 40 S205 20 210 18')" }} />
           <span className="absolute right-2 top-1 text-sm">🏠</span>
         </div>
         <Bubble delay={2300}>✅ Picked up. Thank you!</Bubble>
@@ -185,20 +185,20 @@ function CustomerScene({ step }: { step: number }) {
   if (step === 3)
     return (
       <div className="space-y-2.5 p-4">
-        <div className="mg-rise relative rounded-xl bg-white p-3 text-[#111827]">
-          <div className="flex justify-between text-[10px]"><b>INVOICE</b><span className="text-gray-400">TOSS-2026-000104</span></div>
-          <div className="mt-1.5 flex justify-between text-[10px] text-gray-600"><span>Laundry · 5.0 kg</span><span>₹500</span></div>
+        <div className="mg-rise relative rounded-xl bg-fg p-3 text-[#111827]">
+          <div className="flex justify-between text-[10px]"><b>INVOICE</b><span className="text-muted">TOSS-2026-000104</span></div>
+          <div className="mt-1.5 flex justify-between text-[10px] text-muted"><span>Laundry · 5.0 kg</span><span>₹500</span></div>
           <div className="flex justify-between text-[10px] text-emerald-600"><span>Welcome back −10%</span><span>−₹50</span></div>
           <div className="mt-1.5 flex justify-between border-t pt-1.5 text-xs font-bold"><span>Total</span><span>₹450</span></div>
-          <span className="mg-stamp absolute -right-2 -bottom-2 rounded border-2 border-emerald-500 bg-white px-1.5 text-[11px] font-extrabold tracking-widest text-emerald-600" style={{ animationDelay: "1900ms" }}>PAID</span>
+          <span className="mg-stamp absolute -right-2 -bottom-2 rounded border-2 border-emerald-500 bg-fg px-1.5 text-[11px] font-extrabold tracking-widest text-emerald-600" style={{ animationDelay: "1900ms" }}>PAID</span>
         </div>
-        <p className="mg-rise text-[10px] text-white/50" style={{ animationDelay: "300ms" }}>Pay with</p>
+        <p className="mg-rise text-[10px] text-ink/50" style={{ animationDelay: "300ms" }}>Pay with</p>
         <div className="grid grid-cols-2 gap-1.5">
           {["GPay", "PhonePe", "Paytm", "BHIM"].map((a, i) => (
-            <span key={a} className={`mg-pop rounded-lg py-2 text-center text-[11px] text-white ${i === 0 ? "bg-white/15 ring-1 ring-white/30" : "bg-white/[0.06]"}`} style={{ animationDelay: `${450 + i * 120}ms` }}>{a}</span>
+            <span key={a} className={`mg-pop rounded-lg py-2 text-center text-[11px] text-fg ${i === 0 ? "bg-ink/15 ring-1 ring-ink/30" : "bg-ink/[0.06]"}`} style={{ animationDelay: `${450 + i * 120}ms` }}>{a}</span>
           ))}
         </div>
-        <div className="mg-rise flex items-center gap-2 rounded-xl bg-white/[0.05] px-3 py-2 text-[10px] text-white/70" style={{ animationDelay: "2400ms" }}>
+        <div className="mg-rise flex items-center gap-2 rounded-xl bg-ink/[0.05] px-3 py-2 text-[10px] text-ink/70" style={{ animationDelay: "2400ms" }}>
           📄 Invoice PDF sent to your email
         </div>
       </div>
@@ -210,10 +210,10 @@ function CustomerScene({ step }: { step: number }) {
       ))}
       <div className="mg-pop rounded-2xl border border-amber-300/40 bg-gradient-to-br from-amber-300/20 to-transparent p-4 text-center">
         <p className="text-3xl">🎁</p>
-        <p className="mt-1 text-lg font-semibold text-white">15% off</p>
-        <p className="text-[11px] text-white/70">your next pickup from Fresh</p>
+        <p className="mt-1 text-lg font-semibold text-fg">15% off</p>
+        <p className="text-[11px] text-ink/70">your next pickup from Fresh</p>
       </div>
-      <p className="mg-rise text-center text-[10px] text-white/50" style={{ animationDelay: "700ms" }}>
+      <p className="mg-rise text-center text-[10px] text-ink/50" style={{ animationDelay: "700ms" }}>
         Applied automatically · valid 14 days
       </p>
     </div>
@@ -225,9 +225,9 @@ function DriverScene({ step }: { step: number }) {
   if (step === 0)
     return (
       <div className="flex h-full flex-col gap-2 bg-[#0e1621] p-3">
-        <div className="mg-rise overflow-hidden rounded-xl bg-gradient-to-br from-[#02a9a1]/50 to-amber-400/30 p-3 text-center text-[11px] font-semibold text-white">TOSS · HANDY</div>
+        <div className="mg-rise overflow-hidden rounded-xl bg-gradient-to-br from-[#02a9a1]/50 to-amber-400/30 p-3 text-center text-[11px] font-semibold text-fg">TOSS · HANDY</div>
         <Bubble delay={300}>👋 <b>Welcome to Toss Handy</b><br />Share your number to connect.</Bubble>
-        <div className="mg-pop mt-auto rounded-lg bg-[#2AABEE] py-2 text-center text-[11px] font-medium text-white" style={{ animationDelay: "800ms" }}>📱 Share my phone number</div>
+        <div className="mg-pop mt-auto rounded-lg bg-[#2AABEE] py-2 text-center text-[11px] font-medium text-fg" style={{ animationDelay: "800ms" }}>📱 Share my phone number</div>
         <Bubble me delay={1500}>📞 +91 93115 47292</Bubble>
         <Bubble delay={2100} accent>✅ <b>You&apos;re connected!</b><br />Hi Aviraj, you drive for Fresh.</Bubble>
       </div>
@@ -236,7 +236,7 @@ function DriverScene({ step }: { step: number }) {
     return (
       <div className="relative h-full overflow-hidden bg-[#13202c]">
         {Array.from({ length: 6 }, (_, i) => (
-          <span key={i} className="absolute inset-y-0 w-px bg-white/[0.04]" style={{ left: `${i * 20}%` }} />
+          <span key={i} className="absolute inset-y-0 w-px bg-ink/[0.04]" style={{ left: `${i * 20}%` }} />
         ))}
         <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2">
           <span className="hs-radar absolute top-1/2 left-1/2 size-24 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#5eead4]" />
@@ -244,10 +244,10 @@ function DriverScene({ step }: { step: number }) {
           <span className="relative block size-4 rounded-full border-2 border-white bg-[#2AABEE] shadow-[0_0_14px_#2AABEE]" />
         </div>
         <div className="absolute inset-x-3 bottom-3 space-y-2">
-          <div className="mg-rise flex items-center justify-between rounded-xl bg-[#0e1621]/95 px-3 py-2.5 text-[11px] text-white">
+          <div className="mg-rise flex items-center justify-between rounded-xl bg-[#0e1621]/95 px-3 py-2.5 text-[11px] text-fg">
             <span>Status</span>
-            <span className="hs-switch relative h-5 w-9 rounded-full bg-white/15">
-              <span className="absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow" />
+            <span className="hs-switch relative h-5 w-9 rounded-full bg-ink/15">
+              <span className="absolute top-0.5 left-0.5 size-4 rounded-full bg-fg shadow" />
             </span>
           </div>
           <Bubble delay={1100} accent>🟢 <b>You&apos;re online</b> · 📍 live location on</Bubble>
@@ -257,10 +257,10 @@ function DriverScene({ step }: { step: number }) {
   if (step === 2)
     return (
       <div className="flex h-full flex-col gap-2 bg-[#0e1621] p-3">
-        <div className="mg-rise rounded-2xl border border-white/10 bg-[#182533] p-3 text-[11px] text-white" style={{ animationDelay: "200ms" }}>
+        <div className="mg-rise rounded-2xl border border-ink/10 bg-[#182533] p-3 text-[11px] text-fg" style={{ animationDelay: "200ms" }}>
           <p className="font-semibold">🔔 NEW PICKUP · #104</p>
-          <div className="my-1.5 h-px bg-white/10" />
-          <p>📍 C-12, Saket <span className="text-white/50">· 1.2 km away</span></p>
+          <div className="my-1.5 h-px bg-ink/10" />
+          <p>📍 C-12, Saket <span className="text-ink/50">· 1.2 km away</span></p>
           <p>👤 Riya · 📞 98765 43210</p>
           <p>⚖️ 5.0 kg · 🏁 then deliver to Fresh</p>
         </div>
@@ -289,7 +289,7 @@ function DriverScene({ step }: { step: number }) {
           <text x="150" y="42" textAnchor="middle" fontSize="15">🏠</text>
           <text x="236" y="20" textAnchor="middle" fontSize="16">🏁</text>
         </svg>
-        <div className="absolute inset-x-3 bottom-3 rounded-xl bg-[#0e1621]/95 px-3 py-2 text-[10px] text-white">
+        <div className="absolute inset-x-3 bottom-3 rounded-xl bg-[#0e1621]/95 px-3 py-2 text-[10px] text-fg">
           🛣 <b>2 pickups</b>, then the store · <ProgressNumber to={6.4} decimals={1} suffix=" km" />
         </div>
       </div>
@@ -297,12 +297,12 @@ function DriverScene({ step }: { step: number }) {
   }
   return (
     <div className="flex h-full flex-col gap-2 bg-[#0e1621] p-3">
-      <Bubble delay={100} accent>✅ <b>Picked up</b> · #104<br /><s className="text-white/50">C-12, Saket</s></Bubble>
-      <Bubble delay={700} accent>✅ <b>Picked up</b> · #105<br /><s className="text-white/50">B-4/11, Hauz Khas</s></Bubble>
+      <Bubble delay={100} accent>✅ <b>Picked up</b> · #104<br /><s className="text-ink/50">C-12, Saket</s></Bubble>
+      <Bubble delay={700} accent>✅ <b>Picked up</b> · #105<br /><s className="text-ink/50">B-4/11, Hauz Khas</s></Bubble>
       <Bubble delay={1300}>🏁 <b>All pickups done!</b><br />Deliver to Fresh, Mukherjee Nagar.</Bubble>
-      <div className="mg-rise mt-auto rounded-xl bg-[#182533] p-3 text-[11px] text-white" style={{ animationDelay: "1900ms" }}>
+      <div className="mg-rise mt-auto rounded-xl bg-[#182533] p-3 text-[11px] text-fg" style={{ animationDelay: "1900ms" }}>
         👤 <b>Aviraj</b> · Fresh
-        <div className="my-1.5 h-px bg-white/10" />
+        <div className="my-1.5 h-px bg-ink/10" />
         <p>Status: 🟢 Online</p>
         <p>✅ Done today: <b>6</b></p>
       </div>
@@ -315,12 +315,12 @@ function ManagerScene({ step }: { step: number }) {
   if (step === 0)
     return (
       <div className="grid h-full grid-cols-2 gap-3 p-4">
-        <div className="mg-rise flex flex-col justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-3">
-          <p className="text-[10px] text-white/50">Business ID</p>
-          <p className="font-mono text-xl font-semibold tracking-wider text-white">B-E2ZRFP</p>
-          <p className="text-[10px] text-white/50">Share it with your customers</p>
+        <div className="mg-rise flex flex-col justify-center gap-2 rounded-xl border border-ink/10 bg-ink/[0.04] p-3">
+          <p className="text-[10px] text-ink/50">Business ID</p>
+          <p className="font-mono text-xl font-semibold tracking-wider text-fg">B-E2ZRFP</p>
+          <p className="text-[10px] text-ink/50">Share it with your customers</p>
         </div>
-        <div className="mg-pop grid place-items-center rounded-xl bg-white p-3" style={{ animationDelay: "400ms" }}>
+        <div className="mg-pop grid place-items-center rounded-xl bg-fg p-3" style={{ animationDelay: "400ms" }}>
           <div className="grid size-20 grid-cols-7 gap-px">
             {Array.from({ length: 49 }, (_, i) => (
               <span key={i} className={((i * 37 + (i >> 2) * 11) % 5 < 2 || [0, 1, 2, 7, 9, 14, 15, 16, 4, 5, 6, 11, 13, 18, 19, 20, 28, 29, 30, 35, 37, 42, 43, 44].includes(i)) ? "bg-black" : "bg-white"} />
@@ -333,9 +333,9 @@ function ManagerScene({ step }: { step: number }) {
             ["Baskets", 52],
             ["Drivers", 5],
           ].map(([k, v]) => (
-            <div key={k} className="rounded-xl bg-white/[0.04] p-2.5">
-              <p className="text-[9px] text-white/50">{k}</p>
-              <p className="text-lg font-semibold text-white tabular-nums"><ProgressNumber to={Number(v)} /></p>
+            <div key={k} className="rounded-xl bg-ink/[0.04] p-2.5">
+              <p className="text-[9px] text-ink/50">{k}</p>
+              <p className="text-lg font-semibold text-fg tabular-nums"><ProgressNumber to={Number(v)} /></p>
             </div>
           ))}
         </div>
@@ -344,7 +344,7 @@ function ManagerScene({ step }: { step: number }) {
   if (step === 1)
     return (
       <div className="space-y-1.5 p-4">
-        <div className="mg-rise mb-2 flex items-center gap-2 text-[11px] text-white">
+        <div className="mg-rise mb-2 flex items-center gap-2 text-[11px] text-fg">
           <span className="size-2 animate-pulse rounded-full bg-emerald-400" /> Live board
         </div>
         {[
@@ -354,8 +354,8 @@ function ManagerScene({ step }: { step: number }) {
           ["Karol Bagh · #117", "5.1 kg", "Imran", "good"],
         ].map(([o, w, d, t], i) => (
           <Row key={o} delay={200 + i * 380}>
-            <span className="text-white">{o}</span>
-            <span className="text-white/50">{w}</span>
+            <span className="text-fg">{o}</span>
+            <span className="text-ink/50">{w}</span>
             <Chip tone={t as "good" | "warn"}>🚚 {d}</Chip>
           </Row>
         ))}
@@ -364,19 +364,19 @@ function ManagerScene({ step }: { step: number }) {
   if (step === 2)
     return (
       <div className="space-y-1.5 p-4">
-        <p className="mg-rise mb-1 text-[11px] text-white">Payments to confirm</p>
+        <p className="mg-rise mb-1 text-[11px] text-fg">Payments to confirm</p>
         <Row delay={200}>
-          <span className="text-white">#104 · ₹450</span>
-          <span className="font-mono text-white/50">UPI 4123…8901</span>
+          <span className="text-fg">#104 · ₹450</span>
+          <span className="font-mono text-ink/50">UPI 4123…8901</span>
           <span className="mg-pop rounded-md bg-emerald-400 px-2 py-0.5 text-[9px] font-semibold text-black" style={{ animationDelay: "900ms" }}>✓ Received</span>
         </Row>
         <Row delay={1300}>
-          <span className="text-white/70">📄 Invoice TOSS-2026-000104</span>
+          <span className="text-ink/70">📄 Invoice TOSS-2026-000104</span>
           <Chip tone="info">emailed to Riya</Chip>
         </Row>
         <div className="mg-rise mt-3 grid grid-cols-2 gap-2" style={{ animationDelay: "1800ms" }}>
-          <div className="rounded-xl bg-white/[0.04] p-2.5"><p className="text-[9px] text-white/50">Collected (30d)</p><p className="text-lg font-semibold text-white">96%</p></div>
-          <div className="rounded-xl bg-white/[0.04] p-2.5"><p className="text-[9px] text-white/50">Cash in 7 days</p><p className="text-lg font-semibold text-white">₹3,240</p></div>
+          <div className="rounded-xl bg-ink/[0.04] p-2.5"><p className="text-[9px] text-ink/50">Collected (30d)</p><p className="text-lg font-semibold text-fg">96%</p></div>
+          <div className="rounded-xl bg-ink/[0.04] p-2.5"><p className="text-[9px] text-ink/50">Cash in 7 days</p><p className="text-lg font-semibold text-fg">₹3,240</p></div>
         </div>
       </div>
     );
@@ -384,24 +384,24 @@ function ManagerScene({ step }: { step: number }) {
     const bars = [38, 30, 34, 42, 55, 92, 100];
     return (
       <div className="grid h-full grid-cols-5 gap-3 p-4">
-        <div className="col-span-3 flex flex-col rounded-xl bg-white/[0.04] p-3">
-          <p className="text-[10px] text-white/50">Next 7 days · pickups</p>
+        <div className="col-span-3 flex flex-col rounded-xl bg-ink/[0.04] p-3">
+          <p className="text-[10px] text-ink/50">Next 7 days · pickups</p>
           <div className="mt-2 flex flex-1 items-end gap-1.5">
             {bars.map((b, i) => (
               <span key={i} className="flex-1 rounded-t" style={{ height: `calc(${b}% * min(1, var(--p) * 1.3))`, background: i === 6 ? "#d95926" : "#3987e5", transition: "height 0.2s linear" }} />
             ))}
           </div>
-          <p className="mt-1.5 text-[9px] text-white/40">Backtested accuracy 86%</p>
+          <p className="mt-1.5 text-[9px] text-ink/40">Backtested accuracy 86%</p>
         </div>
-        <div className="col-span-2 flex flex-col items-center justify-center gap-1 rounded-xl bg-white/[0.04] p-3">
+        <div className="col-span-2 flex flex-col items-center justify-center gap-1 rounded-xl bg-ink/[0.04] p-3">
           <svg viewBox="0 0 80 80" className="size-16 -rotate-90">
             <circle cx="40" cy="40" r="32" fill="none" stroke="rgb(255 255 255 / 0.08)" strokeWidth="8" />
             <circle cx="40" cy="40" r="32" fill="none" stroke="#4ade80" strokeWidth="8" strokeLinecap="round" strokeDasharray="201" style={{ strokeDashoffset: "calc(201px * (1 - 0.82 * min(1, var(--p) * 1.3)))" }} />
           </svg>
-          <p className="text-sm font-semibold text-white"><ProgressNumber to={82} /></p>
-          <p className="text-[9px] text-white/50">Health</p>
+          <p className="text-sm font-semibold text-fg"><ProgressNumber to={82} /></p>
+          <p className="text-[9px] text-ink/50">Health</p>
         </div>
-        <p className="mg-rise col-span-5 rounded-xl border border-violet-400/30 bg-violet-400/10 p-2.5 text-[10px] text-white/90" style={{ animationDelay: "500ms" }}>
+        <p className="mg-rise col-span-5 rounded-xl border border-violet-400/30 bg-violet-400/10 p-2.5 text-[10px] text-ink/90" style={{ animationDelay: "500ms" }}>
           ✨ “Saturday 4-7 pm brings 31% of pickups. Two regulars are overdue: ₹18,400 a year at risk.”
         </p>
       </div>
@@ -411,19 +411,19 @@ function ManagerScene({ step }: { step: number }) {
     <div className="grid h-full grid-cols-2 gap-3 p-4">
       <div className="space-y-1.5">
         {["🚀 Automate everything", "📈 Driver staffing", "🎁 Win-back offers", "🧾 Customer nudges"].map((t, i) => (
-          <div key={t} className="flex items-center justify-between rounded-lg bg-white/[0.04] px-2.5 py-2 text-[10px] text-white">
+          <div key={t} className="flex items-center justify-between rounded-lg bg-ink/[0.04] px-2.5 py-2 text-[10px] text-fg">
             {t}
-            <span className="hs-switch relative h-4 w-7 rounded-full bg-white/15" style={{ animationDelay: `${300 + i * 300}ms` }}>
+            <span className="hs-switch relative h-4 w-7 rounded-full bg-ink/15" style={{ animationDelay: `${300 + i * 300}ms` }}>
               <span className="absolute top-0.5 left-0.5 size-3 rounded-full bg-white" />
             </span>
           </div>
         ))}
       </div>
       <div className="space-y-1.5">
-        <p className="text-[10px] text-white/50">Activity · this morning</p>
+        <p className="text-[10px] text-ink/50">Activity · this morning</p>
         {["📈 Alerted 4 drivers: busy Saturday", "🎁 15% offer sent to C-PKQUTG", "🧾 Reminded C-KH7QVB about ₹271"].map((t, i) => (
           <Row key={t} delay={1500 + i * 400}>
-            <span className="text-white/80">{t}</span>
+            <span className="text-ink/80">{t}</span>
             <Chip>Autopilot</Chip>
           </Row>
         ))}
@@ -555,8 +555,8 @@ function Satellites({ role, step, device }: { role: Role; step: number; device: 
       {CHIPS[role][step].map(([icon, text], i) => (
         <div key={text} className="absolute" style={{ ...CHIP_POS[device][i], transform: `translateY(calc((var(--p) - 0.5) * ${CHIP_DRIFT[i]}px))` }}>
           <div className="mg-pop" style={{ animationDelay: `${450 + i * 220}ms` }}>
-            <div className="mg-bob flex items-center gap-2 rounded-2xl border border-white/15 bg-white/[0.07] px-3 py-2 text-xs font-medium whitespace-nowrap text-white shadow-[0_12px_40px_-12px_rgb(0_0_0/0.8)] backdrop-blur-md" style={{ animationDelay: `${i * 0.7}s` }}>
-              <span className="grid size-6 place-items-center rounded-lg bg-white/10 text-[#2ee6d6]">{icon && (() => { const I = icon; return <I size={15} weight="bold" />; })()}</span>
+            <div className="mg-bob flex items-center gap-2 rounded-2xl border border-ink/15 bg-ink/[0.07] px-3 py-2 text-xs font-medium whitespace-nowrap text-fg shadow-[0_12px_40px_-12px_rgb(0_0_0/0.8)] backdrop-blur-md" style={{ animationDelay: `${i * 0.7}s` }}>
+              <span className="grid size-6 place-items-center rounded-lg bg-ink/10 text-accent">{icon && (() => { const I = icon; return <I size={15} weight="bold" />; })()}</span>
               {text}
             </div>
           </div>
@@ -569,14 +569,14 @@ function Satellites({ role, step, device }: { role: Role; step: number; device: 
 // ---------- devices ----------
 function Phone({ app, children }: { app: string; children: React.ReactNode }) {
   return (
-    <div className="relative mx-auto aspect-[9/18.5] w-[min(270px,62vw)] rounded-[2.4rem] border border-white/15 bg-[#05070b] p-2 shadow-[0_40px_100px_-30px_rgb(0_0_0/0.9),inset_0_0_0_1px_rgb(255_255_255/0.04)]">
+    <div className="relative mx-auto aspect-[9/18.5] w-[min(270px,62vw)] rounded-[2.4rem] border border-ink/15 bg-[#05070b] p-2 shadow-[0_40px_100px_-30px_rgb(0_0_0/0.9),inset_0_0_0_1px_rgb(255_255_255/0.04)]">
       <div className="absolute top-3.5 left-1/2 z-10 h-5 w-20 -translate-x-1/2 rounded-full bg-black" />
       <div className="relative flex h-full flex-col overflow-hidden rounded-[1.9rem] bg-[#0b0f16]">
-        <div className="flex items-center justify-between px-5 pt-3 pb-1 text-[9px] text-white/60">
+        <div className="flex items-center justify-between px-5 pt-3 pb-1 text-[9px] text-ink/60">
           <span>9:41</span>
           <span>●●● 5G</span>
         </div>
-        <div className="border-b border-white/5 px-4 py-2 text-center text-[11px] font-medium text-white">{app}</div>
+        <div className="border-b border-ink/5 px-4 py-2 text-center text-[11px] font-medium text-fg">{app}</div>
         <div className="relative flex-1">{children}</div>
       </div>
     </div>
@@ -585,12 +585,12 @@ function Phone({ app, children }: { app: string; children: React.ReactNode }) {
 
 function Window({ app, children }: { app: string; children: React.ReactNode }) {
   return (
-    <div className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-2xl border border-white/15 bg-[#0b0f16] shadow-[0_40px_100px_-30px_rgb(0_0_0/0.9)]">
-      <div className="flex items-center gap-1.5 border-b border-white/5 px-3 py-2">
+    <div className="relative mx-auto w-full max-w-[520px] overflow-hidden rounded-2xl border border-ink/15 bg-[#0b0f16] shadow-[0_40px_100px_-30px_rgb(0_0_0/0.9)]">
+      <div className="flex items-center gap-1.5 border-b border-ink/5 px-3 py-2">
         <span className="size-2.5 rounded-full bg-[#ff5f57]" />
         <span className="size-2.5 rounded-full bg-[#febc2e]" />
         <span className="size-2.5 rounded-full bg-[#28c840]" />
-        <span className="ml-3 rounded-md bg-white/[0.06] px-3 py-0.5 text-[10px] text-white/50">{app}</span>
+        <span className="ml-3 rounded-md bg-ink/[0.06] px-3 py-0.5 text-[10px] text-ink/50">{app}</span>
       </div>
       <div className="relative aspect-[16/10]">{children}</div>
     </div>
@@ -651,11 +651,11 @@ export function HowScrolly() {
   return (
     <div>
       {/* role switcher */}
-      <div className="sticky top-16 z-30 flex justify-center py-3">
-        <div className="relative flex rounded-full border border-white/10 bg-surface-solid/85 p-1 shadow-xl backdrop-blur" role="tablist" aria-label="Who are you?">
+      <div className="sticky top-[6.25rem] z-30 flex justify-center py-3">
+        <div className="relative flex rounded-full border border-ink/10 bg-surface-solid/85 p-1 shadow-xl backdrop-blur" role="tablist" aria-label="Who are you?">
           <span
             aria-hidden
-            className="absolute inset-y-1 rounded-full bg-gradient-to-r from-[#2ee6d6] to-[#00b4ff] transition-all duration-500 ease-[cubic-bezier(0.65,0,0.35,1)]"
+            className="absolute inset-y-1 rounded-full bg-gradient-to-r from-accent to-accent-2 transition-all duration-500 ease-[cubic-bezier(0.65,0,0.35,1)]"
             style={{ left: `calc(${ROLES.findIndex((r) => r.id === role)} * (100% - 8px) / 3 + 4px)`, width: "calc((100% - 8px) / 3)" }}
           />
           {ROLES.map((r) => (
@@ -665,7 +665,7 @@ export function HowScrolly() {
               role="tab"
               aria-selected={role === r.id}
               onClick={() => pick(r.id)}
-              className={`relative z-10 w-[6.6rem] whitespace-nowrap rounded-full px-2 py-2 text-xs font-medium transition-colors sm:w-44 sm:px-3 sm:text-sm ${role === r.id ? "text-[#04131c]" : "text-secondary hover:text-fg"}`}
+              className={`relative z-10 w-[6.6rem] whitespace-nowrap rounded-full px-2 py-2 text-xs font-medium transition-colors sm:w-44 sm:px-3 sm:text-sm ${role === r.id ? "text-accent-contrast" : "text-secondary hover:text-fg"}`}
             >
               <r.icon size={16} weight="bold" className="mr-1 inline -translate-y-px" /> <span className="sm:hidden">{r.short}</span>
               <span className="hidden sm:inline">{r.label}</span>
@@ -674,10 +674,10 @@ export function HowScrolly() {
         </div>
       </div>
 
-      <div id="how-steps" className="relative grid scroll-mt-32 gap-8 lg:grid-cols-2 lg:gap-14">
+      <div id="how-steps" className="relative grid scroll-mt-44 gap-8 lg:grid-cols-2 lg:gap-14">
         {/* sticky stage (on top on phones, on the right on desktop) */}
-        <div className="sticky top-28 z-10 -mx-4 h-[50vh] bg-[var(--bg)] px-4 pb-3 lg:top-32 lg:order-2 lg:mx-0 lg:h-[calc(100vh-9rem)] lg:bg-transparent lg:px-0 lg:pb-0">
-          <div ref={stage} className="relative grid h-full place-items-center overflow-hidden rounded-[2rem] border border-white/10 bg-[#080d22] [container-type:inline-size]" style={{ ["--p" as string]: 0 } as React.CSSProperties}>
+        <div className="sticky top-44 z-10 -mx-4 h-[46vh] bg-[var(--bg)] px-4 pb-3 lg:top-44 lg:order-2 lg:mx-0 lg:h-[calc(100vh-12rem)] lg:bg-transparent lg:px-0 lg:pb-0">
+          <div ref={stage} data-theme="dark" className="relative grid h-full place-items-center overflow-hidden rounded-[2rem] border border-ink/10 bg-[#080d22] [container-type:inline-size]" style={{ ["--p" as string]: 0 } as React.CSSProperties}>
             {BLOBS[role].map((c, i) => (
               <span
                 key={i}
@@ -712,7 +712,7 @@ export function HowScrolly() {
               )}
               </div>
             </div>
-            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-[11px] text-white/70 backdrop-blur">
+            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 text-[11px] text-ink/70 backdrop-blur">
               <R.icon size={13} weight="bold" /> {R.label} · step {step + 1} of {R.steps.length}
             </div>
           </div>
@@ -720,7 +720,7 @@ export function HowScrolly() {
 
         {/* steps */}
         <ol className="relative lg:order-1">
-          <span aria-hidden className="absolute top-0 bottom-0 left-[15px] w-px bg-white/10" />
+          <span aria-hidden className="absolute top-0 bottom-0 left-[15px] w-px bg-ink/10" />
           {R.steps.map((s, i) => (
             <li
               key={`${role}-${i}`}
@@ -732,7 +732,7 @@ export function HowScrolly() {
               <span
                 aria-hidden
                 className={`absolute top-1/2 left-0 grid size-8 -translate-y-1/2 place-items-center rounded-full border font-mono text-xs transition-all duration-500 ${
-                  i === step ? "scale-110 border-transparent bg-gradient-to-br from-[#2ee6d6] to-[#00b4ff] font-bold text-[#04131c] shadow-[0_0_24px_rgb(var(--accent-rgb)/0.6)]" : i < step ? "border-[#02a9a1]/60 bg-[#02a9a1]/15 text-[#5eead4]" : "border-white/15 bg-surface-solid text-muted"
+                  i === step ? "scale-110 border-transparent bg-gradient-to-br from-accent to-accent-2 font-bold text-accent-contrast shadow-[0_0_24px_rgb(var(--accent-rgb)/0.6)]" : i < step ? "border-[#02a9a1]/60 bg-[#02a9a1]/15 text-[#5eead4]" : "border-ink/15 bg-surface-solid text-muted"
                 }`}
               >
                 {i < step ? "✓" : i + 1}
@@ -744,7 +744,7 @@ export function HowScrolly() {
                 >
                   0{i + 1}
                 </span>
-                <span className="relative rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-[11px] tracking-wide text-accent">{s.tag}</span>
+                <span className="relative rounded-full border border-ink/10 bg-ink/[0.04] px-2.5 py-0.5 text-[11px] tracking-wide text-accent">{s.tag}</span>
                 <h3 key={i === step ? "on" : "off"} className="relative mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
                   {i === step
                     ? s.title.split(" ").map((w, k) => (

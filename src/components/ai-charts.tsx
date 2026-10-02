@@ -135,7 +135,7 @@ export function Heatmap({ cells }: { cells: number[][] }) {
                   key={h}
                   onMouseEnter={() => setHover({ d, h })}
                   onMouseLeave={() => setHover(null)}
-                  className="h-6 flex-1 rounded-[3px] transition-[outline] hover:outline hover:outline-2 hover:outline-white/60"
+                  className="h-6 flex-1 rounded-[3px] transition-[outline] hover:outline hover:outline-2 hover:outline-ink/60"
                   style={{ background: v ? `rgb(57 135 229 / ${0.12 + 0.88 * (v / max)})` : "rgb(255 255 255 / 0.03)" }}
                 />
               ))}
@@ -188,7 +188,7 @@ export function SegmentBar({ segments }: { segments: { name: string; count: numb
             key={s.name}
             onMouseEnter={() => setHover(i)}
             onMouseLeave={() => setHover(null)}
-            className={`rounded-xl border p-2.5 transition ${hover === i ? "border-border-strong bg-white/[0.05]" : "border-border bg-white/[0.02]"}`}
+            className={`rounded-xl border p-2.5 transition ${hover === i ? "border-border-strong bg-ink/[0.05]" : "border-border bg-ink/[0.02]"}`}
           >
             <p className="flex items-center gap-1.5 text-xs text-secondary">
               <span className="size-2.5 rounded-sm" style={{ background: VIZ.seg[i] }} />
@@ -217,7 +217,7 @@ export function BarList({ rows, color = VIZ.actual }: { rows: { label: string; v
             <span className="truncate">{r.label}</span>
             <span className="shrink-0 tabular-nums text-secondary">{r.display}</span>
           </div>
-          <div className="h-2 w-full rounded-full bg-white/[0.04]">
+          <div className="h-2 w-full rounded-full bg-ink/[0.04]">
             <div
               className="h-full rounded-full transition-[opacity,box-shadow]"
               style={{ width: `${Math.max(2, (r.value / max) * 100)}%`, background: color, opacity: hover === null || hover === i ? 1 : 0.4, boxShadow: hover === i ? `0 0 14px -2px ${color}` : "none" }}

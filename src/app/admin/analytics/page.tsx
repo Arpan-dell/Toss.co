@@ -35,7 +35,7 @@ export default async function Analytics() {
 
       <Link
         href="/admin/ai"
-        className="group block rounded-2xl border border-accent/30 bg-gradient-to-r from-accent/15 via-white/[0.03] to-transparent p-5 transition hover:border-accent/60"
+        className="group block rounded-2xl border border-accent/30 bg-gradient-to-r from-accent/15 via-ink/[0.03] to-transparent p-5 transition hover:border-accent/60"
       >
         <p className="text-xs tracking-[0.14em] text-accent uppercase">✨ Toss AI</p>
         <p className="mt-1 text-lg font-semibold">Forecasts, a daily action plan and an autopilot for your business</p>

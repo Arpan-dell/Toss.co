@@ -43,7 +43,7 @@ export function HeroReveal() {
       <div className="sticky top-0 h-[100dvh] overflow-hidden [perspective:1400px]">
         <motion.div style={{ scale, rotateX, rotateY, transformOrigin: "50% 80%" }} className="absolute inset-0 will-change-transform">
           <motion.div style={{ x: sketchX, y: sketchY }} className="absolute -inset-6">
-            <Image src="/brand/site/hero-sketch.webp" alt="" fill priority sizes="100vw" className="object-cover object-[60%_center]" />
+            <Image src="/brand/site/hero-sketch.webp" alt="" fill priority sizes="100vw" className="hero-sketch object-cover object-[60%_center]" />
           </motion.div>
           <motion.div style={{ clipPath }} className="absolute inset-0">
             <Image
@@ -58,12 +58,14 @@ export function HeroReveal() {
         </motion.div>
 
         {/* legibility: darken behind the copy, fade into the page below */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0c1128]/90 via-[#0c1128]/40 to-transparent" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#0c1128] to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-bg/90 via-bg/40 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-bg to-transparent" />
+        {/* phones: the copy sits at the bottom, so shade upward from there too */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-bg via-bg/75 to-transparent md:hidden" />
 
         <div className="relative mx-auto flex h-full max-w-7xl flex-col justify-end px-4 pb-20 sm:px-6 md:justify-center md:pb-0 lg:px-8">
           <div className="max-w-2xl">
-            <p className="relative h-5 text-xs font-bold tracking-widest text-[#2ee6d6] uppercase">
+            <p className="relative h-5 text-xs font-bold tracking-widest text-accent uppercase">
               <motion.span style={{ opacity: before }} className="absolute inset-0">
                 Before Toss
               </motion.span>
@@ -83,7 +85,7 @@ export function HeroReveal() {
               initial={reduce ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-6 max-w-[34rem] text-lg leading-relaxed font-light text-gray-300"
+              className="mt-6 max-w-[34rem] text-lg leading-relaxed font-light text-secondary"
             >
               A smart basket weighs your clothes, books the nearest driver and sends the bill to UPI. You just fill it.
             </motion.p>
@@ -96,7 +98,7 @@ export function HeroReveal() {
               <MainCta href="/login" glow className="btn-primary rounded-full px-7 py-3.5 text-base font-semibold">
                 Get started <ArrowRight size={18} weight="bold" />
               </MainCta>
-              <MainCta href="#how" className="btn-ghost rounded-full px-7 py-3.5 text-base font-medium text-white">
+              <MainCta href="#how" className="btn-ghost rounded-full px-7 py-3.5 text-base font-medium text-fg">
                 See how it works
               </MainCta>
             </motion.div>

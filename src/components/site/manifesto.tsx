@@ -44,12 +44,12 @@ export function Manifesto() {
   });
   return (
     <div className="relative grid gap-16 lg:grid-cols-[1.15fr_1fr] lg:gap-20">
-      <div aria-hidden className="pointer-events-none absolute top-1/2 left-1/2 size-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-500/5 blur-[120px]" />
+      <div aria-hidden className="pointer-events-none absolute top-1/2 left-1/2 size-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/5 blur-[120px]" />
       <motion.h2 {...enter()} className="relative text-[clamp(2.4rem,5vw,4.2rem)] leading-[1.05] font-black tracking-tight">
-        Laundry shouldn&apos;t need a calendar. <span className="text-gray-500">It should just happen.</span>
+        Laundry shouldn&apos;t need a calendar. <span className="text-muted">It should just happen.</span>
       </motion.h2>
       <div className="relative">
-        <motion.p {...enter(0.1)} className="max-w-[60ch] text-lg leading-relaxed font-light text-gray-300">
+        <motion.p {...enter(0.1)} className="max-w-[60ch] text-lg leading-relaxed font-light text-secondary">
           Most laundry services still make you book a slot, wait at home and chase a receipt. Toss turns the basket you
           already use into the trigger. It knows when it&apos;s full, the nearest driver gets the job, and you pay from
           your phone.
@@ -58,10 +58,10 @@ export function Manifesto() {
           {FACTS.map((f, i) => (
             <motion.div key={f.label} {...enter(0.15 + i * 0.08)}>
               <dt className="sr-only">{f.label}</dt>
-              <dd className="text-5xl font-black tracking-tight text-white tabular-nums">
+              <dd className="text-5xl font-black tracking-tight text-fg tabular-nums">
                 <Count to={f.value} suffix={f.suffix} />
               </dd>
-              <dd className="mt-2 text-sm text-gray-400">{f.label}</dd>
+              <dd className="mt-2 text-sm text-muted">{f.label}</dd>
             </motion.div>
           ))}
         </dl>

@@ -46,7 +46,7 @@ const toneClass: Record<Tone, string> = {
   warn: "bg-warn-bg text-warn ring-warn/25",
   critical: "bg-critical-bg text-critical ring-critical/25",
   info: "bg-info-bg text-info ring-info/25",
-  neutral: "bg-surface-2 text-secondary ring-white/10",
+  neutral: "bg-surface-2 text-secondary ring-ink/10",
 };
 
 // Status is never color-alone: every badge carries an icon (or live dot) + label.
@@ -108,7 +108,7 @@ export function FillBar({ weightKg, targetKg }: { weightKg?: number; targetKg?: 
   return (
     <div>
       <div
-        className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]"
+        className="h-2 w-full overflow-hidden rounded-full bg-ink/[0.06]"
         role="meter"
         aria-valuenow={pct}
         aria-valuemin={0}
@@ -137,7 +137,8 @@ export function PageTitle({ children, kicker }: { children: React.ReactNode; kic
   );
 }
 
-// Brand artwork lives in public/brand (generated from the original logo for the dark theme).
+// Brand artwork lives in public/brand (generated from the original logo). Each base has a "-light" twin
+// with navy letters for the light theme; CSS shows the one that matches.
 // "wordmark" = shirt + TOSS for headers; "full" adds the SMART LAUNDRY tagline.
 // Each variant is two same-size layers: the logo without the shirt, and the shirt alone,
 // so the shirt can wave (see .logo-shirt in globals.css) while the letters stay still.
@@ -153,7 +154,8 @@ export function Logo({ variant = "wordmark", className = "h-11" }: { variant?: k
   const l = LOGOS[variant];
   return (
     <span className={`logo relative inline-block drop-shadow-[0_0_18px_rgb(2_169_161/0.35)] ${className}`} role="img" aria-label="Toss">
-      <Image src={l.base} width={l.width} height={l.height} alt="" priority className="h-full w-auto" />
+      <Image src={l.base} width={l.width} height={l.height} alt="" priority className="h-full w-auto light:hidden" />
+      <Image src={l.base.replace(".png", "-light.png")} width={l.width} height={l.height} alt="" priority className="hidden h-full w-auto light:block" />
       <Image
         src={l.shirt}
         width={l.width}

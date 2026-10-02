@@ -27,9 +27,9 @@ export function AmountForm({ orderId, amount }: { orderId: string; amount: numbe
         step="1"
         defaultValue={amount}
         autoFocus
-        className="w-24 rounded-lg border border-border bg-white/[0.03] px-2 py-1 text-sm tabular-nums focus:border-accent/60 focus:outline-none"
+        className="w-24 rounded-lg border border-border bg-ink/[0.03] px-2 py-1 text-sm tabular-nums focus:border-accent/60 focus:outline-none"
       />
-      <button disabled={pending} className="rounded-lg bg-white/10 px-2.5 py-1 text-xs hover:bg-white/15 disabled:opacity-60">
+      <button disabled={pending} className="rounded-lg bg-ink/10 px-2.5 py-1 text-xs hover:bg-ink/15 disabled:opacity-60">
         {pending ? "…" : "Save"}
       </button>
       <button type="button" onClick={() => setEditing(false)} className="text-xs text-muted hover:text-fg">

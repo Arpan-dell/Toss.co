@@ -59,7 +59,7 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
               name="q"
               defaultValue={q}
               placeholder="Search name, ID, email…"
-              className="w-full rounded-full border border-border bg-white/[0.03] px-4 py-1.5 text-sm placeholder:text-muted focus:border-accent/60 focus:outline-none"
+              className="w-full rounded-full border border-border bg-ink/[0.03] px-4 py-1.5 text-sm placeholder:text-muted focus:border-accent/60 focus:outline-none"
             />
           </form>
         }
@@ -85,7 +85,7 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
               </thead>
               <tbody>
                 {rows.map(({ c, orders: n, owed, spent, lastOrder, baskets }) => (
-                  <tr key={c.id} data-reveal="row" className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.03]">
+                  <tr key={c.id} data-reveal="row" className="border-b border-border transition-colors last:border-0 hover:bg-ink/[0.03]">
                     <td className="px-5 py-2.5">
                       <p className="font-medium">{c.name ?? c.email ?? "—"}</p>
                       <p className="font-mono text-xs text-muted">{c.customerCode}</p>

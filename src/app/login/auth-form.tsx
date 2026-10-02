@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { signIn, signUp, type AuthState } from "./actions";
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-white/[0.03] px-4 py-2.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
+  "w-full rounded-xl border border-border bg-ink/[0.03] px-4 py-2.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
 
 export function AuthForm({ notice }: { notice?: string }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -15,7 +15,7 @@ export function AuthForm({ notice }: { notice?: string }) {
 
   return (
     <div className="relative">
-      <div className="mb-6 flex gap-1 rounded-full border border-border bg-white/[0.03] p-1 text-sm">
+      <div className="mb-6 flex gap-1 rounded-full border border-border bg-ink/[0.03] p-1 text-sm">
         {(["signin", "signup"] as const).map((m) => (
           <button
             key={m}
@@ -24,7 +24,7 @@ export function AuthForm({ notice }: { notice?: string }) {
             onClick={() => setMode(m)}
             aria-pressed={mode === m}
             className={`flex-1 rounded-full px-3 py-1.5 transition-colors ${
-              mode === m ? "bg-white/10 font-medium text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)]" : "text-muted hover:text-fg"
+              mode === m ? "bg-ink/10 font-medium text-fg shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)]" : "text-muted hover:text-fg"
             }`}
           >
             {m === "signin" ? "Sign in" : "Create account"}
@@ -33,14 +33,14 @@ export function AuthForm({ notice }: { notice?: string }) {
       </div>
 
       {notice && !state.error && !state.message && (
-        <p className="mb-4 rounded-xl border border-border bg-white/[0.04] px-3 py-2 text-sm text-secondary">{notice}</p>
+        <p className="mb-4 rounded-xl border border-border bg-ink/[0.04] px-3 py-2 text-sm text-secondary">{notice}</p>
       )}
 
       <form action={mode === "signin" ? inAction : upAction} className="space-y-3">
         {mode === "signup" && (
           <>
             <input name="name" autoComplete="name" placeholder="Full name" required className={inputClass} />
-            <div className="flex overflow-hidden rounded-xl border border-border bg-white/[0.03] transition-shadow focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)]">
+            <div className="flex overflow-hidden rounded-xl border border-border bg-ink/[0.03] transition-shadow focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)]">
               <span className="flex items-center border-r border-border px-3 text-sm text-muted">+91</span>
               <input
                 name="phone"

@@ -30,10 +30,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning className={`${outfit.variable} ${geistMono.variable} h-full antialiased`}>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body className="min-h-full flex flex-col font-sans">
+        {/* first thing in <body>, so it still runs before anything paints. Not in a hand-written <head>: chunks
+            loaded during hydration are appended to <head>, and React then finds nodes it didn't render there. */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <Effects />
         {children}
       </body>

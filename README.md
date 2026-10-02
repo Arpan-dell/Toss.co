@@ -159,9 +159,12 @@ SUPABASE_SERVICE_ROLE_KEY=... TOSS_BRIDGE_KEY=... npx tsx scripts/e2e-live.ts
 
 ## Security notes
 
-> **⚠️ Rotate secrets that have ever left a secret store.** An audit of all 58 commits found no secret key,
-> token or password in git history: only the Supabase project URL and *publishable* key (public by design)
-> were ever written into the code, as fallbacks in `scripts/`, and those are now read from the environment.
+> **⚠️ Rotate secrets that have ever left a secret store.** An audit of the first 58 commits found no secret
+> key, token or password in git history (only the Supabase URL and *publishable* key, public by design, as
+> script fallbacks; now read from the environment). **One exception, added later:** commit `7d170ab` put the
+> driver bot's real token into `src/lib/log.test.ts` as sample data; it was replaced in `dee2290`, but it stays
+> in history, so that token must be revoked (@BotFather → /revoke). `npm run build` now runs
+> `scripts/check-secrets.mjs` first and fails if a real-looking credential appears in the source.
 > But any credential that was ever pasted into a chat, an issue, a screenshot or a file synced to the cloud
 > (for example the basket firmware in OneDrive) should be treated as exposed. Rotate these and update them in
 > Vercel and `secrets.h`:

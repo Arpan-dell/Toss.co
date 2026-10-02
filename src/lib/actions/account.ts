@@ -3,6 +3,7 @@
 import { createClient as createPlainClient } from "@supabase/supabase-js";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
+import { createClient } from "../supabase/server";
 import type { FormState } from "./shared";
 import { logError } from "@/lib/log";
 import { allow } from "../rate-limit";
@@ -39,5 +40,7 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
     logError("password change failed", updateError);
     return { error: updateError.code === "weak_password" ? "That password is too weak. Try a longer one." : "Couldn't change your password. Please try again." };
   }
-  return { message: "Password changed. Use your new password next time you sign in." };
+  // keep this device signed in, sign out every other one (an old session may be the reason for the change)
+  await (await createClient()).auth.signOut({ scope: "others" }).catch((e) => logError("signing out other devices failed", e));
+  return { message: "Password changed. Other devices have been signed out." };
 }

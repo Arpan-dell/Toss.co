@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { signIn, signUp, type AuthState } from "./actions";
 import { GoogleButton } from "./google-button";
@@ -73,6 +74,14 @@ export function AuthForm({ notice, next }: { notice?: string; next?: string }) {
           required
           className={inputClass}
         />
+
+        {mode === "signin" && (
+          <p className="text-right text-xs">
+            <Link href="/login/forgot" className="text-muted hover:text-fg hover:underline">
+              Forgot password?
+            </Link>
+          </p>
+        )}
 
         {state.error && (
           <p role="alert" className="rounded-[8px] border border-critical/30 bg-critical-bg px-3 py-2 text-sm text-critical">

@@ -105,6 +105,8 @@ function StepText({ step, progress, color, onColor, reduce }: { step: Step; prog
   const range = a === 0 ? [0, b - fade / 2, b + fade] : b === 1 ? [a - fade, a + fade / 2, 1] : [a - fade, a + fade / 2, b - fade / 2, b + fade];
   const opacity = useTransform(progress, range, a === 0 ? [1, 1, 0] : b === 1 ? [0, 1, 1] : [0, 1, 1, 0]);
   const y = useTransform(progress, range, a === 0 ? [0, 0, -28] : b === 1 ? [28, 0, 0] : [28, 0, 0, -28]);
+  // the steps are stacked; a faded-out one must not swallow taps meant for the visible one (the swatches)
+  const pointerEvents = useTransform(opacity, (o) => (o > 0.5 ? "auto" : "none"));
   const place =
     step.side === "center"
       ? "lg:inset-x-0 lg:top-[12%] lg:mx-auto lg:max-w-2xl lg:text-center lg:items-center"
@@ -113,7 +115,7 @@ function StepText({ step, progress, color, onColor, reduce }: { step: Step; prog
         : "lg:inset-x-auto lg:right-[max(2rem,calc((100vw-80rem)/2+2rem))] lg:top-1/2 lg:max-w-md lg:-translate-y-1/2";
   return (
     <motion.div
-      style={reduce ? undefined : { opacity, y }}
+      style={reduce ? undefined : { opacity, y, pointerEvents }}
       className={`flex flex-col px-5 lg:absolute lg:px-0 ${reduce ? "py-6" : "absolute inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.5rem)]"} ${place}`}
     >
       <p className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">{step.kicker}</p>

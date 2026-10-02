@@ -22,7 +22,7 @@ const ITEMS: { title: string; href: string; icon: Icon; section?: string; deskto
 // in view; the last button switches the theme, since the top nav and its toggle are gone by then.
 // On another page (page="laundries") it is always shown, marks that page, and its section links lead back
 // to the landing page.
-export function SiteDock({ page }: { page?: "laundries" }) {
+export function SiteDock({ page }: { page?: "laundries" | "info" }) {
   const docked = useDocked();
   const shown = page ? true : docked;
   const [scrolledTo, setActive] = useState("top");

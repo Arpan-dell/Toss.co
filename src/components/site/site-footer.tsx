@@ -1,3 +1,4 @@
+import { COMPANY_LINKS } from "./info-page";
 import { MainCta } from "./main-cta";
 import { Reveal } from "./reveal";
 
@@ -20,6 +21,7 @@ const COLUMNS = [
       { label: "Get started", href: "/login" },
     ],
   },
+  { title: "Company", links: COMPANY_LINKS },
   {
     title: "Contact",
     links: [
@@ -43,7 +45,7 @@ export function SiteFooter({ logo }: { logo: React.ReactNode }) {
           </MainCta>
         </Reveal>
 
-        <div className="mt-28 grid gap-12 border-t border-ink/10 pt-14 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-28 grid gap-12 border-t border-ink/10 pt-14 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             {logo}
             <p className="mt-5 max-w-xs text-sm leading-relaxed text-muted">Smart baskets that order their own laundry pickup, and the platform laundries run on.</p>

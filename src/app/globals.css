@@ -143,16 +143,17 @@ html[data-theme] { background-color: var(--bg); }
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
 }
 .aurora { opacity: var(--aurora-opacity); }
+/* Soft radial gradients instead of filter: blur() on big moving layers, which cost a repaint per frame. */
 .aurora span {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(90px);
   opacity: 0.35;
   animation: drift 22s ease-in-out infinite alternate;
+  will-change: transform;
 }
-.aurora span:nth-child(1) { width: 560px; height: 560px; background: var(--aurora-1); top: -180px; left: -120px; }
-.aurora span:nth-child(2) { width: 460px; height: 460px; background: var(--aurora-2); top: -120px; right: -140px; animation-delay: -7s; opacity: 0.25; }
-.aurora span:nth-child(3) { width: 380px; height: 380px; background: var(--aurora-3); bottom: -200px; left: 35%; animation-delay: -14s; opacity: 0.18; }
+.aurora span:nth-child(1) { width: 900px; height: 900px; background: radial-gradient(closest-side, var(--aurora-1), transparent); top: -380px; left: -320px; }
+.aurora span:nth-child(2) { width: 760px; height: 760px; background: radial-gradient(closest-side, var(--aurora-2), transparent); top: -270px; right: -290px; animation-delay: -7s; opacity: 0.25; }
+.aurora span:nth-child(3) { width: 680px; height: 680px; background: radial-gradient(closest-side, var(--aurora-3), transparent); bottom: -350px; left: 30%; animation-delay: -14s; opacity: 0.18; }
 
 @keyframes drift {
   0% { transform: translate(0, 0) scale(1); }
@@ -164,8 +165,6 @@ html[data-theme] { background-color: var(--bg); }
 .glass {
   background: linear-gradient(180deg, rgb(var(--ink-rgb) / 0.05), rgb(var(--ink-rgb) / 0.02));
   border: 1px solid var(--border);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 
 /* Gradient hairline that lights up on hover. */
@@ -511,6 +510,7 @@ html[data-scrolled] .site-header {
 }
 
 /* ---------- role-based scrollytelling (components/how-scrolly.tsx) ---------- */
+[data-paused] *, [data-paused] *::before, [data-paused] *::after { animation-play-state: paused !important; }
 .mg-type { width: 0; animation: mg-type 0.9s steps(var(--chars, 12)) forwards; border-right: 1px solid rgb(255 255 255 / 0.6); }
 .hs-follow { offset-distance: 0%; offset-rotate: 0deg; animation: hs-follow 3.2s cubic-bezier(0.65, 0, 0.35, 1) 1.6s forwards; }
 .hs-radar { animation: hs-radar 1.8s ease-out infinite; }
@@ -541,6 +541,9 @@ html[data-scrolled] .site-header {
   .hs-twinkle { animation: none; opacity: 0.4; }
 }
 
+/* Button glow (core/glow-effect, colorShift): two blurred gradient layers cross-fade on the compositor. */
+@keyframes glow-swap { from { opacity: 0; } to { opacity: 1; } }
+
 /* Theme switch: the new theme grows as a circle from the toggle (see ThemeToggle); no default crossfade. */
 ::view-transition-old(root),
 ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
@@ -548,7 +551,5 @@ html[data-scrolled] .site-header {
 /* ---------- Light theme touches ---------- */
 [data-theme="light"] .text-gradient:not([data-theme="dark"] *) { background-image: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #0b1430); }
 [data-theme="light"] .glass:not([data-theme="dark"] *) { background: rgb(255 255 255 / 0.8); box-shadow: 0 1px 2px rgb(11 20 48 / 0.04), 0 12px 32px -18px rgb(11 20 48 / 0.18); }
-/* the hero blueprint is white-on-navy; inverted it reads as navy ink on paper */
-[data-theme="light"] .hero-sketch { filter: invert(1) hue-rotate(180deg) saturate(0.8) brightness(1.02); }
 /* framer-motion writes the nav glass inline; light mode needs a much denser white to stay legible */
 [data-theme="light"] .nav-glass { background: rgb(255 255 255 / 0.82) !important; box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 18px 40px -22px rgb(11 20 48 / 0.35) !important; }

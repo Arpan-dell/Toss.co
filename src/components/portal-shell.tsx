@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { NavLinks } from "./nav-links";
+import { PortalDock, type PortalNavItem } from "./portal-dock";
 import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./ui";
 import { signOut } from "@/app/login/actions";
@@ -7,7 +7,7 @@ import { signOut } from "@/app/login/actions";
 export function PortalShell({ badge, subtitle, nav, children }: {
   badge?: string;
   subtitle: string;
-  nav: { href: string; label: string }[];
+  nav: PortalNavItem[];
   children: React.ReactNode;
 }) {
   return (
@@ -22,7 +22,6 @@ export function PortalShell({ badge, subtitle, nav, children }: {
               </span>
             )}
           </Link>
-          <NavLinks items={nav} />
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="hidden text-muted sm:inline">{subtitle}</span>
             <ThemeToggle className="size-9" />
@@ -32,7 +31,8 @@ export function PortalShell({ badge, subtitle, nav, children }: {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-32">{children}</main>
+      <PortalDock items={nav} />
     </div>
   );
 }

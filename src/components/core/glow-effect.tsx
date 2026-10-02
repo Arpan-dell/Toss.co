@@ -61,14 +61,34 @@ export function GlowEffect({ colors = ["#2ee6d6", "#00b4ff", "#7aa2ff", "#19cbe9
     static: { background: `linear-gradient(to right, ${colors.join(", ")})` },
   };
 
-  const a = animations[reduce ? "static" : mode];
   const blurClass = typeof blur === "number" ? "" : BLUR[blur];
+  const base = `pointer-events-none absolute inset-0 h-full w-full transform-gpu ${blurClass} ${className}`;
+  const filter = typeof blur === "number" ? `blur(${blur}px)` : undefined;
+
+  // colorShift runs in CSS: two static blurred gradients, the top one fading in and out (opacity only, so
+  // it stays on the compositor instead of re-painting an interpolated gradient every frame).
+  if (mode === "colorShift" && !reduce) {
+    const turn = [...colors.slice(1), colors[0]];
+    const grad = (c: string[]) => `conic-gradient(from 0deg at 50% 50%, ${c.join(", ")}, ${c[0]})`;
+    return (
+      <>
+        <div aria-hidden style={{ background: grad(colors), scale, filter }} className={base} />
+        <div
+          aria-hidden
+          style={{ background: grad(turn), scale, filter, animation: `glow-swap ${duration}s ease-in-out infinite alternate` }}
+          className={base}
+        />
+      </>
+    );
+  }
+
+  const a = animations[reduce ? "static" : mode];
   return (
     <motion.div
       aria-hidden
-      style={{ scale, willChange: "transform", backfaceVisibility: "hidden", filter: typeof blur === "number" ? `blur(${blur}px)` : undefined }}
+      style={{ scale, willChange: "transform", backfaceVisibility: "hidden", filter }}
       animate={a}
-      className={`pointer-events-none absolute inset-0 h-full w-full transform-gpu ${blurClass} ${className}`}
+      className={base}
     />
   );
 }

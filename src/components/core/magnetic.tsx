@@ -52,10 +52,22 @@ export function Magnetic({ children, intensity = 0.6, range = 100, actionArea = 
       x.set(0);
       y.set(0);
     };
+    // only track the pointer while the element is on screen
+    let listening = false;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !listening) document.addEventListener("mousemove", onMove, { passive: true });
+      if (!e.isIntersecting && listening) {
+        document.removeEventListener("mousemove", onMove);
+        x.set(0);
+        y.set(0);
+      }
+      listening = e.isIntersecting;
+    });
+    io.observe(el);
     target?.addEventListener("mouseenter", enter);
     target?.addEventListener("mouseleave", leave);
-    document.addEventListener("mousemove", onMove);
     return () => {
+      io.disconnect();
       target?.removeEventListener("mouseenter", enter);
       target?.removeEventListener("mouseleave", leave);
       document.removeEventListener("mousemove", onMove);

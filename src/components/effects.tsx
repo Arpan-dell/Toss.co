@@ -33,8 +33,12 @@ export function Effects() {
         else io.observe(el);
       });
     scan();
-    // Client-side navigation swaps page content; pick up newly rendered elements.
-    const mo = new MutationObserver(scan);
+    // Client-side navigation swaps page content; pick up newly rendered elements. Batched to one scan per
+    // frame: count-ups and live data mutate the DOM constantly and must not each trigger a full query.
+    let queued = 0;
+    const mo = new MutationObserver(() => {
+      if (!queued) queued = requestAnimationFrame(() => ((queued = 0), scan()));
+    });
     mo.observe(document.body, { childList: true, subtree: true });
 
     // ---- Spotlight ----
@@ -61,7 +65,12 @@ export function Effects() {
     };
 
     // ---- Scrolled flag ----
-    const onScroll = () => root.toggleAttribute("data-scrolled", window.scrollY > 8);
+    // only touch <html> when the flag flips: any attribute write on the root invalidates page-wide styles
+    let scrolled: boolean | undefined;
+    const onScroll = () => {
+      const now = window.scrollY > 8;
+      if (now !== scrolled) root.toggleAttribute("data-scrolled", (scrolled = now));
+    };
     onScroll();
 
     document.addEventListener("pointermove", onMove, { passive: true });
@@ -70,6 +79,7 @@ export function Effects() {
     return () => {
       io.disconnect();
       mo.disconnect();
+      cancelAnimationFrame(queued);
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerdown", onDown);
       window.removeEventListener("scroll", onScroll);

@@ -143,6 +143,8 @@ html[data-theme] { background-color: var(--bg); }
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
 }
 .aurora { opacity: var(--aurora-opacity); }
+/* the landing paints its own full background over it, so don't keep animating something nobody sees */
+body:has(> #top) > .aurora { display: none; }
 /* Soft radial gradients instead of filter: blur() on big moving layers, which cost a repaint per frame. */
 .aurora span {
   position: absolute;
@@ -448,12 +450,14 @@ html[data-scrolled] .site-header {
 /* Rotation sways the whole shirt from where it leaves the "O"; skew and a slight squash bend
    the cloth so the top lags behind the base. Uneven keyframe spacing keeps it from looking mechanical.
    The amplitude stays under ±5°, which keeps the opening in the "O" covered. */
+/* waves a few times on load, then rests (an endless loop costs a style update every frame on every page);
+   hovering the logo sets it off again */
 .logo-shirt {
-  animation: shirt-wave 3.6s cubic-bezier(0.45, 0.05, 0.4, 0.95) infinite;
+  animation: shirt-wave 3.6s cubic-bezier(0.45, 0.05, 0.4, 0.95) 3;
   will-change: transform;
 }
 .logo:hover .logo-shirt {
-  animation-duration: 1.1s;
+  animation: shirt-wave 1.1s cubic-bezier(0.45, 0.05, 0.4, 0.95) infinite;
 }
 @keyframes shirt-wave {
   0%   { transform: rotate(-3deg) skewX(1.5deg) scale(1, 1); }

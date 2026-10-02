@@ -152,17 +152,20 @@ const SHIRT_PIVOT = { x: 240, y: 160 };
 
 export function Logo({ variant = "wordmark", className = "h-11" }: { variant?: keyof typeof LOGOS; className?: string }) {
   const l = LOGOS[variant];
+  // The glow sits on each image, not the wrapper: a filter on the wrapper would be re-rendered on every
+  // frame of the shirt's wave instead of the wave running on the GPU.
+  const glow = "drop-shadow-[0_0_18px_rgb(2_169_161/0.35)]";
   return (
-    <span className={`logo relative inline-block drop-shadow-[0_0_18px_rgb(2_169_161/0.35)] ${className}`} role="img" aria-label="Toss">
-      <Image src={l.base} width={l.width} height={l.height} alt="" priority className="h-full w-auto light:hidden" />
-      <Image src={l.base.replace(".png", "-light.png")} width={l.width} height={l.height} alt="" priority className="hidden h-full w-auto light:block" />
+    <span className={`logo relative inline-block ${className}`} role="img" aria-label="Toss">
+      <Image src={l.base} width={l.width} height={l.height} alt="" priority className={`h-full w-auto light:hidden ${glow}`} />
+      <Image src={l.base.replace(".png", "-light.png")} width={l.width} height={l.height} alt="" priority className={`hidden h-full w-auto light:block ${glow}`} />
       <Image
         src={l.shirt}
         width={l.width}
         height={l.height}
         alt=""
         priority
-        className="logo-shirt absolute inset-0 h-full w-auto"
+        className={`logo-shirt absolute inset-0 h-full w-auto ${glow}`}
         style={{ transformOrigin: `${(SHIRT_PIVOT.x / l.width) * 100}% ${(SHIRT_PIVOT.y / l.height) * 100}%` }}
       />
     </span>

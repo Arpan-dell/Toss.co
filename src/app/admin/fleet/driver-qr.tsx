@@ -6,7 +6,7 @@ export async function DriverBotQr({ username }: { username: string }) {
   const link = `https://t.me/${username}`;
   const svg = await qrSvg(link);
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-border bg-white/[0.03] p-3 sm:flex-col sm:items-center sm:gap-2 sm:p-4">
+    <div className="flex items-center gap-4 rounded-2xl border border-border bg-ink/[0.03] p-3 sm:flex-col sm:items-center sm:gap-2 sm:p-4">
       <div
         role="img"
         aria-label={`QR code for @${username}`}

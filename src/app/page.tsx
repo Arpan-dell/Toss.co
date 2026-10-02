@@ -14,7 +14,7 @@ import { Logo } from "@/components/ui";
 // components/site; this page stays a Server Component that only lays them out.
 export default function Home() {
   return (
-    <div id="top" className="relative flex min-h-[100dvh] w-full flex-1 flex-col overflow-x-clip bg-[#0c1128] text-white selection:bg-[#2ee6d6]/30">
+    <div id="top" className="relative flex min-h-[100dvh] w-full flex-1 flex-col overflow-x-clip bg-bg text-fg selection:bg-accent/30">
       <SiteNav logo={<Logo className="h-9" />} />
 
       <main className="flex-1">
@@ -26,7 +26,7 @@ export default function Home() {
           <Reveal as="h2" className="max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1.05] font-black tracking-tight">
             Three people, one basket. See your side.
           </Reveal>
-          <Reveal as="p" delay={0.1} className="mt-5 max-w-[56ch] text-lg leading-relaxed font-light text-gray-300">
+          <Reveal as="p" delay={0.1} className="mt-5 max-w-[56ch] text-lg leading-relaxed font-light text-secondary">
             Pick who you are and scroll. Every step is what actually happens on Toss, from the first weigh-in to the paid invoice.
           </Reveal>
           <div className="mt-8">
@@ -40,7 +40,7 @@ export default function Home() {
               Inside Toss
             </Reveal>
             <Reveal delay={0.1}>
-              <a href="/login" className="group inline-flex items-center gap-2 text-sm text-gray-300 transition-colors hover:text-white">
+              <a href="/login" className="group inline-flex items-center gap-2 text-sm text-secondary transition-colors hover:text-fg">
                 Sign in to your dashboard
                 <span className="transition-transform group-hover:translate-x-1">→</span>
               </a>

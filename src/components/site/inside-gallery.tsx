@@ -33,7 +33,7 @@ export function InsideGallery() {
             aria-label={s.title}
             animate={{ flex: open ? 4 : 0.8 }}
             transition={reduce ? { duration: 0 } : { duration: 0.6, ease: EASE }}
-            className="group relative min-h-0 min-w-0 overflow-hidden rounded-3xl border border-white/10 bg-[#121a3c] text-left outline-none focus-visible:ring-2 focus-visible:ring-[#2ee6d6]"
+            className="group relative min-h-0 min-w-0 overflow-hidden rounded-3xl border border-ink/10 bg-surface-solid text-left outline-none focus-visible:ring-2 focus-visible:ring-accent"
           >
             <Image
               src={s.src}
@@ -43,15 +43,15 @@ export function InsideGallery() {
               sizes="(min-width: 768px) 60vw, 100vw"
               className={`object-cover object-top transition-[transform,opacity] duration-1000 group-hover:scale-105 ${open ? "opacity-100" : "opacity-40"}`}
             />
-            <div className={`absolute inset-0 bg-gradient-to-t from-[#0c1128] from-15% via-[#0c1128]/85 via-40% to-transparent to-75% transition-opacity duration-500 ${open ? "opacity-100" : "opacity-50"}`} />
+            <div className={`absolute inset-0 bg-gradient-to-t from-bg from-15% via-bg/85 via-40% to-transparent to-75% transition-opacity duration-500 ${open ? "opacity-100" : "opacity-50"}`} />
             <motion.div
               initial={false}
               animate={{ opacity: open ? 1 : 0, y: open ? 0 : 12 }}
               transition={{ duration: 0.45, delay: open ? 0.2 : 0, ease: EASE }}
               className="absolute inset-x-0 bottom-0 p-6 sm:p-8"
             >
-              <p className="text-2xl font-bold tracking-tight text-white">{s.title}</p>
-              <p className="mt-2 max-w-md text-sm leading-relaxed text-gray-300">{s.body}</p>
+              <p className="text-2xl font-bold tracking-tight text-fg">{s.title}</p>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-secondary">{s.body}</p>
             </motion.div>
           </motion.button>
         );

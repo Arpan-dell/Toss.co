@@ -1,9 +1,26 @@
 @import "tailwindcss";
 
-/* Design tokens: midnight base, one aqua accent (from the Toss logo teal). Components use these via
-   Tailwind (bg-surface, text-muted, ...). --accent-rgb feeds every glow and tinted shadow. */
-:root {
+/* `light:` utilities apply under the light theme, except inside a forced-dark island (data-theme="dark"). */
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *):not(:where([data-theme="dark"], [data-theme="dark"] *)));
+
+/* Design tokens. Dark: midnight base, aqua accent (the Toss logo teal). Light: cool white base, blue accent.
+   Components use these via Tailwind (bg-surface, text-muted, bg-ink/10, ...). --ink-rgb is the foreground
+   channel for translucent overlays; --accent-rgb feeds every glow and tinted shadow. The theme lives on
+   <html data-theme>; any element with data-theme="dark" stays dark inside a light page (device mockups). */
+:root,
+[data-theme="dark"] {
   color-scheme: dark;
+  --ink-rgb: 255 255 255;
+  --btn-bg: #f4f6ff;
+  --btn-bg-hover: #ffffff;
+  --btn-fg: #0c1128;
+  --btn-glow: rgb(255 255 255 / 0.18);
+  --btn-glow-hover: rgb(255 255 255 / 0.32);
+  --header-bg: rgb(12 17 40 / 0.6);
+  --aurora-1: #2a3fd1;
+  --aurora-2: #0f9fa3;
+  --aurora-3: #6b2fd6;
+  --aurora-opacity: 1;
   --bg: #0c1128;
   --surface: rgb(255 255 255 / 0.04);
   --surface-solid: #121a3c;
@@ -31,8 +48,49 @@
   --gradient: linear-gradient(135deg, #2ee6d6 0%, #19cbe9 50%, #00b4ff 100%);
 }
 
+[data-theme="light"] {
+  color-scheme: light;
+  --ink-rgb: 11 20 48;
+  --bg: #f5f7fc;
+  --surface: rgb(255 255 255 / 0.85);
+  --surface-solid: #ffffff;
+  --surface-2: rgb(11 20 48 / 0.045);
+  --border: rgb(11 20 48 / 0.1);
+  --border-strong: rgb(11 20 48 / 0.18);
+  --text: #0b1430;
+  --text-secondary: #3a4566;
+  --text-muted: #5b6686;
+  --accent: #1f5eff;
+  --accent-rgb: 31 94 255;
+  --accent-2: #0ea5e9;
+  --accent-contrast: #ffffff;
+  --good: #15803d;
+  --good-bg: rgb(21 128 61 / 0.1);
+  --warn: #b45309;
+  --warn-bg: rgb(180 83 9 / 0.1);
+  --critical: #dc2626;
+  --critical-bg: rgb(220 38 38 / 0.08);
+  --info: #0369a1;
+  --info-bg: rgb(3 105 161 / 0.08);
+  --series-1: #5b5bd6;
+  --series-1-wash: rgb(91 91 214 / 0.12);
+  --grid: rgb(11 20 48 / 0.07);
+  --gradient: linear-gradient(135deg, #1f5eff 0%, #3b82f6 50%, #0ea5e9 100%);
+  --btn-bg: #1f5eff;
+  --btn-bg-hover: #1a50e0;
+  --btn-fg: #ffffff;
+  --btn-glow: rgb(31 94 255 / 0.25);
+  --btn-glow-hover: rgb(31 94 255 / 0.4);
+  --header-bg: rgb(255 255 255 / 0.75);
+  --aurora-1: #93b4ff;
+  --aurora-2: #8ee3f5;
+  --aurora-3: #c4b5fd;
+  --aurora-opacity: 0.55;
+}
+
 @theme inline {
   --color-bg: var(--bg);
+  --color-ink: rgb(var(--ink-rgb));
   --color-surface: var(--surface);
   --color-surface-solid: var(--surface-solid);
   --color-surface-2: var(--surface-2);
@@ -57,9 +115,10 @@
 }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--text);
 }
+html[data-theme] { background-color: var(--bg); }
 
 ::selection {
   background: rgb(var(--accent-rgb) / 0.4);
@@ -78,11 +137,12 @@ body {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+    linear-gradient(rgb(var(--ink-rgb) / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--ink-rgb) / 0.035) 1px, transparent 1px);
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 30%, transparent 75%);
 }
+.aurora { opacity: var(--aurora-opacity); }
 .aurora span {
   position: absolute;
   border-radius: 9999px;
@@ -90,9 +150,9 @@ body {
   opacity: 0.35;
   animation: drift 22s ease-in-out infinite alternate;
 }
-.aurora span:nth-child(1) { width: 560px; height: 560px; background: #2a3fd1; top: -180px; left: -120px; }
-.aurora span:nth-child(2) { width: 460px; height: 460px; background: #0f9fa3; top: -120px; right: -140px; animation-delay: -7s; opacity: 0.25; }
-.aurora span:nth-child(3) { width: 380px; height: 380px; background: #6b2fd6; bottom: -200px; left: 35%; animation-delay: -14s; opacity: 0.18; }
+.aurora span:nth-child(1) { width: 560px; height: 560px; background: var(--aurora-1); top: -180px; left: -120px; }
+.aurora span:nth-child(2) { width: 460px; height: 460px; background: var(--aurora-2); top: -120px; right: -140px; animation-delay: -7s; opacity: 0.25; }
+.aurora span:nth-child(3) { width: 380px; height: 380px; background: var(--aurora-3); bottom: -200px; left: 35%; animation-delay: -14s; opacity: 0.18; }
 
 @keyframes drift {
   0% { transform: translate(0, 0) scale(1); }
@@ -102,7 +162,7 @@ body {
 
 /* ---------- Surfaces ---------- */
 .glass {
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.02));
+  background: linear-gradient(180deg, rgb(var(--ink-rgb) / 0.05), rgb(var(--ink-rgb) / 0.02));
   border: 1px solid var(--border);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -131,20 +191,20 @@ body {
 .glow-card:hover { transform: translateY(-2px); }
 
 .btn-primary {
-  background: #f4f6ff;
-  color: #0c1128;
-  box-shadow: 0 0 20px rgb(255 255 255 / 0.18);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  box-shadow: 0 0 20px var(--btn-glow);
   transition: box-shadow 0.3s, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s;
 }
-.btn-primary:hover { background: #ffffff; box-shadow: 0 0 34px rgb(255 255 255 / 0.32), 0 0 60px -10px rgb(var(--accent-rgb) / 0.55); }
+.btn-primary:hover { background: var(--btn-bg-hover); box-shadow: 0 0 34px var(--btn-glow-hover), 0 0 60px -10px rgb(var(--accent-rgb) / 0.55); }
 .btn-primary:active { transform: scale(0.96); }
 
 .btn-ghost {
   border: 1px solid var(--border-strong);
-  background: rgb(255 255 255 / 0.03);
+  background: rgb(var(--ink-rgb) / 0.03);
   transition: background 0.2s, border-color 0.2s;
 }
-.btn-ghost:hover { background: rgb(255 255 255 / 0.08); border-color: rgb(255 255 255 / 0.28); }
+.btn-ghost:hover { background: rgb(var(--ink-rgb) / 0.08); border-color: rgb(var(--ink-rgb) / 0.28); }
 
 .text-gradient {
   background: linear-gradient(90deg, #e6fffb, #2ee6d6, #00b4ff, #e6fffb);
@@ -294,7 +354,7 @@ body {
 /* ---------- Sticky header that turns to glass on scroll ---------- */
 .site-header { transition: background 0.4s, border-color 0.4s, backdrop-filter 0.4s; border-bottom: 1px solid transparent; }
 html[data-scrolled] .site-header {
-  background: rgb(12 17 40 / 0.6);
+  background: var(--header-bg);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-color: var(--border);
@@ -480,3 +540,15 @@ html[data-scrolled] .site-header {
   .hs-word-in { letter-spacing: -0.04em; }
   .hs-twinkle { animation: none; opacity: 0.4; }
 }
+
+/* Theme switch: the new theme grows as a circle from the toggle (see ThemeToggle); no default crossfade. */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+
+/* ---------- Light theme touches ---------- */
+[data-theme="light"] .text-gradient:not([data-theme="dark"] *) { background-image: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #0b1430); }
+[data-theme="light"] .glass:not([data-theme="dark"] *) { background: rgb(255 255 255 / 0.8); box-shadow: 0 1px 2px rgb(11 20 48 / 0.04), 0 12px 32px -18px rgb(11 20 48 / 0.18); }
+/* the hero blueprint is white-on-navy; inverted it reads as navy ink on paper */
+[data-theme="light"] .hero-sketch { filter: invert(1) hue-rotate(180deg) saturate(0.8) brightness(1.02); }
+/* framer-motion writes the nav glass inline; light mode needs a much denser white to stay legible */
+[data-theme="light"] .nav-glass { background: rgb(255 255 255 / 0.82) !important; box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 18px 40px -22px rgb(11 20 48 / 0.35) !important; }

@@ -55,7 +55,7 @@ export function AskToss() {
                 input.current.form?.requestSubmit();
               }
             }}
-            className="rounded-full border border-border bg-white/[0.03] px-3 py-1 text-xs text-secondary transition hover:border-accent/50 hover:text-fg"
+            className="rounded-full border border-border bg-ink/[0.03] px-3 py-1 text-xs text-secondary transition hover:border-accent/50 hover:text-fg"
           >
             {s}
           </button>

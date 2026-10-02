@@ -92,7 +92,7 @@ export function DockItem({ children, className = "", href, onClick, ...rest }: D
     onHoverEnd: () => hovered.set(0),
     onFocus: () => hovered.set(1),
     onBlur: () => hovered.set(0),
-    className: `relative inline-flex shrink-0 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-[#2ee6d6] ${className}`,
+    className: `relative inline-flex shrink-0 items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`,
     "aria-label": rest["aria-label"],
   };
   return (
@@ -124,7 +124,7 @@ export function DockLabel({ children, className = "" }: { children: React.ReactN
           transition={{ duration: 0.2 }}
           style={{ x: "-50%" }}
           role="tooltip"
-          className={`pointer-events-none absolute -top-7 left-1/2 w-fit rounded-md border border-white/10 bg-[#121a3c] px-2 py-0.5 text-xs whitespace-pre text-white ${className}`}
+          className={`pointer-events-none absolute -top-7 left-1/2 w-fit rounded-md border border-ink/10 bg-surface-solid px-2 py-0.5 text-xs whitespace-pre text-fg ${className}`}
         >
           {children}
         </motion.span>

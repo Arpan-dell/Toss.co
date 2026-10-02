@@ -52,7 +52,7 @@ export default async function CustomerOverview() {
       {offer && business && (
         <div
           role="status"
-          className="relative overflow-hidden rounded-2xl border border-good/30 bg-gradient-to-r from-good-bg via-white/[0.03] to-transparent p-5"
+          className="relative overflow-hidden rounded-2xl border border-good/30 bg-gradient-to-r from-good-bg via-ink/[0.03] to-transparent p-5"
         >
           <p className="text-xs tracking-[0.14em] text-good uppercase">🎁 We miss you</p>
           <p className="mt-1 text-xl font-semibold">

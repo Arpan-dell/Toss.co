@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NavLinks } from "./nav-links";
+import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./ui";
 import { signOut } from "@/app/login/actions";
 
@@ -11,7 +12,7 @@ export function PortalShell({ badge, subtitle, nav, children }: {
 }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-20 border-b border-border bg-black/40 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 border-b border-border bg-[var(--header-bg)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
           <Link href="/" className="flex items-center gap-2">
             <Logo />
@@ -24,6 +25,7 @@ export function PortalShell({ badge, subtitle, nav, children }: {
           <NavLinks items={nav} />
           <div className="ml-auto flex items-center gap-3 text-sm">
             <span className="hidden text-muted sm:inline">{subtitle}</span>
+            <ThemeToggle className="size-9" />
             <form action={signOut}>
               <button className="btn-ghost rounded-full px-3.5 py-1.5 text-secondary">Sign out</button>
             </form>

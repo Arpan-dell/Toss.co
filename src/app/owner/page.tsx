@@ -63,7 +63,7 @@ export default async function OwnerHome() {
               </thead>
               <tbody>
                 {rows.map(({ t, plan, s }) => (
-                  <tr key={t.id} className="border-b border-border transition-colors last:border-0 hover:bg-white/[0.03]">
+                  <tr key={t.id} className="border-b border-border transition-colors last:border-0 hover:bg-ink/[0.03]">
                     <td className="px-5 py-2.5">
                       <p className="font-medium">{t.name}</p>
                       <p className="font-mono text-xs text-muted">{t.joinCode}</p>

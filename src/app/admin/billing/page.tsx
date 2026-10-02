@@ -74,14 +74,14 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
             <EmptyState>Online subscription payments aren&apos;t set up yet. Contact Toss.</EmptyState>
           ) : (
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-1 rounded-full border border-border bg-white/[0.03] p-1 text-sm">
+              <div className="flex flex-wrap gap-1 rounded-full border border-border bg-ink/[0.03] p-1 text-sm">
                 {MONTH_OPTIONS.map((m) => (
                   <Link
                     key={m}
                     href={`/admin/billing?months=${m}`}
                     data-ripple
                     aria-current={m === months ? "page" : undefined}
-                    className={`rounded-full px-3.5 py-1 ${m === months ? "bg-white/10 font-medium text-fg" : "text-muted hover:text-fg"}`}
+                    className={`rounded-full px-3.5 py-1 ${m === months ? "bg-ink/10 font-medium text-fg" : "text-muted hover:text-fg"}`}
                   >
                     {m} month{m > 1 ? "s" : ""}
                     {quote(m).pct > 0 && <span className="ml-1.5 text-[11px] font-medium text-good">−{quote(m).pct}%</span>}

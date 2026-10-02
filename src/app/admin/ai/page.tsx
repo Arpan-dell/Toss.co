@@ -101,9 +101,9 @@ function SectionTitle({ id, kicker, children }: { id: string; kicker: string; ch
 
 function Toggle({ name, label, hint, defaultChecked, big = false }: { name: string; label: string; hint: string; defaultChecked: boolean; big?: boolean }) {
   return (
-    <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-white/[0.02] p-3 transition hover:border-accent/40 ${big ? "sm:col-span-2" : ""}`}>
+    <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-ink/[0.02] p-3 transition hover:border-accent/40 ${big ? "sm:col-span-2" : ""}`}>
       <input type="checkbox" name={name} defaultChecked={defaultChecked} className="peer sr-only" />
-      <span className="relative mt-0.5 h-6 w-11 shrink-0 rounded-full bg-white/10 transition peer-checked:bg-accent after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-accent/60" />
+      <span className="relative mt-0.5 h-6 w-11 shrink-0 rounded-full bg-ink/10 transition peer-checked:bg-accent after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-accent/60" />
       <span>
         <span className={`block font-medium ${big ? "text-base" : "text-sm"}`}>{label}</span>
         <span className="block text-xs text-muted">{hint}</span>
@@ -148,7 +148,7 @@ export default async function TossAi() {
         <ul className="flex min-w-max gap-1 text-sm">
           {SECTIONS.map(([id, label]) => (
             <li key={id}>
-              <a href={`#${id}`} className="block rounded-full px-3.5 py-1.5 text-secondary transition hover:bg-white/[0.06] hover:text-fg">
+              <a href={`#${id}`} className="block rounded-full px-3.5 py-1.5 text-secondary transition hover:bg-ink/[0.06] hover:text-fg">
                 {label}
               </a>
             </li>
@@ -157,7 +157,7 @@ export default async function TossAi() {
       </nav>
 
       {/* ---------- briefing ---------- */}
-      <section id="briefing" className="relative scroll-mt-24 overflow-hidden rounded-3xl bg-gradient-to-br from-accent/60 via-white/10 to-cyan-400/40 p-px shadow-[0_30px_80px_-30px_rgb(var(--accent-rgb)/0.55)]">
+      <section id="briefing" className="relative scroll-mt-24 overflow-hidden rounded-3xl bg-gradient-to-br from-accent/60 via-ink/10 to-cyan-400/40 p-px shadow-[0_30px_80px_-30px_rgb(var(--accent-rgb)/0.55)]">
         <div className="relative rounded-[calc(1.5rem-1px)] bg-surface-solid p-6 sm:p-8">
           <div className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-accent/20 blur-3xl" />
           {r ? (
@@ -228,7 +228,7 @@ export default async function TossAi() {
           ) : (
             <ul className="space-y-3">
               {queue.map((a) => (
-                <li key={a.id} data-reveal="row" className="rounded-2xl border border-border bg-white/[0.02] p-4 transition hover:border-accent/40">
+                <li key={a.id} data-reveal="row" className="rounded-2xl border border-border bg-ink/[0.02] p-4 transition hover:border-accent/40">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 space-y-1">
                       <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
@@ -333,7 +333,7 @@ export default async function TossAi() {
               </thead>
               <tbody>
                 {atRisk.map((c) => (
-                  <tr key={c.code} className="border-b border-border last:border-0 hover:bg-white/[0.03]">
+                  <tr key={c.code} className="border-b border-border last:border-0 hover:bg-ink/[0.03]">
                     <td className="px-5 py-2.5 font-mono text-xs">{c.code}</td>
                     <td className="px-3 py-2.5"><Badge tone={c.segment === "Lost" ? "critical" : "warn"}>{c.segment}</Badge></td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{c.orders}</td>
@@ -341,7 +341,7 @@ export default async function TossAi() {
                     <td className="px-3 py-2.5 text-right tabular-nums">{c.usualGapDays ? `${c.usualGapDays} d` : "—"}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-20 rounded-full bg-white/[0.06]">
+                        <div className="h-1.5 w-20 rounded-full bg-ink/[0.06]">
                           <div className="h-full rounded-full" style={{ width: `${c.risk}%`, background: c.risk >= 75 ? "var(--color-critical)" : "var(--color-warn)" }} />
                         </div>
                         <span className="tabular-nums text-secondary">{c.risk}</span>

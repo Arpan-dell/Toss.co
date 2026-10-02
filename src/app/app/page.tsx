@@ -64,6 +64,18 @@ export default async function CustomerOverview() {
         </div>
       )}
 
+      {customer && !customer.phone && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-l-4 border-border border-l-warn bg-surface-solid p-4">
+          <p className="text-sm text-secondary">
+            <span className="font-medium text-fg">Add your mobile number.</span> Your laundry&apos;s driver uses it to reach you at pickup,
+            and it links your Telegram basket to this account.
+          </p>
+          <Link href="/app/settings" className="btn-primary rounded-full px-4 py-2 text-sm font-medium">
+            Add number
+          </Link>
+        </div>
+      )}
+
       <Card title={business ? "Your laundry" : "Connect to your laundry"}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           {business ? (

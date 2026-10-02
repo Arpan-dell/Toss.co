@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { signIn, signUp, type AuthState } from "./actions";
+import { GoogleButton } from "./google-button";
 
 const inputClass =
   "w-full rounded-[8px] border border-border bg-ink/[0.03] px-4 py-2.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
@@ -35,6 +36,13 @@ export function AuthForm({ notice, next }: { notice?: string; next?: string }) {
       {notice && !state.error && !state.message && (
         <p className="mb-4 rounded-[8px] border border-border bg-ink/[0.04] px-3 py-2 text-sm text-secondary">{notice}</p>
       )}
+
+      <GoogleButton next={next} />
+      <div className="my-5 flex items-center gap-3" aria-hidden>
+        <span className="h-px flex-1 border-t border-dotted border-border-strong" />
+        <span className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">or use email</span>
+        <span className="h-px flex-1 border-t border-dotted border-border-strong" />
+      </div>
 
       <form action={mode === "signin" ? inAction : upAction} className="space-y-3">
         {next && <input type="hidden" name="next" value={next} />}

@@ -8,6 +8,7 @@ export const metadata: Metadata = { title: "Sign in" };
 const NOTICES: Record<string, string> = {
   confirmed: "Email confirmed. Sign in to continue.",
   "link-invalid": "That link has expired or was already used. Sign in, or create your account again.",
+  "google-failed": "Google sign-in didn't finish. Try again, or use your email.",
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {

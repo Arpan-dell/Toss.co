@@ -5,12 +5,23 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { invoiceHref } from "@/components/order-table";
 import { planGate } from "@/components/plan-gate";
 import { StatusTimeline } from "@/components/status-timeline";
-import { Card, OrderStatusBadge, PageTitle, PaymentBadge } from "@/components/ui";
+import { Badge, Card, OrderStatusBadge, PageTitle, PaymentBadge } from "@/components/ui";
 import { confirmPayment, markPaidCash, rejectPayment } from "@/lib/actions/manager";
 import { assignDriver, autoAssign, setOrderStatus } from "@/lib/actions/manager-ops";
 import { deviceLabel, getOrder, listCustomers, listDevices, listDrivers, listOrderEvents } from "@/lib/data";
 import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
 import { AmountForm } from "../../payments/amount-form";
+import { weightGapPct } from "@/lib/dispatch/weighing";
+import type { Order } from "@/lib/types";
+import { WeightForm } from "./weight-form";
+
+// Where the billed weight came from, as a tag (never color-only).
+function weightTag(source: Order["weightSource"]) {
+  if (source === "driver") return <Badge tone="good">Weighed by driver</Badge>;
+  if (source === "manager") return <Badge tone="info">Confirmed by you</Badge>;
+  if (source === "basket") return <Badge tone="warn">Not weighed</Badge>;
+  return <Badge tone="neutral">Basket reading</Badge>;
+}
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -35,6 +46,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
   const device = devices.find((d) => d.deviceId === order.deviceId);
   const driver = drivers.find((d) => d.telegramChatId === order.driverId);
   const open = order.status === "PENDING" || order.status === "ACCEPTED";
+  const gap = order.weighedKg != null ? weightGapPct(order.reportedWeightKg ?? order.weightKg, order.weighedKg) : null;
 
   return (
     <div className="stagger max-w-4xl space-y-6">
@@ -192,6 +204,43 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
           </div>
         </Card>
       )}
+
+      <Card title="Weight" action={weightTag(order.weightSource)}>
+        <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="border-t-2 border-fg pt-3">
+            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Basket said</dt>
+            <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatKg(order.reportedWeightKg ?? order.weightKg)}</dd>
+          </div>
+          <div className="border-t-2 border-fg pt-3">
+            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Weighed</dt>
+            <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{order.weighedKg != null ? formatKg(order.weighedKg) : "—"}</dd>
+          </div>
+          <div className="border-t-2 border-fg pt-3">
+            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Difference</dt>
+            <dd className={`mt-1.5 font-mono text-xl font-semibold tabular-nums ${gap !== null && Math.abs(gap) > 15 ? "text-warn" : ""}`}>
+              {gap === null ? "—" : `${gap > 0 ? "+" : ""}${gap}%`}
+            </dd>
+          </div>
+          <div className="border-t-2 border-fg pt-3">
+            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Billed</dt>
+            <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatINR(order.amountDue)}</dd>
+          </div>
+        </dl>
+        {gap !== null && Math.abs(gap) > 15 && (
+          <p className="mt-4 text-sm text-warn">
+            The scale and the basket disagree by more than 15%. If this keeps happening for the same basket, its sensor may need
+            recalibrating, or it may be under-reporting.
+          </p>
+        )}
+        {order.paymentStatus === "UNPAID" ? (
+          <div className="mt-5 border-t border-dotted border-border-strong pt-4">
+            <p className="mb-2 text-sm text-secondary">Weighed it again at the store? Confirm or correct the weight; the amount updates.</p>
+            <WeightForm orderId={order.id} current={order.weighedKg ?? order.weightKg} />
+          </div>
+        ) : (
+          <p className="mt-4 text-xs text-muted">The weight is locked once the customer has paid or reported a payment.</p>
+        )}
+      </Card>
 
       <Card title="Basket log">
         {events.length === 0 ? (

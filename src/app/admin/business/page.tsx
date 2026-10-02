@@ -3,7 +3,7 @@ import { ChangePasswordCard } from "@/components/change-password";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { IdChip } from "@/components/id-chip";
 import { Card, PageTitle, StatTile } from "@/components/ui";
-import { requestClosure, updateBusiness, updateWinback } from "@/lib/actions/manager";
+import { requestClosure, updateBusiness, updateWeighing, updateWinback } from "@/lib/actions/manager";
 import { getOfferStats, getTenantById, listCustomers } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { requireRole } from "@/lib/session";
@@ -71,6 +71,23 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
           </Field>
         </ActionForm>
       </Card>
+      <Card title="Weight at pickup">
+        <ActionForm action={updateWeighing} submitLabel="Save">
+          <label className="flex items-start gap-2.5 text-sm">
+            <input name="weighAtPickup" type="checkbox" defaultChecked={tenant.weighAtPickup} className="mt-0.5 size-4 accent-[var(--accent)]" />
+            <span>
+              <span className="font-medium text-fg">Driver weighs every bag at pickup</span>
+              <span className="mt-0.5 block text-secondary">
+                After <b>Picked up</b>, the driver bot asks for the scale reading and bills that weight. The basket&apos;s reading is
+                kept beside it, so a basket that under-reports shows up on the order page. A driver without a scale can still use the
+                basket&apos;s reading; that order is marked <i>not weighed</i>.
+              </span>
+              <span className="mt-1 block text-xs text-muted">Off: pickups bill the basket&apos;s reading straight away. You can still confirm any unpaid order&apos;s weight on its page.</span>
+            </span>
+          </label>
+        </ActionForm>
+      </Card>
+
       <Card title="Service area">
         <p className="mb-4 text-sm text-secondary">
           Where you pick up from. Toss lists you for customers inside this circle in <span className="text-fg">Find a laundry</span>, on the

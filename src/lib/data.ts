@@ -38,6 +38,9 @@ function toOrder(r: Row): Order {
     invoiceNumber: u(r.invoice_number),
     discountPct: u(r.discount_pct),
     amountBeforeDiscount: u(r.amount_before_discount),
+    reportedWeightKg: u(r.reported_weight_kg),
+    weighedKg: u(r.weighed_kg),
+    weightSource: u(r.weight_source),
     createdAt: r.placed_at as string,
     acceptedAt: u(r.accepted_at),
     completedAt: u(r.completed_at),
@@ -74,7 +77,7 @@ function orThrow<T>(res: { data: T | null; error: { message: string } | null }):
 }
 
 const TENANT_COLUMNS =
-  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, store_lng, service_radius_km, listed, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason, autopilot_enabled, autopilot_staffing, autopilot_winback, autopilot_nudges, autopilot_pricing, ai_max_discount, ai_price_min, ai_price_max, ai_price_step_pct";
+  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, store_lng, service_radius_km, listed, weigh_at_pickup, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason, autopilot_enabled, autopilot_staffing, autopilot_winback, autopilot_nudges, autopilot_pricing, ai_max_discount, ai_price_min, ai_price_max, ai_price_step_pct";
 
 function toTenant(r: Row): Tenant {
   return {
@@ -92,6 +95,7 @@ function toTenant(r: Row): Tenant {
     storeLng: u(r.store_lng),
     serviceRadiusKm: (r.service_radius_km as number) ?? 10,
     listed: r.listed !== false,
+    weighAtPickup: r.weigh_at_pickup !== false,
     planStatus: r.plan_status as Tenant["planStatus"],
     trialEndsAt: u(r.trial_ends_at),
     paidUntil: u(r.paid_until),

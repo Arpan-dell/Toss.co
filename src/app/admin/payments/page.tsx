@@ -6,6 +6,7 @@ import { listCustomers, listOrders, now } from "@/lib/data";
 import { formatDateTime, formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
 import type { Customer, Order } from "@/lib/types";
 import { AmountForm } from "./amount-form";
+import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -44,7 +45,7 @@ export default async function Payments() {
         ) : (
           <ul className="divide-y divide-border">
             {toVerify.map((o) => (
-              <li key={o.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
+              <OptimisticRow key={o.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-[220px] flex-1 text-sm">
                   <p className="font-medium">
                     {formatINR(o.amountDue)} <span className="font-mono text-xs text-muted">{orderLabel(o)}</span>
@@ -56,16 +57,16 @@ export default async function Payments() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <form action={confirmPayment}>
+                  <OptimisticForm action={confirmPayment} hide>
                     <input type="hidden" name="orderId" value={o.id} />
-                    <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">✓ Received</button>
-                  </form>
-                  <form action={rejectPayment}>
+                    <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">Received</button>
+                  </OptimisticForm>
+                  <OptimisticForm action={rejectPayment} hide>
                     <input type="hidden" name="orderId" value={o.id} />
                     <button className="btn-ghost rounded-full px-4 py-1.5 text-sm text-critical">Not received</button>
-                  </form>
+                  </OptimisticForm>
                 </div>
-              </li>
+              </OptimisticRow>
             ))}
           </ul>
         )}
@@ -81,7 +82,7 @@ export default async function Payments() {
         ) : (
           <ul className="divide-y divide-border">
             {unpaid.map((o) => (
-              <li key={o.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
+              <OptimisticRow key={o.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-[220px] flex-1 text-sm">
                   <p className="font-medium">
                     {formatINR(o.amountDue)} <span className="font-mono text-xs text-muted">{orderLabel(o)}</span>
@@ -92,11 +93,11 @@ export default async function Payments() {
                   </p>
                 </div>
                 <AmountForm orderId={o.id} amount={o.amountDue} />
-                <form action={markPaidCash}>
+                <OptimisticForm action={markPaidCash} hide>
                   <input type="hidden" name="orderId" value={o.id} />
                   <button className="btn-ghost rounded-full px-4 py-1.5 text-sm">Mark paid (cash)</button>
-                </form>
-              </li>
+                </OptimisticForm>
+              </OptimisticRow>
             ))}
           </ul>
         )}

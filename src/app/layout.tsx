@@ -34,11 +34,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        <div className="aurora" aria-hidden>
-          <span />
-          <span />
-          <span />
-        </div>
         <Effects />
         {children}
       </body>

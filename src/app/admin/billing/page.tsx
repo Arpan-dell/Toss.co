@@ -67,7 +67,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
       {plan.state !== "SUSPENDED" && (
         <Card title="Pay for more months">
           {pending ? (
-            <p className="rounded-xl border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
+            <p className="rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
               Your payment of {formatINR(pending.amount)} (ref {pending.paymentRef}) is waiting for Toss to confirm it.
             </p>
           ) : !canPay ? (
@@ -89,8 +89,8 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
                 ))}
               </div>
               {pct > 0 && (
-                <p className="rounded-xl border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
-                  🎉 {pct}% off for paying {months} months at once: <s className="opacity-70">{formatINR(full)}</s>{" "}
+                <p className="rounded-[8px] border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
+                  {pct}% off for paying {months} months at once: <s className="opacity-70">{formatINR(full)}</s>{" "}
                   <span className="font-semibold">{formatINR(amount)}</span>. You save {formatINR(saved)}.
                 </p>
               )}

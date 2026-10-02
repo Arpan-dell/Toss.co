@@ -48,7 +48,7 @@ export function TelegramMiniApp({ linked }: { linked: boolean }) {
     <>
       <Script src="https://telegram.org/js/telegram-web-app.js" strategy="afterInteractive" onReady={() => void onReady()} />
       {note && (
-        <p role="status" className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-xl border border-border bg-surface-solid px-4 py-3 text-sm shadow-lg backdrop-blur">
+        <p role="status" className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-[8px] border border-border bg-surface-solid px-4 py-3 text-sm shadow-lg backdrop-blur">
           {note}
         </p>
       )}

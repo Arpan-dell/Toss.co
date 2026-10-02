@@ -1,6 +1,7 @@
 "use client";
 
 import { Moon, Sun } from "@phosphor-icons/react";
+import { Tip } from "./ui";
 
 export const THEME_KEY = "toss-theme";
 
@@ -35,15 +36,16 @@ export function switchTheme(e: React.MouseEvent) {
 // hydration mismatch.
 export function ThemeToggle({ className = "" }: { className?: string }) {
   return (
-    <button
-      type="button"
-      onClick={switchTheme}
-      aria-label="Switch between light and dark theme"
-      title="Switch theme"
-      className={`grid size-10 shrink-0 place-items-center rounded-full text-secondary transition-colors hover:bg-ink/[0.07] hover:text-fg ${className}`}
-    >
-      <Sun size={20} weight="bold" className="light:hidden" />
-      <Moon size={20} weight="bold" className="hidden light:block" />
-    </button>
+    <Tip label="Switch theme">
+      <button
+        type="button"
+        onClick={switchTheme}
+        aria-label="Switch between light and dark theme"
+        className={`grid size-10 shrink-0 place-items-center rounded-full text-secondary transition-colors hover:bg-ink/[0.07] hover:text-fg ${className}`}
+      >
+        <Sun size={20} weight="bold" className="light:hidden" />
+        <Moon size={20} weight="bold" className="hidden light:block" />
+      </button>
+    </Tip>
   );
 }

@@ -11,20 +11,21 @@ import { getLatestAiRun, getTenantById, listAiActions, listDrivers, now } from "
 import { formatINR, timeAgo } from "@/lib/format";
 import { requireRole } from "@/lib/session";
 import type { AiAction } from "@/lib/types";
-import { AskToss, PendingButton, RunNow } from "./parts";
+import { AskToss, RunNow } from "./parts";
 import { Simulator } from "./simulator";
+import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
 
 export const metadata: Metadata = { title: "Toss AI" };
 // "Re-analyse now" and "Ask Toss AI" wait on Gemini; give them room on the free tier.
 export const maxDuration = 120;
 
-const KIND: Record<AiAction["type"], { icon: string; name: string }> = {
-  driver_alert: { icon: "📈", name: "Staffing" },
-  set_max_jobs: { icon: "🚚", name: "Staffing" },
-  winback_offer: { icon: "🎁", name: "Win-back" },
-  payment_reminder: { icon: "🧾", name: "Payments" },
-  basket_nudge: { icon: "🧺", name: "Nudge" },
-  price_change: { icon: "💹", name: "Pricing" },
+const KIND: Record<AiAction["type"], { name: string }> = {
+  driver_alert: { name: "Staffing" },
+  set_max_jobs: { name: "Staffing" },
+  winback_offer: { name: "Win-back" },
+  payment_reminder: { name: "Payments" },
+  basket_nudge: { name: "Nudge" },
+  price_change: { name: "Pricing" },
 };
 const PRIORITY = { 1: { tone: "critical", label: "Today" }, 2: { tone: "warn", label: "This week" }, 3: { tone: "neutral", label: "Nice to have" } } as const;
 const SEGMENT_HINT: Record<(typeof SEGMENTS)[number], string> = {
@@ -82,9 +83,9 @@ function How({ children }: { children: React.ReactNode }) {
 function Metric({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "warn" | "critical" }) {
   const color = tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : tone === "critical" ? "text-critical" : "text-muted";
   return (
-    <div className="glass glow-card rounded-2xl p-4">
-      <p className="text-[11px] tracking-[0.12em] text-muted uppercase">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+    <div className="border-t-2 border-fg pt-3">
+      <p className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">{label}</p>
+      <p className="mt-1.5 font-mono text-2xl leading-none font-semibold tracking-tight tabular-nums">{value}</p>
       {sub && <p className={`mt-0.5 text-xs ${color}`}>{sub}</p>}
     </div>
   );
@@ -101,7 +102,7 @@ function SectionTitle({ id, kicker, children }: { id: string; kicker: string; ch
 
 function Toggle({ name, label, hint, defaultChecked, big = false }: { name: string; label: string; hint: string; defaultChecked: boolean; big?: boolean }) {
   return (
-    <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-ink/[0.02] p-3 transition hover:border-accent/40 ${big ? "sm:col-span-2" : ""}`}>
+    <label className={`flex cursor-pointer items-start gap-3 rounded-[10px] border border-border bg-ink/[0.02] p-3 transition hover:border-accent/40 ${big ? "sm:col-span-2" : ""}`}>
       <input type="checkbox" name={name} defaultChecked={defaultChecked} className="peer sr-only" />
       <span className="relative mt-0.5 h-6 w-11 shrink-0 rounded-full bg-ink/10 transition peer-checked:bg-accent after:absolute after:top-0.5 after:left-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-accent/60" />
       <span>
@@ -138,17 +139,21 @@ export default async function TossAi() {
           <span className="text-muted">
             {ins.data.orders.toLocaleString("en-IN")} pickups over {ins.data.days} days
           </span>
-          <Badge tone={geminiEnabled() ? "info" : "neutral"} icon={geminiEnabled() ? "✨" : "⚙"}>
+          <Badge tone={geminiEnabled() ? "info" : "neutral"}>
             {geminiEnabled() ? "Gemini AI" : "Rules engine"}
           </Badge>
         </div>
       </div>
 
-      <nav className="sticky top-2 z-30 -mx-1 overflow-x-auto rounded-full border border-border bg-surface-solid/85 p-1 backdrop-blur">
-        <ul className="flex min-w-max gap-1 text-sm">
-          {SECTIONS.map(([id, label]) => (
+      <nav className="sticky top-[4.25rem] z-10 overflow-x-auto border-b border-border bg-bg">
+        <ul className="flex min-w-max">
+          {SECTIONS.map(([id, label], i) => (
             <li key={id}>
-              <a href={`#${id}`} className="block rounded-full px-3.5 py-1.5 text-secondary transition hover:bg-ink/[0.06] hover:text-fg">
+              <a
+                href={`#${id}`}
+                className="-mb-px flex items-baseline gap-1.5 border-b-2 border-transparent px-3 py-2.5 font-mono text-[11px] tracking-[0.12em] text-secondary uppercase transition-colors hover:border-fg hover:text-fg"
+              >
+                <span className="text-muted">{String(i + 1).padStart(2, "0")}</span>
                 {label}
               </a>
             </li>
@@ -157,15 +162,14 @@ export default async function TossAi() {
       </nav>
 
       {/* ---------- briefing ---------- */}
-      <section id="briefing" className="relative scroll-mt-24 overflow-hidden rounded-3xl bg-gradient-to-br from-accent/60 via-ink/10 to-cyan-400/40 p-px shadow-[0_30px_80px_-30px_rgb(var(--accent-rgb)/0.55)]">
-        <div className="relative rounded-[calc(1.5rem-1px)] bg-surface-solid p-6 sm:p-8">
-          <div className="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-accent/20 blur-3xl" />
+      <section id="briefing" className="relative scroll-mt-24 rounded-[10px] border border-l-4 border-border border-l-accent bg-surface-solid">
+        <div className="relative p-6 sm:p-8">
           {r ? (
             <div className="relative flex flex-col gap-6 md:flex-row md:items-center">
               <HealthRing score={r.health.score} />
               <div className="min-w-0 flex-1 space-y-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                  <Badge tone={r.by === "ai" ? "info" : "neutral"} icon={r.by === "ai" ? "✨" : "⚙"}>
+                  <Badge tone={r.by === "ai" ? "info" : "neutral"}>
                     {r.by === "ai" ? `Written by Toss AI${r.model ? ` · ${r.model}` : ""}` : "Rules engine"}
                   </Badge>
                   <span>
@@ -196,7 +200,7 @@ export default async function TossAi() {
             </div>
           ) : (
             <div className="relative max-w-2xl space-y-4">
-              <h2 className="text-2xl font-semibold sm:text-3xl">Meet Toss AI ✨</h2>
+              <h2 className="text-2xl font-semibold sm:text-3xl">Meet Toss AI</h2>
               <p className="text-sm leading-relaxed text-secondary">
                 Toss AI studies your pickups, customers, drivers and payments: it forecasts demand (and measures its own accuracy), finds
                 customers drifting away, tracks money stuck in unpaid invoices and acts for you within limits you set.
@@ -228,11 +232,11 @@ export default async function TossAi() {
           ) : (
             <ul className="space-y-3">
               {queue.map((a) => (
-                <li key={a.id} data-reveal="row" className="rounded-2xl border border-border bg-ink/[0.02] p-4 transition hover:border-accent/40">
+                <OptimisticRow key={a.id} className="rounded-[10px] border border-border bg-surface-solid p-4 transition-colors hover:border-accent/40">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1 space-y-1">
                       <p className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                        <span>{KIND[a.type].icon} {KIND[a.type].name}</span>
+                        <span className="font-mono text-[11px] tracking-[0.12em] uppercase">{KIND[a.type].name}</span>
                         <Badge tone={PRIORITY[a.priority].tone}>{PRIORITY[a.priority].label}</Badge>
                       </p>
                       <p className="font-medium">{a.label}</p>
@@ -241,17 +245,17 @@ export default async function TossAi() {
                       <p className="text-xs text-good">↗ {a.impact}</p>
                     </div>
                     <div className="flex shrink-0 gap-2">
-                      <form action={approveAiAction}>
+                      <OptimisticForm action={approveAiAction} hide>
                         <input type="hidden" name="id" value={a.id} />
-                        <PendingButton pendingText="Doing…" className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">Do it</PendingButton>
-                      </form>
-                      <form action={dismissAiAction}>
+                        <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">Do it</button>
+                      </OptimisticForm>
+                      <OptimisticForm action={dismissAiAction} hide>
                         <input type="hidden" name="id" value={a.id} />
-                        <PendingButton pendingText="…" className="btn-ghost rounded-full px-3 py-1.5 text-sm text-muted">Skip</PendingButton>
-                      </form>
+                        <button className="btn-ghost rounded-full px-3 py-1.5 text-sm text-muted">Skip</button>
+                      </OptimisticForm>
                     </div>
                   </div>
-                </li>
+                </OptimisticRow>
               ))}
             </ul>
           )}
@@ -316,7 +320,7 @@ export default async function TossAi() {
       </Card>
       <Card title="Who's drifting away">
         {atRisk.length === 0 ? (
-          <EmptyState>Every repeat customer is on their usual rhythm. 🎉</EmptyState>
+          <EmptyState>Every repeat customer is on their usual rhythm.</EmptyState>
         ) : (
           <div className="-mx-5 overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm">
@@ -419,7 +423,7 @@ export default async function TossAi() {
                 <tbody>
                   {ins.drivers.map((d, i) => (
                     <tr key={d.name} className="border-b border-border last:border-0">
-                      <td className="px-5 py-2.5">{i === 0 && d.pickups > 0 ? "🏆 " : ""}{d.name}</td>
+                      <td className="px-5 py-2.5">{d.name}{i === 0 && d.pickups > 0 ? <span className="ml-2 font-mono text-[11px] tracking-[0.12em] text-accent uppercase">Top</span> : null}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{d.pickups}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{d.medianMins != null ? `${d.medianMins} min` : "—"}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{d.onTimePct != null ? `${d.onTimePct}%` : "—"}</td>
@@ -459,11 +463,11 @@ export default async function TossAi() {
       <Card>
         <ActionForm action={updateAutopilot} submitLabel="Save autopilot" className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Toggle name="enabled" big label="🚀 Automate everything" hint="Every morning Toss AI does the switched-on jobs below by itself and logs each one. Off: it only suggests, and you tap “Do it”." defaultChecked={ap.enabled} />
-            <Toggle name="staffing" label="📈 Driver staffing" hint="Alert drivers before busy days; raise how many pickups each can carry." defaultChecked={ap.staffing} />
-            <Toggle name="winback" label="🎁 Win-back offers" hint="Personal discounts for regulars who are overdue, in Toss Control." defaultChecked={ap.winback} />
-            <Toggle name="nudges" label="🧾 Customer nudges" hint="Remind unpaid invoices (bot + email) and nearly-full baskets." defaultChecked={ap.nudges} />
-            <Toggle name="pricing" label="💹 Pricing" hint="Move your price per kg with demand, only within your limits." defaultChecked={ap.pricing} />
+            <Toggle name="enabled" big label="Automate everything" hint="Every morning Toss AI does the switched-on jobs below by itself and logs each one. Off: it only suggests, and you tap “Do it”." defaultChecked={ap.enabled} />
+            <Toggle name="staffing" label="Driver staffing" hint="Alert drivers before busy days; raise how many pickups each can carry." defaultChecked={ap.staffing} />
+            <Toggle name="winback" label="Win-back offers" hint="Personal discounts for regulars who are overdue, in Toss Control." defaultChecked={ap.winback} />
+            <Toggle name="nudges" label="Customer nudges" hint="Remind unpaid invoices (bot + email) and nearly-full baskets." defaultChecked={ap.nudges} />
+            <Toggle name="pricing" label="Pricing" hint="Move your price per kg with demand, only within your limits." defaultChecked={ap.pricing} />
           </div>
           <fieldset className="grid gap-3 sm:grid-cols-4">
             <legend className="mb-2 text-xs font-medium text-secondary">Guardrails: Toss AI never goes beyond these</legend>
@@ -490,7 +494,7 @@ export default async function TossAi() {
             {log.map((a) => (
               <li key={a.id} className="flex flex-wrap items-start justify-between gap-3 py-2.5 text-sm">
                 <div className="min-w-0 flex-1">
-                  <p>{KIND[a.type].icon} {a.label}</p>
+                  <p><span className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">{KIND[a.type].name}</span> {a.label}</p>
                   {a.result && <p className="text-xs text-muted">{a.result}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-xs text-muted">

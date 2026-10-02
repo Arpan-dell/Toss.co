@@ -18,7 +18,7 @@ export function StatusTimeline({ order }: { order: Order }) {
             <span
               aria-hidden
               className={`absolute top-6 left-[9px] h-[calc(100%-4px)] w-px ${
-                steps[i + 1].done ? "bg-gradient-to-b from-accent to-accent-2" : "bg-border"
+                steps[i + 1].done ? "bg-accent" : "bg-border"
               }`}
             />
           )}
@@ -26,12 +26,11 @@ export function StatusTimeline({ order }: { order: Order }) {
             aria-hidden
             className={`relative z-10 mt-0.5 grid size-5 shrink-0 place-items-center rounded-full text-[10px] ${
               s.done
-                ? "text-accent-contrast font-bold shadow-[0_0_14px_-2px_rgb(var(--accent-rgb)/0.9)]"
+                ? "bg-accent font-bold text-accent-contrast"
                 : i === current
                   ? "pulse-ring border-2 border-accent bg-bg"
                   : "border-2 border-border bg-bg"
             }`}
-            style={s.done ? { background: "var(--gradient)" } : undefined}
           >
             {s.done ? "✓" : ""}
           </span>

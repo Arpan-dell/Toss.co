@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { signIn, signUp, type AuthState } from "./actions";
 
 const inputClass =
-  "w-full rounded-xl border border-border bg-ink/[0.03] px-4 py-2.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
+  "w-full rounded-[8px] border border-border bg-ink/[0.03] px-4 py-2.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
 
 export function AuthForm({ notice }: { notice?: string }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -33,14 +33,14 @@ export function AuthForm({ notice }: { notice?: string }) {
       </div>
 
       {notice && !state.error && !state.message && (
-        <p className="mb-4 rounded-xl border border-border bg-ink/[0.04] px-3 py-2 text-sm text-secondary">{notice}</p>
+        <p className="mb-4 rounded-[8px] border border-border bg-ink/[0.04] px-3 py-2 text-sm text-secondary">{notice}</p>
       )}
 
       <form action={mode === "signin" ? inAction : upAction} className="space-y-3">
         {mode === "signup" && (
           <>
             <input name="name" autoComplete="name" placeholder="Full name" required className={inputClass} />
-            <div className="flex overflow-hidden rounded-xl border border-border bg-ink/[0.03] transition-shadow focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)]">
+            <div className="flex overflow-hidden rounded-[8px] border border-border bg-ink/[0.03] transition-shadow focus-within:border-accent/60 focus-within:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)]">
               <span className="flex items-center border-r border-border px-3 text-sm text-muted">+91</span>
               <input
                 name="phone"
@@ -66,12 +66,12 @@ export function AuthForm({ notice }: { notice?: string }) {
         />
 
         {state.error && (
-          <p role="alert" className="rounded-xl border border-critical/30 bg-critical-bg px-3 py-2 text-sm text-critical">
+          <p role="alert" className="rounded-[8px] border border-critical/30 bg-critical-bg px-3 py-2 text-sm text-critical">
             {state.error}
           </p>
         )}
         {state.message && (
-          <p role="status" className="rounded-xl border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
+          <p role="status" className="rounded-[8px] border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
             {state.message}
           </p>
         )}

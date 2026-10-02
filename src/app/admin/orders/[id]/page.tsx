@@ -79,7 +79,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                     id="driver"
                     name="driverChatId"
                     defaultValue={order.driverId ?? ""}
-                    className="flex-1 rounded-xl border border-border bg-surface-solid px-3 py-2 text-sm"
+                    className="flex-1 rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm"
                   >
                     <option value="">— No driver —</option>
                     {drivers.filter((d) => d.telegramChatId).map((d) => (
@@ -148,13 +148,13 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
               {order.paymentStatus === "PAID" && (
                 <p className="text-xs">
                   <a href={invoiceHref(order.id)} target="_blank" rel="noreferrer" className="text-accent hover:text-accent-2">
-                    🧾 Invoice{order.invoiceNumber ? ` ${order.invoiceNumber}` : ""} (PDF)
+                    Invoice{order.invoiceNumber ? ` ${order.invoiceNumber}` : ""} (PDF)
                   </a>
                 </p>
               )}
               {order.discountPct && (
                 <p className="text-xs text-good">
-                  🎁 {order.discountPct}% win-back discount applied
+                  {order.discountPct}% win-back discount applied
                   {order.amountBeforeDiscount ? ` (was ${formatINR(order.amountBeforeDiscount)})` : ""}
                 </p>
               )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Broadcast,
@@ -46,6 +46,7 @@ export type PortalNavItem = { href: string; label: string; icon: keyof typeof IC
 // The dashboards' main navigation, as a magnifying dock pinned to the bottom of the screen.
 export function PortalDock({ items }: { items: PortalNavItem[] }) {
   const pathname = usePathname();
+  const router = useRouter();
   // The portal root (/app, /admin) only matches exactly; sub-pages match by prefix.
   const rootHref = items[0]?.href;
   return (
@@ -60,6 +61,8 @@ export function PortalDock({ items }: { items: PortalNavItem[] }) {
               href={item.href}
               aria-label={item.label}
               aria-current={on ? "page" : undefined}
+              // hovering or focusing an icon fully prefetches that page, so the click is instant
+              onIntent={() => router.prefetch(item.href)}
               className={`aspect-square rounded-full transition-colors ${on ? "bg-accent/15 text-accent" : "bg-ink/[0.07] text-secondary hover:text-fg"}`}
             >
               <DockLabel>{item.label}</DockLabel>

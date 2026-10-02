@@ -44,7 +44,7 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
       <PageTitle kicker="Account">Settings</PageTitle>
 
       {result && (
-        <p role="status" className={`rounded-xl border px-4 py-3 text-sm ${toneClass[result.tone]}`}>
+        <p role="status" className={`rounded-[8px] border px-4 py-3 text-sm ${toneClass[result.tone]}`}>
           {result.text}
         </p>
       )}

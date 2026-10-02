@@ -2,21 +2,14 @@ import type { Metadata } from "next";
 import { ConfirmButton } from "@/components/confirm-button";
 import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, PageTitle } from "@/components/ui";
-import { deleteDriver, setDriverMaxJobs, setDriverStatus } from "@/lib/actions/manager-ops";
+import { deleteDriver, setDriverMaxJobs } from "@/lib/actions/manager-ops";
 import { deviceLabel, isDeviceOnline, listActiveOrders, listCustomers, listDevices, listDrivers, listOrders, now } from "@/lib/data";
 import { orderLabel, timeAgo } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
-import type { DriverStatus } from "@/lib/types";
 import { DriverBotQr } from "./driver-qr";
-import { AddDriverForm, BasketEditor } from "./forms";
+import { AddDriverForm, BasketEditor, DriverStatusControl } from "./forms";
 
 export const metadata: Metadata = { title: "Fleet" };
-
-const STATUS: Record<DriverStatus, { tone: "good" | "info" | "neutral"; label: string; live?: boolean }> = {
-  AVAILABLE: { tone: "good", label: "Available", live: true },
-  ON_JOB: { tone: "info", label: "On a job" },
-  OFFLINE: { tone: "neutral", label: "Offline" },
-};
 
 function signalLabel(rssi: number) {
   if (rssi >= -60) return "Strong";
@@ -86,7 +79,6 @@ export default async function Fleet() {
                   const mine = (o: { driverId?: string }) => !!drv.telegramChatId && o.driverId === drv.telegramChatId;
                   const job = active.find((o) => mine(o) && o.status === "ACCEPTED");
                   const today = all.filter((o) => mine(o) && o.completedAt?.startsWith(todayKey)).length;
-                  const s = STATUS[drv.status];
                   return (
                     <tr key={drv.id} className="border-b border-border transition-colors last:border-0 hover:bg-ink/[0.03]">
                       <td className="px-5 py-2.5">
@@ -103,21 +95,7 @@ export default async function Fleet() {
                         {!drv.telegramChatId ? (
                           <Badge tone="warn" icon="!">Not connected to Telegram yet</Badge>
                         ) : (
-                          <form action={setDriverStatus} className="flex items-center gap-2">
-                            <input type="hidden" name="driverId" value={drv.id} />
-                            <Badge tone={s.tone} icon="●" live={s.live}>{s.label}</Badge>
-                            <select
-                              name="status"
-                              defaultValue={drv.status}
-                              aria-label={`Change ${drv.name}'s status`}
-                              className="rounded-lg border border-border bg-surface-solid px-2 py-1 text-xs"
-                            >
-                              <option value="AVAILABLE">Available</option>
-                              <option value="ON_JOB">On a job</option>
-                              <option value="OFFLINE">Offline</option>
-                            </select>
-                            <button className="text-xs text-accent hover:text-accent-2">Set</button>
-                          </form>
+                          <DriverStatusControl driverId={drv.id} name={drv.name} status={drv.status} />
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-xs">
@@ -128,7 +106,7 @@ export default async function Fleet() {
                             rel="noreferrer"
                             className={current.getTime() - new Date(drv.locationAt).getTime() < 30 * 60_000 ? "text-good" : "text-muted"}
                           >
-                            📍 {timeAgo(drv.locationAt, current)}
+                            Seen {timeAgo(drv.locationAt, current)}
                           </a>
                         ) : (
                           <span className="text-muted">Not shared</span>
@@ -170,7 +148,7 @@ export default async function Fleet() {
           {devices.map((d) => {
             const c = d.customerId ? owner.get(d.customerId) : undefined;
             return (
-              <div key={d.deviceId} className="glow-card rounded-xl border border-border bg-ink/[0.02] p-4">
+              <div key={d.deviceId} className="rounded-[10px] border border-border bg-surface-solid p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate font-medium">{deviceLabel(d)}</p>

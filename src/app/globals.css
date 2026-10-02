@@ -379,3 +379,17 @@ html[data-theme] { background-color: var(--bg); }
 [data-theme="light"] .text-gradient:not([data-theme="dark"] *) { background-image: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #0b1430); }
 /* framer-motion writes the nav glass inline; light mode needs a much denser white to stay legible */
 [data-theme="light"] .nav-glass { background: rgb(255 255 255 / 0.82) !important; box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 18px 40px -22px rgb(11 20 48 / 0.35) !important; }
+
+/* ---------- Maps (components/area-map.tsx) ---------- */
+.map-pin { display: block; width: 14px; height: 14px; background: var(--surface-solid); border: 3px solid var(--accent); box-shadow: 0 2px 6px rgb(0 0 0 / 0.35); }
+.map-pin.is-active { background: var(--accent); }
+.map-you { display: block; width: 16px; height: 16px; border-radius: 9999px; background: var(--text); border: 3px solid var(--surface-solid); box-shadow: 0 0 0 2px var(--text), 0 2px 8px rgb(0 0 0 / 0.4); }
+.area-map .leaflet-container { font: inherit; background: var(--surface-2); }
+.area-map .leaflet-tooltip { background: var(--surface-solid); color: var(--text); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 6px 18px -8px rgb(0 0 0 / 0.4); font-family: var(--font-geist-mono); font-size: 11px; }
+.area-map .leaflet-tooltip-top::before { border-top-color: var(--surface-solid); }
+.area-map .leaflet-control-attribution { background: rgb(var(--ink-rgb) / 0.0) !important; font-size: 10px; }
+.area-map .leaflet-bar a { background: var(--surface-solid); color: var(--text); border-color: var(--border); }
+/* OpenStreetMap only ships light tiles; in dark mode invert them so the map sits in the page */
+[data-theme="dark"] .area-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.6); }
+[data-theme="dark"] .area-map .leaflet-control-attribution { color: var(--text-muted); }
+[data-theme="dark"] .area-map .leaflet-control-attribution a { color: var(--text-secondary); }

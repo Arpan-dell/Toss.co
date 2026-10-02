@@ -13,6 +13,7 @@ const LINKS = [
   { label: "Inside Toss", href: "#inside" },
   { label: "Who it's for", href: "#roles" },
   { label: "Why Toss", href: "#why" },
+  { label: "Find a laundry", href: "/laundries" },
 ];
 
 // Floating glass pill for the top of the page. Once you scroll, it slides up out of view and the bottom

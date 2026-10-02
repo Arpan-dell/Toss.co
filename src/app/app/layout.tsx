@@ -7,6 +7,7 @@ import { requireRole } from "@/lib/session";
 const nav: PortalNavItem[] = [
   { href: "/app", label: "Overview", icon: "home" },
   { href: "/app/orders", label: "Order history", icon: "history" },
+  { href: "/laundries", label: "Find a laundry", icon: "find" },
   { href: "/app/settings", label: "Settings", icon: "settings" },
 ];
 

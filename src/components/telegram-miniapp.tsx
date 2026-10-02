@@ -25,8 +25,10 @@ export function TelegramMiniApp({ linked }: { linked: boolean }) {
     if (!app?.initData) return;
     app.ready();
     app.expand();
-    app.setHeaderColor?.("#0c1128");
-    app.setBackgroundColor?.("#0c1128");
+    // match Telegram's chrome to the current theme
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#f5f7fc";
+    app.setHeaderColor?.(bg);
+    app.setBackgroundColor?.(bg);
     if (linked || sent.current) return;
     sent.current = true;
 

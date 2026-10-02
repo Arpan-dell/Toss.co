@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { House, Moon, PlayCircle, SignIn, Sparkle, SquaresFour, Sun, TelegramLogo, UsersThree, type Icon } from "@phosphor-icons/react";
+import { House, MapPinArea, Moon, PlayCircle, SignIn, Sparkle, SquaresFour, Sun, TelegramLogo, UsersThree, type Icon } from "@phosphor-icons/react";
 import { Dock, DockIcon, DockItem, DockLabel } from "@/components/core/dock";
 import { switchTheme } from "@/components/theme-toggle";
 import { useDocked } from "./use-docked";
 
 const ITEMS: { title: string; href: string; icon: Icon; section?: string; desktopOnly?: boolean }[] = [
-  { title: "Home", href: "#top", icon: House, section: "top" },
+  { title: "Home", href: "#top", icon: House, section: "top", desktopOnly: true },
   { title: "How it works", href: "#how", icon: PlayCircle, section: "how" },
   { title: "Inside Toss", href: "#inside", icon: SquaresFour, section: "inside" },
   { title: "Who it's for", href: "#roles", icon: UsersThree, section: "roles" },
   { title: "Why Toss", href: "#why", icon: Sparkle, section: "why" },
+  { title: "Find a laundry", href: "/laundries", icon: MapPinArea },
   { title: "Driver bot", href: "https://t.me/toss_driver_bot", icon: TelegramLogo, desktopOnly: true },
   { title: "Sign in", href: "/login", icon: SignIn },
 ];

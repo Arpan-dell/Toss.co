@@ -18,6 +18,10 @@ export interface Tenant {
   upiName?: string;
   storeAddress?: string; // where drivers deliver; the last stop of every route
   storeLocated?: boolean; // the store address was found on the map
+  storeLat?: number;
+  storeLng?: number;
+  serviceRadiusKm: number; // the business picks up within this distance of its store (1-20 km)
+  listed: boolean; // shown in the public "Find a laundry" directory
   planStatus: "TRIAL" | "ACTIVE" | "SUSPENDED";
   trialEndsAt?: string;
   paidUntil?: string;

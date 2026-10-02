@@ -7,6 +7,7 @@ import { requestClosure, updateBusiness, updateWinback } from "@/lib/actions/man
 import { getOfferStats, getTenantById, listCustomers } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { requireRole } from "@/lib/session";
+import { ServiceAreaEditor } from "./area-editor";
 
 export const metadata: Metadata = { title: "Business" };
 
@@ -69,6 +70,13 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
             <input name="upiName" maxLength={50} defaultValue={tenant.upiName ?? ""} placeholder={tenant.name} className={fieldClass} />
           </Field>
         </ActionForm>
+      </Card>
+      <Card title="Service area">
+        <p className="mb-4 text-sm text-secondary">
+          Where you pick up from. Toss lists you for customers inside this circle in <span className="text-fg">Find a laundry</span>, on the
+          website and in Telegram.
+        </p>
+        <ServiceAreaEditor lat={tenant.storeLat} lng={tenant.storeLng} radiusKm={tenant.serviceRadiusKm} listed={tenant.listed} />
       </Card>
       <Card title="Win back quiet customers">
         <p className="mb-4 text-sm text-secondary">

@@ -11,7 +11,7 @@ const NOTICES: Record<string, string> = {
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { notice } = await searchParams;
+  const { notice, next } = await searchParams;
   return (
     <main className="grid flex-1 place-items-center px-4 py-12">
       <div className="stagger w-full max-w-sm">
@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <div className="relative rounded-[10px] border border-t-2 border-border border-t-accent bg-surface-solid p-7">
           <h1 className="relative text-2xl font-semibold tracking-tight">Welcome to Toss</h1>
           <p className="relative mt-1.5 mb-6 text-sm text-secondary">Track your pickups and pay invoices in one place.</p>
-          <AuthForm notice={typeof notice === "string" ? NOTICES[notice] : undefined} />
+          <AuthForm notice={typeof notice === "string" ? NOTICES[notice] : undefined} next={typeof next === "string" ? next : undefined} />
         </div>
       </div>
     </main>

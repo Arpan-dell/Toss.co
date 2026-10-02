@@ -11,6 +11,7 @@ import {
   CurrencyInr,
   GearSix,
   House,
+  MapPinArea,
   Package,
   Receipt,
   Sliders,
@@ -39,6 +40,7 @@ const ICONS = {
   businesses: Buildings,
   subscriptions: CreditCard,
   plan: Sliders,
+  find: MapPinArea,
 } satisfies Record<string, Icon>;
 
 export type PortalNavItem = { href: string; label: string; icon: keyof typeof ICONS };

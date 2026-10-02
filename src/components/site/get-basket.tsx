@@ -1,21 +1,14 @@
 "use client";
 
-import Image from "next/image";
-import { useActionState, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useActionState } from "react";
 import { requestBasket } from "@/lib/actions/basket";
 import type { FormState } from "@/lib/actions/shared";
 import { BASKET_COLORS, colorOf } from "./basket-colors";
 import { useBasketColor } from "./basket-color-store";
+import { BasketViewer } from "./basket-viewer";
 
-// "Get a Toss basket": the real photo in the chosen filament colour, and a short request form. The owner is
+// "Get a Toss basket": the 3D box in the chosen filament colour, and a short request form. The owner is
 // emailed the request and replies about availability.
-const ANGLES = [
-  { id: "hero", label: "Angle", w: 1000, h: 694 },
-  { id: "front", label: "Front", w: 640, h: 350 },
-  { id: "side", label: "Side", w: 640, h: 405 },
-  { id: "top", label: "Top", w: 520, h: 493 },
-] as const;
 
 const field =
   "w-full rounded-[8px] border border-border-strong bg-surface-solid px-3.5 py-3 text-base text-fg placeholder:text-muted focus:border-accent focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
@@ -23,45 +16,12 @@ const label = "mb-1.5 block text-sm font-medium text-fg";
 
 export function GetBasket() {
   const [color, setColor] = useBasketColor();
-  const [angle, setAngle] = useState<(typeof ANGLES)[number]["id"]>("hero");
   const [state, action, pending] = useActionState<FormState, FormData>(requestBasket, {});
-  const a = ANGLES.find((x) => x.id === angle)!;
 
   return (
     <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
-      {/* the real thing, in the chosen colour */}
-      <div>
-        <div className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-[10px] border border-border bg-[radial-gradient(ellipse_at_50%_60%,rgb(var(--ink-rgb)/0.06),transparent_70%)]">
-          <AnimatePresence mode="wait">
-            <motion.div key={`${a.id}-${color}`} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="w-[82%]">
-              <Image
-                src={`/brand/basket/${a.id}-${color}.webp`}
-                alt={`Toss basket box, ${a.label.toLowerCase()} view, ${colorOf(color).name}`}
-                width={a.w}
-                height={a.h}
-                sizes="(min-width: 1024px) 40vw, 90vw"
-                className="h-auto w-full drop-shadow-[0_24px_30px_rgb(0_0_0/0.25)]"
-              />
-            </motion.div>
-          </AnimatePresence>
-          <span className="absolute bottom-3 left-3 font-mono text-[10px] tracking-[0.12em] text-muted uppercase">
-            Real photo · colours shown are print options
-          </span>
-        </div>
-        <div className="mt-3 grid grid-cols-4 gap-2">
-          {ANGLES.map((x) => (
-            <button
-              key={x.id}
-              type="button"
-              onClick={() => setAngle(x.id)}
-              aria-pressed={angle === x.id}
-              className={`grid aspect-[4/3] place-items-center rounded-[8px] border p-2 transition-colors ${angle === x.id ? "border-fg" : "border-border hover:border-border-strong"}`}
-            >
-              <Image src={`/brand/basket/${x.id}-${color}.webp`} alt={`${x.label} view`} width={x.w} height={x.h} sizes="120px" className="h-auto max-h-full w-auto" />
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* the 3D model from the scroll story, in the chosen colour */}
+      <BasketViewer color={colorOf(color).hex} />
 
       {/* request form */}
       <div>

@@ -5,6 +5,7 @@ import { Manifesto } from "@/components/site/manifesto";
 import { Reveal } from "@/components/site/reveal";
 import { RolesBento } from "@/components/site/roles-bento";
 import { SiteFooter } from "@/components/site/site-footer";
+import { SiteDock } from "@/components/site/site-dock";
 import { SiteNav } from "@/components/site/site-nav";
 import { WorksWith } from "@/components/site/works-with";
 import { Logo } from "@/components/ui";
@@ -63,6 +64,7 @@ export default function Home() {
       </main>
 
       <SiteFooter logo={<Logo variant="full" className="h-14" />} />
+      <SiteDock />
     </div>
   );
 }

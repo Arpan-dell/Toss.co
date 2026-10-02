@@ -13,6 +13,13 @@ export interface AuthState {
 
 const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 
+// Where a customer goes after signing in. Only the laundry directory may be requested (with its own query),
+// so this can't be used to send people to another site.
+function nextFor(f: FormData) {
+  const next = text(f, "next");
+  return /^\/laundries(\?[\w=&%.\-]*)?$/.test(next) ? next : "/app";
+}
+
 async function siteOrigin() {
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
@@ -41,7 +48,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
     };
   }
   const role = data.user?.app_metadata?.role;
-  redirect(role === "owner" ? "/owner" : role === "manager" ? "/admin" : "/app");
+  redirect(role === "owner" ? "/owner" : role === "manager" ? "/admin" : nextFor(formData));
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -64,7 +71,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
 
   // With email confirmation on, there is no session until the link is clicked.
   if (!data.session) return { message: `We sent a confirmation link to ${email}. Open it to finish signing up.` };
-  redirect("/app");
+  redirect(nextFor(formData));
 }
 
 export async function signOut() {

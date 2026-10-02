@@ -6,7 +6,7 @@ import { signIn, signUp, type AuthState } from "./actions";
 const inputClass =
   "w-full rounded-[8px] border border-border bg-ink/[0.03] px-4 py-2.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
 
-export function AuthForm({ notice }: { notice?: string }) {
+export function AuthForm({ notice, next }: { notice?: string; next?: string }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [inState, inAction, inPending] = useActionState<AuthState, FormData>(signIn, {});
   const [upState, upAction, upPending] = useActionState<AuthState, FormData>(signUp, {});
@@ -37,6 +37,7 @@ export function AuthForm({ notice }: { notice?: string }) {
       )}
 
       <form action={mode === "signin" ? inAction : upAction} className="space-y-3">
+        {next && <input type="hidden" name="next" value={next} />}
         {mode === "signup" && (
           <>
             <input name="name" autoComplete="name" placeholder="Full name" required className={inputClass} />

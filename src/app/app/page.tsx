@@ -72,6 +72,9 @@ export default async function CustomerOverview() {
               <p className="text-sm text-secondary">
                 Business ID <span className="font-mono text-fg">{business.joinCode}</span> · ₹{business.pricePerKg}/kg
               </p>
+              <Link href="/laundries" className="mt-1 inline-block text-sm text-accent hover:underline">
+                Compare laundries near you →
+              </Link>
             </div>
           ) : (
             <div className="max-w-md flex-1 space-y-3">
@@ -80,6 +83,12 @@ export default async function CustomerOverview() {
                 them.
               </p>
               <JoinBusiness compact />
+              <p className="border-t border-dotted border-border-strong pt-3 text-sm text-secondary">
+                Don&apos;t know a laundry yet?{" "}
+                <Link href="/laundries" className="font-medium text-accent hover:underline">
+                  Find one that picks up near you →
+                </Link>
+              </p>
             </div>
           )}
           {customer && <IdChip label="Your Customer ID" value={customer.customerCode} />}

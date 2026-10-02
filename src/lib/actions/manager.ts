@@ -51,6 +51,34 @@ export async function updateBusiness(_prev: FormState, formData: FormData): Prom
     : { message: "Saved, but we couldn't find the store address on the map. Drivers' routes will search it by text. Try adding the area and city." };
 }
 
+// Service area: where the store is (a pin the manager places or their current location) and how far it picks
+// up (1-20 km). `listed` puts the business in the public "Find a laundry" directory.
+export async function updateServiceArea(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireManager();
+  const lat = Number(text(formData, "lat"));
+  const lng = Number(text(formData, "lng"));
+  const radius = Number(text(formData, "radius"));
+  const listed = formData.get("listed") === "on";
+  if (!(Number.isInteger(radius) && radius >= 1 && radius <= 20)) return { error: "Choose a radius between 1 and 20 km." };
+  const hasPin = Number.isFinite(lat) && Number.isFinite(lng) && text(formData, "lat") !== "";
+  if (hasPin && !(Math.abs(lat) <= 90 && Math.abs(lng) <= 180)) return { error: "That store location doesn't look right." };
+  if (listed && !hasPin) return { error: "Place your store on the map first, so customers nearby can find you." };
+
+  // Not in the manager's column grants: written server-side after the role check.
+  const { error } = await supabaseAdmin()
+    .from("tenants")
+    .update({ service_radius_km: radius, listed, ...(hasPin ? { store_lat: lat, store_lng: lng } : {}) })
+    .eq("id", session.tenantId);
+  if (error) return { error: friendlyError(error) };
+  done();
+  revalidatePath("/laundries");
+  return {
+    message: listed
+      ? `Saved. Customers within ${radius} km of your store can find you under Find a laundry.`
+      : `Saved. You pick up within ${radius} km and stay hidden from Find a laundry.`,
+  };
+}
+
 // Win-back offers: after `days` without a pickup, the customer gets `pct`% off their next one.
 export async function updateWinback(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireManager();

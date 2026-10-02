@@ -19,6 +19,7 @@ const MESSAGES: Record<string, string> = {
   already_manages_a_business: "This account already runs a business.",
   customer_not_in_business: "That customer isn't part of your business.",
   payment_not_pending: "That payment was already reviewed.",
+  pickup_in_progress: "You have a pickup in progress. Switch laundries once it's picked up.",
 };
 
 export function friendlyError(err: { message?: string } | null | undefined): string {

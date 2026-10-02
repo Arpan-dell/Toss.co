@@ -12,8 +12,9 @@
  */
 import { randomBytes } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
+import { need } from "./env";
 
-const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xysopyyujfgwpwfrhmei.supabase.co";
+const SB_URL = need("NEXT_PUBLIC_SUPABASE_URL");
 const SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Random per run (this repo is public); printed once at the end. Set DEMO_PASSWORD to choose one.
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? `Demo-${randomBytes(6).toString("base64url")}`;

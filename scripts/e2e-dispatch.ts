@@ -7,9 +7,10 @@
  *   SUPABASE_SERVICE_ROLE_KEY=… TOSS_BRIDGE_KEY=… TELEGRAM_DRIVER_WEBHOOK_SECRET=… npx tsx scripts/e2e-dispatch.ts
  */
 import { createClient } from "@supabase/supabase-js";
+import { need } from "./env";
 
 const SITE = process.env.TOSS_SITE ?? "https://toss-code-x-a24a.vercel.app";
-const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://xysopyyujfgwpwfrhmei.supabase.co";
+const SB_URL = need("NEXT_PUBLIC_SUPABASE_URL");
 const must = (k: string) => {
   const v = process.env[k];
   if (!v) throw new Error(`Set ${k}`);

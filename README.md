@@ -159,8 +159,32 @@ SUPABASE_SERVICE_ROLE_KEY=... TOSS_BRIDGE_KEY=... npx tsx scripts/e2e-live.ts
 
 ## Security notes
 
+> **⚠️ Rotate secrets that have ever left a secret store.** An audit of all 58 commits found no secret key,
+> token or password in git history: only the Supabase project URL and *publishable* key (public by design)
+> were ever written into the code, as fallbacks in `scripts/`, and those are now read from the environment.
+> But any credential that was ever pasted into a chat, an issue, a screenshot or a file synced to the cloud
+> (for example the basket firmware in OneDrive) should be treated as exposed. Rotate these and update them in
+> Vercel and `secrets.h`:
+> Supabase secret (service-role) key · both Telegram bot tokens (@BotFather → /revoke) · the driver webhook
+> secret (re-run `setWebhook`) · Gmail app password · Gemini API key · Telegram login client secret ·
+> `DEVICE_BRIDGE_KEY` and `CRON_SECRET` · the basket's claim password and Apps Script URL (redeploy the script).
+> If a secret is ever committed by mistake, rotating it is the fix: deleting the file does not remove it
+> from history.
+
+- No secret appears as a string literal in source. The app reads every credential from environment variables
+  (full list with placeholders in `.env.example`); scripts use `need()` from `scripts/env.ts`, which fails
+  instead of falling back to a value. Firmware keeps its tokens in `secrets.h` (git-ignored; template in
+  `secrets.example.h`), since microcontrollers have no environment variables.
+- Only two variables reach the browser: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+  Both are public by design and safe because Row Level Security is on for every table. Nothing secret uses
+  the `NEXT_PUBLIC_` prefix.
 - Never commit secrets. `.env*` is git-ignored except `.env.example`.
-- The service-role key is only used server-side (`src/lib/supabase/admin.ts` imports `server-only`).
+- Every module that reads a secret imports `server-only` (Supabase admin client, Gemini, Gmail, Telegram,
+  invoices, dispatch, offers, Telegram login), so a client import fails the build. The service-role key is
+  only used server-side (`src/lib/supabase/admin.ts`).
+- Incoming secrets (driver webhook, basket bridge key, cron) are compared in constant time. Gemini's key goes
+  in a header, not the URL; Telegram network errors are rethrown without the request, so logs never contain
+  a token. API routes return fixed messages, not raw error details.
 - Row-level security: customers only see their own rows; managers are identified by `app_metadata.role = 'manager'`, which only the service role can set.
 - Device keys are stored only as SHA-256 hashes, and client roles can't read that column at all.
 - Test scripts use placeholder Telegram IDs, not real ones.

@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import { runAutopilotAll } from "@/lib/ai/autopilot";
 import { runPlanReminders } from "@/lib/email/notify";
 import { runWinback } from "@/lib/offers";
@@ -10,13 +11,16 @@ import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 export const maxDuration = 300;
 
 export async function GET(request: Request) {
-  if (request.headers.get("authorization") !== `Bearer ${process.env.CRON_SECRET}` || !process.env.CRON_SECRET) {
+  if (!authorized(request.headers.get("authorization"))) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (!isSupabaseConfigured()) return Response.json({ error: "Supabase not configured" }, { status: 503 });
 
   const { error } = await supabaseAdmin().from("tenants").select("id").limit(1);
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error("keep-alive query failed", error.code);
+    return Response.json({ error: "Database unavailable" }, { status: 500 });
+  }
   const winback = await runWinback().catch((err) => {
     console.error("win-back run failed", err);
     return { error: "win-back failed" };
@@ -30,4 +34,12 @@ export async function GET(request: Request) {
     return { error: "ai failed" };
   });
   return Response.json({ ok: true, winback, reminders, ai });
+}
+
+// Constant-time check of "Bearer <CRON_SECRET>" (hashing first makes the lengths equal).
+function authorized(header: string | null) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || !header) return false;
+  const h = (v: string) => createHash("sha256").update(v).digest();
+  return timingSafeEqual(h(header), h(`Bearer ${secret}`));
 }

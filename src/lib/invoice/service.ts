@@ -4,7 +4,7 @@ import { emailEnabled, sendEmail } from "../email/mailer";
 import { orderLabel } from "../format";
 import { formatPhone } from "../phone";
 import { supabaseAdmin } from "../supabase/admin";
-import { sendDocument } from "../telegram-api";
+import { esc, sendDocument } from "../telegram-api";
 import { renderInvoicePdf, type InvoiceData } from "./pdf";
 import { logError } from "@/lib/log";
 
@@ -123,7 +123,8 @@ export async function sendInvoice(orderId: string): Promise<{ email: boolean; te
         inv.customerTelegram,
         pdf,
         file,
-        `🧾 <b>Payment received, thank you!</b>\nInvoice ${inv.data.number} · ${inv.data.business.name}`,
+        // Telegram parses this caption as HTML and the business name is typed by the manager: escape it.
+        `🧾 <b>Payment received, thank you!</b>\nInvoice ${esc(inv.data.number)} · ${esc(inv.data.business.name)}`,
       )
         .then(() => true)
         .catch((err) => {

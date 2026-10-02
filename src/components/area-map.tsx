@@ -8,6 +8,12 @@ export type MapPin = { lat: number; lng: number; label: string; radiusKm?: numbe
 
 type View = { center: [number, number]; zoom: number; pins: MapPin[]; you?: [number, number] };
 
+function textNode(text: string) {
+  const el = document.createElement("span");
+  el.textContent = text;
+  return el;
+}
+
 function render(mod: typeof Leaflet, map: Leaflet.Map, g: Leaflet.LayerGroup, { center, zoom, pins, you }: View) {
   g.clearLayers();
   const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#1f5eff";
@@ -24,7 +30,9 @@ function render(mod: typeof Leaflet, map: Leaflet.Map, g: Leaflet.LayerGroup, { 
         title: p.label,
         keyboard: false,
       })
-      .bindTooltip(p.label, { direction: "top", offset: [0, -8] })
+      // Leaflet renders string tooltips as HTML, and labels carry business names typed by managers:
+      // pass a text node so a name can never become markup or script.
+      .bindTooltip(textNode(p.label), { direction: "top", offset: [0, -8] })
       .addTo(g);
     bounds.push([p.lat, p.lng]);
   }

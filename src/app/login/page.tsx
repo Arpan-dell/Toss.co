@@ -10,6 +10,7 @@ const NOTICES: Record<string, string> = {
   "link-invalid": "That link has expired or was already used. Sign in, or create your account again.",
   "google-failed": "Google sign-in didn't finish. Try again, or use your email.",
   "slow-down": "Too many sign-in attempts. Wait a minute and try again.",
+  "password-reset": "Password changed and every device signed out. Sign in with your new password.",
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {

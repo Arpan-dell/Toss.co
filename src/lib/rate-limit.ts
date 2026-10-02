@@ -15,6 +15,9 @@ export const LIMITS = {
   oauthStartIp: { limit: 10, windowSec: 60 },
   geocodeIp: { limit: 10, windowSec: 60 }, // OpenStreetMap's geocoder allows ~1 request/second for the whole app
   directoryIp: { limit: 30, windowSec: 60 },
+  resetRequestIp: { limit: 3, windowSec: 60 * 60 }, // password reset emails: 3 per hour per IP
+  resetRequestAccount: { limit: 3, windowSec: 60 * 60 }, // and per account
+  resetSubmitIp: { limit: 10, windowSec: 60 * 60 },
 } as const;
 
 /** The caller's IP as seen by Vercel's edge (first x-forwarded-for hop). */

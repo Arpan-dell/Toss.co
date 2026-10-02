@@ -9,9 +9,9 @@ import { Tip } from "./ui";
 // (a basket fills, a driver taps Accept, a customer reports a payment…). Supabase Realtime
 // applies RLS, so a manager only ever receives their own business's rows.
 // Session cookies are HttpOnly, so the server passes the manager's short-lived access token for the
-// subscription. The page refreshes every 20 minutes, which hands over a fresh token before it expires;
+// subscription. The page refreshes every 5 minutes, which hands over a fresh token before it expires;
 // the refresh token never reaches the browser.
-const TOKEN_REFRESH_MS = 20 * 60_000;
+const TOKEN_REFRESH_MS = 5 * 60_000; // stays ahead of short JWT lifetimes (Supabase → Auth → JWT expiry)
 
 export function LiveRefresh({ tenantId, token }: { tenantId: string; token: string }) {
   const router = useRouter();

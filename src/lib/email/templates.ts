@@ -286,3 +286,19 @@ export const managerClosureReceived = (b: { name: string }) =>
       tone: "warn",
     }),
   );
+
+// ---------- to anyone with an account ----------
+
+export const passwordResetEmail = (p: { link: string; minutes: number }) =>
+  mail(
+    "Reset your Toss password",
+    layout({
+      preheader: `This link works once and expires in ${p.minutes} minutes.`,
+      heading: "Reset your password",
+      paragraphs: [
+        `Someone (hopefully you) asked to reset the password for your Toss account. The link below works once and expires in <b>${p.minutes} minutes</b>.`,
+        "Didn't ask for this? Ignore this email: your password stays the same.",
+      ],
+      cta: { label: "Choose a new password", url: p.link },
+    }),
+  );

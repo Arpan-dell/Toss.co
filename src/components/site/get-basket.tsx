@@ -58,20 +58,18 @@ export function GetBasket() {
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <label htmlFor="br-phone" className={label}>
-                  Mobile number
+                  Mobile number <span className="text-critical">*</span>
                 </label>
-                <input id="br-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" enterKeyHint="next" className={field} aria-describedby="br-reach" />
+                <input id="br-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="98765 43210" required minLength={10} maxLength={16} enterKeyHint="next" className={field} />
               </div>
               <div>
                 <label htmlFor="br-email" className={label}>
-                  Email
+                  Email <span className="text-critical">*</span>
                 </label>
-                <input id="br-email" name="email" type="email" autoComplete="email" enterKeyHint="next" className={field} aria-describedby="br-reach" />
+                <input id="br-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required maxLength={254} enterKeyHint="next" className={field} />
               </div>
             </div>
-            <p id="br-reach" className="-mt-3 text-xs text-muted">
-              Mobile or email, at least one, so we can tell you when it&apos;s available.
-            </p>
+            <p className="-mt-3 text-xs text-muted">We&apos;ll call you about availability and email you a confirmation.</p>
             <div className="grid gap-5 sm:grid-cols-[1fr_8rem]">
               <div>
                 <label htmlFor="br-city" className={label}>

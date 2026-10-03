@@ -28,10 +28,12 @@ export async function requestBasket(_prev: FormState, formData: FormData): Promi
   const quantity = Number(text(formData, "quantity") || "1");
 
   if (name.length < 2 || name.length > 80) return { error: "Please enter your name." };
-  const phone = rawPhone ? normalizePhone(rawPhone) : null;
-  if (rawPhone && !phone) return { error: "That mobile number doesn't look right. Try 98765 43210." };
-  if (email && (!EMAIL.test(email) || email.length > 254)) return { error: "That email doesn't look right." };
-  if (!phone && !email) return { error: "Add your mobile number or email so we can reach you." };
+  // both are required: the owner calls about availability and the confirmation goes by email
+  if (!rawPhone) return { error: "Please enter your mobile number." };
+  const phone = normalizePhone(rawPhone);
+  if (!phone) return { error: "That mobile number doesn't look right. Try 98765 43210." };
+  if (!email) return { error: "Please enter your email." };
+  if (!EMAIL.test(email) || email.length > 254) return { error: "That email doesn't look right." };
   const colour = BASKET_COLORS.find((c) => c.id === colourId);
   if (!colour) return { error: "Pick a colour." };
   if (!(Number.isInteger(quantity) && quantity >= 1 && quantity <= 50)) return { error: "Choose how many (1 to 50)." };
@@ -40,14 +42,14 @@ export async function requestBasket(_prev: FormState, formData: FormData): Promi
   if (isSupabaseConfigured()) {
     const { error } = await supabaseAdmin()
       .from("basket_requests")
-      .insert({ name, phone, email: email || null, city: city || null, colour: colour.name, quantity, message: message || null });
+      .insert({ name, phone, email, city: city || null, colour: colour.name, quantity, message: message || null });
     if (error) logError("saving basket request failed", error);
   }
 
-  const details = { name, phone: phone ? formatPhone(phone) : undefined, email: email || undefined, city: city || undefined, colour: colour.name, quantity, message: message || undefined };
-  const sent = await sendEmail(ownerEmail(), ownerBasketRequest(details), { replyTo: email || undefined });
+  const details = { name, phone: formatPhone(phone), email, city: city || undefined, colour: colour.name, quantity, message: message || undefined };
+  const sent = await sendEmail(ownerEmail(), ownerBasketRequest(details), { replyTo: email });
   if (!sent) logError("basket request email to owner not sent");
-  if (email) await sendEmail(email, customerBasketRequestReceived({ name, colour: colour.name, quantity }));
+  await sendEmail(email, customerBasketRequestReceived({ name, colour: colour.name, quantity }));
 
-  return { message: `Thanks, ${name.split(" ")[0]}! We've got your request and will ${email ? "email" : "call"} you about availability soon.` };
+  return { message: `Thanks, ${name.split(" ")[0]}! We've got your request and get back to you about availability soon. A confirmation is on its way to ${email}.` };
 }

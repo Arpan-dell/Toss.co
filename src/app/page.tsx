@@ -12,12 +12,38 @@ import { SiteDock } from "@/components/site/site-dock";
 import { SiteNav } from "@/components/site/site-nav";
 import { WorksWith } from "@/components/site/works-with";
 import { Logo } from "@/components/ui";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { alternates: { canonical: "/" }, openGraph: { url: "/" } };
+
+// Tells search engines who runs the site and what it is (shown as the knowledge panel / sitelinks search).
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#org`,
+      name: SITE_NAME,
+      alternateName: "Toss",
+      url: SITE_URL,
+      logo: `${SITE_URL}/icon.png`,
+      email: "toss.smartlaundry@gmail.com",
+      description: SITE_DESCRIPTION,
+      areaServed: { "@type": "City", name: "New Delhi" },
+      sameAs: ["https://t.me/smart_laundry_control_bot"],
+    },
+    { "@type": "WebSite", "@id": `${SITE_URL}/#site`, name: SITE_NAME, url: SITE_URL, publisher: { "@id": `${SITE_URL}/#org` }, inLanguage: "en-IN" },
+  ],
+};
 
 // Landing page. Midnight theme, Outfit, one aqua accent. Interactive pieces are client islands under
 // components/site; this page stays a Server Component that only lays them out.
 export default function Home() {
   return (
     <div id="top" className="relative flex min-h-[100dvh] w-full flex-1 flex-col overflow-x-clip bg-bg text-fg selection:bg-accent/30">
+      {/* constant data, no user input, so plain JSON is safe here */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }} />
       <SiteNav logo={<Logo className="h-9" />} />
 
       <main className="flex-1">

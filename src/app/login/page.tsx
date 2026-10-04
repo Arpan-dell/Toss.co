@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { AuthForm } from "./auth-form";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = { title: "Sign in", alternates: { canonical: "/login" } };
 
 const NOTICES: Record<string, string> = {
   confirmed: "Email confirmed. Sign in to continue.",

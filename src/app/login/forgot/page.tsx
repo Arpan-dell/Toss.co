@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { ForgotForm } from "./form";
 
-export const metadata: Metadata = { title: "Forgot password" };
+export const metadata: Metadata = { title: "Forgot password", robots: { index: false } };
 
 export default function ForgotPasswordPage() {
   return (

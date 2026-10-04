@@ -3,6 +3,7 @@ import Link from "next/link";
 import { InfoPage } from "@/components/site/info-page";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/contact" },
   title: "Contact",
   description: "Get in touch with Toss: baskets, laundries joining the platform, account help and privacy requests.",
 };

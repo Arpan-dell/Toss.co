@@ -12,6 +12,7 @@ import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { LaundryFinder } from "./finder";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/laundries" },
   title: "Find a laundry",
   description: "Compare the laundries that pick up where you live: distance, price per kg, drivers and how fast they accept.",
 };

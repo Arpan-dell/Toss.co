@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Outfit } from "next/font/google";
 import { Effects } from "@/components/effects";
 import { themeInitScript } from "@/components/theme-toggle";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -16,9 +17,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.SITE_URL ?? "https://tosslaundry.online"),
-  title: { default: "Toss: laundry that calls its own pickup", template: "%s · Toss" },
-  description: "Smart baskets that order their own laundry pickup.",
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
+  title: { default: `${SITE_NAME}: laundry that calls its own pickup`, template: `%s · ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  keywords: ["smart laundry", "laundry pickup", "laundry pickup Delhi", "laundry near me", "wash and fold", "laundry service", "smart laundry basket", "Toss"],
+  openGraph: { type: "website", siteName: SITE_NAME, locale: "en_IN", title: `${SITE_NAME}: laundry that calls its own pickup`, description: SITE_DESCRIPTION },
+  twitter: { card: "summary_large_image" },
+  // Google Search Console's HTML-tag check, if that method is used instead of the DNS record
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
 };
 
 export const viewport: Viewport = {

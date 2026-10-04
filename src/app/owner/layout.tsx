@@ -1,6 +1,10 @@
+import type { Metadata } from "next";
 import type { PortalNavItem } from "@/components/portal-dock";
 import { PortalShell } from "@/components/portal-shell";
 import { requireRole } from "@/lib/session";
+
+// Private portal: keep it out of search results.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 const nav: PortalNavItem[] = [
   { href: "/owner", label: "Businesses", icon: "businesses" },

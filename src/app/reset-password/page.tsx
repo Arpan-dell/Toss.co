@@ -6,7 +6,7 @@ import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { ResetForm } from "./form";
 
 // no-referrer: the token is in this page's URL and must never leave in a Referer header
-export const metadata: Metadata = { title: "Choose a new password", referrer: "no-referrer" };
+export const metadata: Metadata = { title: "Choose a new password", referrer: "no-referrer", robots: { index: false } };
 
 // Checks the link without using it, so an expired or used link says so before anyone types a password.
 async function linkIsLive(token: string) {

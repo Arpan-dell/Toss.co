@@ -3,6 +3,7 @@ import Link from "next/link";
 import { InfoPage } from "@/components/site/info-page";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/privacy" },
   title: "Privacy Policy",
   description: "What Toss collects, why, who it's shared with, and how to get it corrected or deleted.",
 };

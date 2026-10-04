@@ -3,6 +3,7 @@ import Link from "next/link";
 import { InfoPage } from "@/components/site/info-page";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/terms" },
   title: "Terms of Service",
   description: "The rules for using Toss: the website, the baskets, the bots and the laundry platform.",
 };

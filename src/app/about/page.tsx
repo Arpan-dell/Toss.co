@@ -3,6 +3,7 @@ import Link from "next/link";
 import { InfoPage } from "@/components/site/info-page";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/about" },
   title: "About",
   description: "Toss makes laundry baskets that order their own pickup, and the platform laundries run on.",
 };

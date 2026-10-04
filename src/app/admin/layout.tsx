@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LiveRefresh } from "@/components/live-refresh";
 import type { PortalNavItem } from "@/components/portal-dock";
@@ -7,6 +8,9 @@ import { formatDate } from "@/lib/format";
 import { planState } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
+
+// Private portal: keep it out of search results.
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 const nav: PortalNavItem[] = [
   { href: "/admin", label: "Live board", icon: "live" },

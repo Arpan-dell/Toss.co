@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { reminderFor } from "../plan";
+import { APP_URL } from "../site";
 import * as t from "./templates";
 
 const NOW = new Date("2026-10-10T06:00:00Z");
@@ -52,7 +53,8 @@ describe("email templates", () => {
     expect(m.subject).toContain("Fresh");
     expect(m.subject).toContain("4,491");
     expect(m.html).toContain("12 months (25% off)");
-    expect(m.html).toContain(`${t.SITE}/owner/payments`);
+    // dashboard links go to the app host
+    expect(m.html).toContain(`${APP_URL}/owner/payments`);
     expect(m.text).toContain("UPI reference: 123456789012");
   });
 

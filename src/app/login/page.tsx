@@ -4,7 +4,7 @@ import { Logo } from "@/components/ui";
 import { AuthForm } from "./auth-form";
 import { siteHref } from "@/lib/hosts";
 
-export const metadata: Metadata = { title: "Sign in", alternates: { canonical: "/login" } };
+export const metadata: Metadata = { title: "Sign in" };
 
 const NOTICES: Record<string, string> = {
   confirmed: "Email confirmed. Sign in to continue.",

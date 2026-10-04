@@ -6,6 +6,7 @@ import { Cube, House, MapPinArea, Moon, PlayCircle, SignIn, Sparkle, SquaresFour
 import { Dock, DockIcon, DockItem, DockLabel } from "@/components/core/dock";
 import { switchTheme } from "@/components/theme-toggle";
 import { useDocked } from "./use-docked";
+import { appHref } from "@/lib/hosts";
 
 const ITEMS: { title: string; href: string; icon: Icon; section?: string; desktopOnly?: boolean }[] = [
   { title: "Home", href: "#top", icon: House, section: "top", desktopOnly: true },
@@ -15,7 +16,7 @@ const ITEMS: { title: string; href: string; icon: Icon; section?: string; deskto
   { title: "Who it's for", href: "#roles", icon: UsersThree, section: "roles" },
   { title: "Why Toss", href: "#why", icon: Sparkle, section: "why", desktopOnly: true },
   { title: "Find a laundry", href: "/laundries", icon: MapPinArea, section: "laundries" },
-  { title: "Sign in", href: "/login", icon: SignIn },
+  { title: "Sign in", href: appHref("/login"), icon: SignIn },
 ];
 
 // Floating dock that replaces the top nav as soon as you scroll (see useDocked). The dot marks the section

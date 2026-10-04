@@ -10,6 +10,7 @@ import { getCustomer, getTenantById } from "@/lib/data";
 import { getSession } from "@/lib/session";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { LaundryFinder } from "./finder";
+import { appHref, siteHref } from "@/lib/hosts";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/laundries" },
@@ -64,20 +65,20 @@ export default async function LaundriesPage() {
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-20 border-b border-border bg-[var(--header-bg)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3">
-          <Link href="/" aria-label="Toss home">
+          <Link href={siteHref("/")} aria-label="Toss home">
             <Logo />
           </Link>
-          <Link href="/" className="group hidden items-center gap-1.5 text-sm text-secondary transition-colors hover:text-fg sm:inline-flex">
+          <Link href={siteHref("/")} className="group hidden items-center gap-1.5 text-sm text-secondary transition-colors hover:text-fg sm:inline-flex">
             <span className="transition-transform group-hover:-translate-x-1">←</span> Back to home
           </Link>
           <div className="ml-auto flex items-center gap-3 text-sm">
             <ThemeToggle className="size-9" />
             {session ? (
-              <Link href="/login" className="btn-ghost rounded-full px-3.5 py-1.5 text-secondary">
+              <Link href={appHref("/login")} className="btn-ghost rounded-full px-3.5 py-1.5 text-secondary">
                 My dashboard
               </Link>
             ) : (
-              <Link href="/login?next=%2Flaundries" className="btn-ghost rounded-full px-3.5 py-1.5 text-secondary">
+              <Link href={appHref("/login?next=%2Flaundries")} className="btn-ghost rounded-full px-3.5 py-1.5 text-secondary">
                 Sign in
               </Link>
             )}

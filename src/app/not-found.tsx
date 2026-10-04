@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { siteHref } from "@/lib/hosts";
 
 export default function NotFound() {
   return (
@@ -7,7 +8,7 @@ export default function NotFound() {
         <p className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">404</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">This page doesn&apos;t exist</h1>
         <p className="mt-2 text-sm text-secondary">The link may be old or mistyped.</p>
-        <Link href="/" className="btn-primary mt-6 inline-flex rounded-full px-5 py-2.5 text-sm font-medium">
+        <Link href={siteHref("/")} className="btn-primary mt-6 inline-flex rounded-full px-5 py-2.5 text-sm font-medium">
           Go home
         </Link>
       </div>

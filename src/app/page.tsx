@@ -14,6 +14,7 @@ import { WorksWith } from "@/components/site/works-with";
 import { Logo } from "@/components/ui";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Metadata } from "next";
+import { appHref } from "@/lib/hosts";
 
 export const metadata: Metadata = { alternates: { canonical: "/" }, openGraph: { url: "/" } };
 
@@ -85,7 +86,7 @@ export default function Home() {
               Inside Toss
             </Reveal>
             <Reveal delay={0.1}>
-              <a href="/login" className="group inline-flex items-center gap-2 text-sm text-secondary transition-colors hover:text-fg">
+              <a href={appHref("/login")} className="group inline-flex items-center gap-2 text-sm text-secondary transition-colors hover:text-fg">
                 Sign in to your dashboard
                 <span className="transition-transform group-hover:translate-x-1">→</span>
               </a>

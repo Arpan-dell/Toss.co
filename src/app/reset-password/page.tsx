@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { ResetForm } from "./form";
+import { siteHref } from "@/lib/hosts";
 
 // no-referrer: the token is in this page's URL and must never leave in a Referer header
 export const metadata: Metadata = { title: "Choose a new password", referrer: "no-referrer", robots: { index: false } };
@@ -27,7 +28,7 @@ export default async function ResetPasswordPage({ searchParams }: PageProps<"/re
   return (
     <main className="grid flex-1 place-items-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <Link href="/" className="mb-8 flex justify-center">
+        <Link href={siteHref("/")} className="mb-8 flex justify-center">
           <Logo variant="full" className="h-28" />
         </Link>
         <div className="rounded-[10px] border border-t-2 border-border border-t-accent bg-surface-solid p-7">

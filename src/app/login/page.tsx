@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { AuthForm } from "./auth-form";
+import { siteHref } from "@/lib/hosts";
 
 export const metadata: Metadata = { title: "Sign in", alternates: { canonical: "/login" } };
 
@@ -18,7 +19,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   return (
     <main className="grid flex-1 place-items-center px-4 py-12">
       <div className="stagger w-full max-w-sm">
-        <Link href="/" className="mb-8 flex justify-center">
+        <Link href={siteHref("/")} className="mb-8 flex justify-center">
           <Logo variant="full" className="h-28" />
         </Link>
         <div className="relative rounded-[10px] border border-t-2 border-border border-t-accent bg-surface-solid p-7">

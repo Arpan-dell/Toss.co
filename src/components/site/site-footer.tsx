@@ -1,6 +1,7 @@
 import { COMPANY_LINKS } from "./info-page";
 import { MainCta } from "./main-cta";
 import { Reveal } from "./reveal";
+import { appHref } from "@/lib/hosts";
 
 const COLUMNS = [
   {
@@ -17,8 +18,8 @@ const COLUMNS = [
   {
     title: "Account",
     links: [
-      { label: "Sign in", href: "/login" },
-      { label: "Get started", href: "/login" },
+      { label: "Sign in", href: appHref("/login") },
+      { label: "Get started", href: appHref("/login") },
     ],
   },
   { title: "Company", links: COMPANY_LINKS },
@@ -40,7 +41,7 @@ export function SiteFooter({ logo }: { logo: React.ReactNode }) {
           Make laundry disappear.
         </Reveal>
         <Reveal delay={0.1} className="mt-10">
-          <MainCta href="/login" glow className="btn-primary rounded-full px-9 py-4 text-lg font-semibold">
+          <MainCta href={appHref("/login")} glow className="btn-primary rounded-full px-9 py-4 text-lg font-semibold">
             Get started
           </MainCta>
         </Reveal>

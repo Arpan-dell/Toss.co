@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowUpRight } from "@phosphor-icons/react";
+import { appHref } from "@/lib/hosts";
 
 // Real screens from Toss (demo business data), shown as an expanding strip gallery on a dark stage.
 // Each screen gets its own filament colour (the same palette the basket is printed in), so the closed strips
@@ -100,7 +101,7 @@ export function InsideGallery() {
                   <p className="mt-3 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">{s.body}</p>
                 </div>
                 <Link
-                  href="/login"
+                  href={appHref("/login")}
                   tabIndex={open ? 0 : -1}
                   aria-label={`Sign in to see ${s.tag.toLowerCase()}`}
                   title="Sign in to see it"

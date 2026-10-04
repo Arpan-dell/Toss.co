@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { ForgotForm } from "./form";
+import { siteHref } from "@/lib/hosts";
 
 export const metadata: Metadata = { title: "Forgot password", robots: { index: false } };
 
@@ -9,7 +10,7 @@ export default function ForgotPasswordPage() {
   return (
     <main className="grid flex-1 place-items-center px-4 py-12">
       <div className="w-full max-w-sm">
-        <Link href="/" className="mb-8 flex justify-center">
+        <Link href={siteHref("/")} className="mb-8 flex justify-center">
           <Logo variant="full" className="h-28" />
         </Link>
         <div className="rounded-[10px] border border-t-2 border-border border-t-accent bg-surface-solid p-7">

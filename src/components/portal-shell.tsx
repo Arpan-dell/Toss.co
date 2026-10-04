@@ -3,6 +3,7 @@ import { PortalDock, type PortalNavItem } from "./portal-dock";
 import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./ui";
 import { signOut } from "@/app/login/actions";
+import { siteHref } from "@/lib/hosts";
 
 export function PortalShell({ badge, subtitle, nav, children }: {
   badge?: string;
@@ -14,7 +15,7 @@ export function PortalShell({ badge, subtitle, nav, children }: {
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-20 border-b border-border bg-[var(--header-bg)] backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href={siteHref("/")} className="flex items-center gap-2">
             <Logo />
             {badge && (
               <span className="rounded-full border border-border-strong px-2 py-0.5 text-[10px] tracking-[0.14em] text-secondary uppercase">

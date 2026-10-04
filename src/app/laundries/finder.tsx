@@ -7,6 +7,7 @@ import { AreaMap } from "@/components/area-map";
 import { Badge } from "@/components/ui";
 import { chooseLaundry, findLaundries, locatePlace, type Laundry } from "@/lib/actions/directory";
 import type { FormState } from "@/lib/actions/shared";
+import { appHref } from "@/lib/hosts";
 
 type Viewer = "customer" | "signed-out" | "other";
 type Sort = "near" | "price" | "fast" | "busy";
@@ -235,7 +236,7 @@ function Choose({ laundry, viewer, currentCode, here }: { laundry: Laundry; view
     return (
       <p role="status" className="flex flex-wrap items-center gap-3 text-sm text-good">
         {state.message}
-        <Link href="/app" className="text-accent hover:underline">
+        <Link href={appHref("/app")} className="text-accent hover:underline">
           Open my dashboard →
         </Link>
       </p>
@@ -243,7 +244,7 @@ function Choose({ laundry, viewer, currentCode, here }: { laundry: Laundry; view
   }
   if (laundry.code === currentCode) {
     return (
-      <Link href="/app" className="text-sm text-accent hover:underline">
+      <Link href={appHref("/app")} className="text-sm text-accent hover:underline">
         Go to my dashboard →
       </Link>
     );

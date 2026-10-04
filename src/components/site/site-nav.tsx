@@ -7,6 +7,7 @@ import { List, X } from "@phosphor-icons/react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useDocked } from "./use-docked";
 import { Tip } from "@/components/ui";
+import { appHref } from "@/lib/hosts";
 
 const LINKS = [
   { label: "The basket", href: "#basket" },
@@ -57,10 +58,10 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
           </ul>
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
-            <Link href="/login" className="hidden rounded-full px-4 py-2 text-sm text-secondary transition-colors hover:text-fg sm:block">
+            <Link href={appHref("/login")} className="hidden rounded-full px-4 py-2 text-sm text-secondary transition-colors hover:text-fg sm:block">
               Sign in
             </Link>
-            <Link href="/login" className="btn-primary rounded-full px-5 py-2.5 text-sm font-semibold">
+            <Link href={appHref("/login")} className="btn-primary rounded-full px-5 py-2.5 text-sm font-semibold">
               Get started
             </Link>
             <span className="md:hidden">
@@ -87,7 +88,7 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
               transition={{ duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
               className="overflow-hidden px-5 md:hidden"
             >
-              {[...LINKS, { label: "Sign in", href: "/login" }].map((l) => (
+              {[...LINKS, { label: "Sign in", href: appHref("/login") }].map((l) => (
                 <li key={l.label} className="border-t border-ink/10 first:border-0">
                   <a href={l.href} onClick={() => setOpen(false)} className="block py-3.5 text-lg font-medium text-fg">
                     {l.label}

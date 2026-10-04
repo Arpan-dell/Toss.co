@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { InfoPage } from "@/components/site/info-page";
+import { appHref } from "@/lib/hosts";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/contact" },
@@ -12,7 +13,7 @@ const EMAIL = "toss.smartlaundry@gmail.com";
 
 const REASONS = [
   { title: "Buy a basket", body: "Pick a colour and leave your number and email. We'll reply about availability, price and delivery.", href: "/#buy", cta: "Ask about a basket" },
-  { title: "Run a laundry", body: "Put your business on Toss: live pickups, drivers, weighing and UPI payments, and a listing in the directory.", href: "/login", cta: "Get started" },
+  { title: "Run a laundry", body: "Put your business on Toss: live pickups, drivers, weighing and UPI payments, and a listing in the directory.", href: appHref("/login"), cta: "Get started" },
   { title: "Account or order help", body: "Something wrong with a pickup, a weight or an invoice? Email us with your customer ID (shown on your dashboard).", href: `mailto:${EMAIL}?subject=Help%20with%20my%20account`, cta: "Email support" },
   { title: "Privacy request", body: "Ask what we hold about you, or have it corrected or deleted.", href: `mailto:${EMAIL}?subject=Privacy%20request`, cta: "Send a request" },
 ];

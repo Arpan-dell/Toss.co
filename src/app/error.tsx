@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { siteHref } from "@/lib/hosts";
 
 // Shown when a page fails. Never shows the error itself (Next.js already replaces server errors with a
 // generic one); the digest is the reference that matches the full details in the server logs.
@@ -16,7 +17,7 @@ export default function ErrorPage({ error, retry }: { error: Error & { digest?: 
           <button type="button" onClick={() => retry()} className="btn-primary rounded-full px-5 py-2.5 text-sm font-medium">
             Try again
           </button>
-          <Link href="/" className="btn-ghost rounded-full px-5 py-2.5 text-sm">
+          <Link href={siteHref("/")} className="btn-ghost rounded-full px-5 py-2.5 text-sm">
             Go home
           </Link>
         </div>

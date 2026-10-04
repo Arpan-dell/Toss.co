@@ -2,7 +2,12 @@
 
 **Laundry that calls its own pickup.**
 
-**Live:** https://tosslaundry.online
+**Live:** https://tosslaundry.online (website) · https://app.tosslaundry.online (sign-in and portals)
+
+One deployment serves both hosts. `src/proxy.ts` moves app paths (`/login`, `/app`, `/admin`, `/owner`, `/invoice`,
+`/reset-password`, `/r`) to `APP_URL` and the website's pages back to `SITE_URL`; `/laundries` and `/api` answer on
+both. Session cookies use `AUTH_COOKIE_DOMAIN` (`.tosslaundry.online`) so one sign-in covers both hosts. With
+`APP_URL` unset everything is served from one host, as locally and on `*.vercel.app`.
 
 Toss is a B2B2C platform for smart laundry baskets. An ESP32 + load-cell basket detects when it's full and automatically dispatches a pickup driver over Telegram. This repo is the web platform: a customer portal to track and pay, and a manager portal to run the whole city.
 

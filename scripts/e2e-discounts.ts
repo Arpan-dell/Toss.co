@@ -12,7 +12,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { need } from "./env";
 
-const SITE = process.env.TOSS_SITE ?? "https://toss-code-x-a24a.vercel.app";
+const SITE = process.env.TOSS_SITE ?? "https://tosslaundry.online";
 const SB_URL = need("NEXT_PUBLIC_SUPABASE_URL");
 const PUB = need("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 const SECRET = must("SUPABASE_SERVICE_ROLE_KEY");

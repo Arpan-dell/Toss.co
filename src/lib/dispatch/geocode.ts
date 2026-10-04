@@ -7,7 +7,7 @@ import type { LatLng } from "./core";
 // https://operations.osmfoundation.org/policies/nominatim/
 
 const ENDPOINT = "https://nominatim.openstreetmap.org/search";
-const USER_AGENT = "Toss-laundry/1.0 (https://toss-code-x-a24a.vercel.app)";
+const USER_AGENT = "Toss-laundry/1.0 (https://tosslaundry.online)";
 
 async function query(q: string): Promise<LatLng | null> {
   const url = `${ENDPOINT}?${new URLSearchParams({ q, format: "jsonv2", limit: "1", countrycodes: "in" })}`;

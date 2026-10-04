@@ -1,7 +1,7 @@
 // Branded transactional emails. Pure functions (no I/O) so they can be unit-tested; email clients
 // ignore <style> blocks and dark-mode CSS, so everything is inline and table-based.
 
-export const SITE = process.env.SITE_URL ?? "https://toss-code-x-a24a.vercel.app";
+export const SITE = process.env.SITE_URL ?? "https://tosslaundry.online";
 
 export interface Email {
   subject: string;

@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL ?? "https://tosslaundry.online"),
   title: { default: "Toss: laundry that calls its own pickup", template: "%s · Toss" },
   description: "Smart baskets that order their own laundry pickup.",
 };

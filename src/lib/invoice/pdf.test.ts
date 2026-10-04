@@ -20,7 +20,7 @@ const DATA: InvoiceData = {
   },
   driver: { name: "Vikram" },
   payment: { method: "UPI", ref: "412345678901", paidAt: "2026-10-01T09:58:00Z" },
-  site: "https://toss-code-x-a24a.vercel.app",
+  site: "https://tosslaundry.online",
 };
 
 describe("invoice PDF", () => {

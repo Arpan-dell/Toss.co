@@ -9,7 +9,7 @@ import { logError } from "@/lib/log";
 // SQL functions (migration 0010); this module runs them and tells the customer through the customer
 // bot (send-only: the basket polls that bot, so the cloud never reads its updates).
 
-const SITE = process.env.SITE_URL ?? "https://toss-code-x-a24a.vercel.app";
+const SITE = process.env.SITE_URL ?? "https://tosslaundry.online";
 const OPEN_TOSS: InlineButton[][] = [[{ text: "📱 Open Toss", web_app: { url: `${SITE}/app` } }]];
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });

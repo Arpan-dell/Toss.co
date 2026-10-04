@@ -27,7 +27,7 @@ import { logError } from "@/lib/log";
 // it crosses customers, baskets and drivers inside one business, and is triggered by trusted events
 // (a new order from ingest, a manager action, or a verified Telegram webhook).
 
-const SITE = process.env.SITE_URL ?? "https://toss-code-x-a24a.vercel.app";
+const SITE = process.env.SITE_URL ?? "https://tosslaundry.online";
 const driverToken = () => process.env.TELEGRAM_DRIVER_BOT_TOKEN;
 const customerToken = () => process.env.TELEGRAM_CUSTOMER_BOT_TOKEN;
 export const dispatchEnabled = () => !!driverToken();

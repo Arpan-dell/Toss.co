@@ -12,7 +12,7 @@ import { logError } from "@/lib/log";
 // its manager, the customer and the driver, which no single client role may read together
 // (e.g. managers can't read customer phone numbers; the customer's own invoice shows theirs).
 
-const SITE = process.env.SITE_URL ?? "https://toss-code-x-a24a.vercel.app";
+const SITE = process.env.SITE_URL ?? "https://tosslaundry.online";
 type Row = Record<string, unknown>;
 const u = <T>(v: unknown) => (v ?? undefined) as T | undefined;
 

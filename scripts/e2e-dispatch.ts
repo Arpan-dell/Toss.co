@@ -9,7 +9,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { need } from "./env";
 
-const SITE = process.env.TOSS_SITE ?? "https://toss-code-x-a24a.vercel.app";
+const SITE = process.env.TOSS_SITE ?? "https://tosslaundry.online";
 const SB_URL = need("NEXT_PUBLIC_SUPABASE_URL");
 const must = (k: string) => {
   const v = process.env[k];

@@ -2,7 +2,7 @@
 
 **Laundry that calls its own pickup.**
 
-**Live:** https://toss-code-x-a24a.vercel.app
+**Live:** https://tosslaundry.online
 
 Toss is a B2B2C platform for smart laundry baskets. An ESP32 + load-cell basket detects when it's full and automatically dispatches a pickup driver over Telegram. This repo is the web platform: a customer portal to track and pay, and a manager portal to run the whole city.
 

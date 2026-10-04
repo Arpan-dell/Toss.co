@@ -21,7 +21,7 @@ const hash = (token: string) => createHash("sha256").update(token).digest("hex")
 async function siteOrigin() {
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
-  return process.env.SITE_URL ?? `${h.get("x-forwarded-proto") ?? "https"}://${host}`;
+  return process.env.APP_URL ?? process.env.SITE_URL ?? `${h.get("x-forwarded-proto") ?? "https"}://${host}`;
 }
 
 export async function requestPasswordReset(_prev: FormState, formData: FormData): Promise<FormState> {

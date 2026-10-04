@@ -1,7 +1,10 @@
 // Branded transactional emails. Pure functions (no I/O) so they can be unit-tested; email clients
 // ignore <style> blocks and dark-mode CSS, so everything is inline and table-based.
 
-export const SITE = process.env.SITE_URL ?? "https://tosslaundry.online";
+import { APP_URL, SITE_URL } from "../site";
+
+export const SITE = SITE_URL;
+const APP = APP_URL;
 
 export interface Email {
   subject: string;
@@ -70,7 +73,7 @@ export const ownerNewBusiness = (b: { name: string; joinCode: string; managerEma
         ["Price", `₹${b.pricePerKg}/kg`],
         ...(b.trialEndsAt ? ([["Trial ends", day(b.trialEndsAt)]] as Row[]) : []),
       ],
-      cta: { label: "Open owner dashboard", url: `${SITE}/owner` },
+      cta: { label: "Open owner dashboard", url: `${APP}/owner` },
     }),
   );
 
@@ -87,7 +90,7 @@ export const ownerPaymentToReview = (p: { business: string; joinCode: string; mo
         ["UPI reference", p.ref],
         ["Business ID", p.joinCode],
       ],
-      cta: { label: "Review payment", url: `${SITE}/owner/payments` },
+      cta: { label: "Review payment", url: `${APP}/owner/payments` },
     }),
   );
 
@@ -102,7 +105,7 @@ export const ownerClosureRequest = (b: { name: string; joinCode: string; manager
         ["Business ID", b.joinCode],
         ["Manager", b.managerEmail],
       ],
-      cta: { label: "Open businesses", url: `${SITE}/owner` },
+      cta: { label: "Open businesses", url: `${APP}/owner` },
       tone: "warn",
     }),
   );
@@ -118,7 +121,7 @@ export const ownerBusinessLapsed = (b: { name: string; joinCode: string; manager
         ["Business ID", b.joinCode],
         ["Manager", b.managerEmail],
       ],
-      cta: { label: "Open owner dashboard", url: `${SITE}/owner` },
+      cta: { label: "Open owner dashboard", url: `${APP}/owner` },
       tone: "warn",
     }),
   );
@@ -146,7 +149,7 @@ export const customerInvoice = (d: {
         ["Paid by", d.payment.method],
         ...(d.payment.paidAt ? ([["Paid on", day(d.payment.paidAt)]] as Row[]) : []),
       ],
-      cta: { label: "View your orders", url: `${SITE}/app/orders` },
+      cta: { label: "View your orders", url: `${APP}/app/orders` },
       tone: "good",
     }),
   );
@@ -162,7 +165,7 @@ export const customerPaymentReminder = (p: { business: string; name?: string; or
         ...(p.note ? [e(p.note)] : []),
         "Open your Toss dashboard to pay with any UPI app. It takes a few seconds.",
       ],
-      cta: { label: "Pay now", url: `${SITE}/app` },
+      cta: { label: "Pay now", url: `${APP}/app` },
       tone: "warn",
     }),
   );
@@ -183,7 +186,7 @@ export const managerWelcome = (b: { name: string; joinCode: string; trialEndsAt?
         ["Business ID", b.joinCode],
         ...(b.trialEndsAt ? ([["Free trial until", day(b.trialEndsAt)]] as Row[]) : []),
       ],
-      cta: { label: "Open your dashboard", url: `${SITE}/admin` },
+      cta: { label: "Open your dashboard", url: `${APP}/admin` },
     }),
   );
 
@@ -199,7 +202,7 @@ export const managerPaymentReceived = (p: { business: string; months: number; am
         ["Plan", `${p.months} month${p.months > 1 ? "s" : ""}${p.discountPct ? ` (${p.discountPct}% off)` : ""}`],
         ["UPI reference", p.ref],
       ],
-      cta: { label: "View billing", url: `${SITE}/admin/billing` },
+      cta: { label: "View billing", url: `${APP}/admin/billing` },
     }),
   );
 
@@ -215,7 +218,7 @@ export const managerPaymentApproved = (p: { business: string; months: number; am
         ["Added", `${p.months} month${p.months > 1 ? "s" : ""}`],
         ...(p.paidUntil ? ([["Paid until", day(p.paidUntil)]] as Row[]) : []),
       ],
-      cta: { label: "Open your dashboard", url: `${SITE}/admin` },
+      cta: { label: "Open your dashboard", url: `${APP}/admin` },
       tone: "good",
     }),
   );
@@ -230,7 +233,7 @@ export const managerPaymentRejected = (p: { business: string; amount: number; re
         `We couldn't find your UPI payment of <b>${inr(p.amount)}</b> for ${e(p.business)}. Please check the reference in your UPI app's payment details and submit it again.`,
       ],
       rows: [["UPI reference you entered", p.ref]],
-      cta: { label: "Go to billing", url: `${SITE}/admin/billing` },
+      cta: { label: "Go to billing", url: `${APP}/admin/billing` },
       tone: "bad",
     }),
   );
@@ -255,7 +258,7 @@ export const managerPlanReminder = (p: { business: string; kind: "TRIAL" | "ACTI
         ["Plan", `${inr(p.monthlyPrice)}/month`],
         ...(p.until ? ([[ended ? "Ended on" : "Ends on", day(p.until)]] as Row[]) : []),
       ],
-      cta: { label: ended ? "Renew now" : "Renew", url: `${SITE}/admin/billing` },
+      cta: { label: ended ? "Renew now" : "Renew", url: `${APP}/admin/billing` },
       tone: ended ? "bad" : "warn",
     }),
   );
@@ -268,7 +271,7 @@ export const managerSuspended = (p: { business: string; suspended: boolean }) =>
       preheader: p.suspended ? "Contact Toss to resolve it." : "Your dashboard is unlocked.",
       heading: p.suspended ? `${p.business} is suspended` : `${p.business} is active again`,
       paragraphs: [p.suspended ? "Toss has suspended your business. Reply to this email to resolve it." : "Your dashboard is unlocked. Welcome back!"],
-      cta: { label: "Open your dashboard", url: `${SITE}/admin` },
+      cta: { label: "Open your dashboard", url: `${APP}/admin` },
       tone: p.suspended ? "bad" : "good",
     }),
   );

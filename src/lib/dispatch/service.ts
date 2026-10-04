@@ -22,12 +22,13 @@ import { chooseDriver, directionsUrl, routeUrl, searchUrl, type DriverCandidate,
 import { geocode } from "./geocode";
 import { MAX_KG, MIN_KG, parseKg, repriceForWeight } from "./weighing";
 import { logError } from "@/lib/log";
+import { APP_URL, SITE_URL } from "@/lib/site";
 
 // Automatic pickup dispatch over the driver bot. Runs server-side with the service role:
 // it crosses customers, baskets and drivers inside one business, and is triggered by trusted events
 // (a new order from ingest, a manager action, or a verified Telegram webhook).
 
-const SITE = process.env.SITE_URL ?? "https://tosslaundry.online";
+const SITE = SITE_URL;
 const driverToken = () => process.env.TELEGRAM_DRIVER_BOT_TOKEN;
 const customerToken = () => process.env.TELEGRAM_CUSTOMER_BOT_TOKEN;
 export const dispatchEnabled = () => !!driverToken();
@@ -113,7 +114,7 @@ export async function routeByToken(token: string) {
   return data ? { driver: data as Row, ...(await currentRoute(data as Row)) } : null;
 }
 
-const routeLink = (d: Row) => `${SITE}/r/${d.route_token as string}`;
+const routeLink = (d: Row) => `${APP_URL}/r/${d.route_token as string}`;
 
 // ---------- assignment ----------
 

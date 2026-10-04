@@ -7,12 +7,13 @@ import { supabaseAdmin } from "../supabase/admin";
 import { esc, sendDocument } from "../telegram-api";
 import { renderInvoicePdf, type InvoiceData } from "./pdf";
 import { logError } from "@/lib/log";
+import { SITE_URL } from "@/lib/site";
 
 // Invoices for paid pickups. Server-side with the service role: an invoice joins the business,
 // its manager, the customer and the driver, which no single client role may read together
 // (e.g. managers can't read customer phone numbers; the customer's own invoice shows theirs).
 
-const SITE = process.env.SITE_URL ?? "https://tosslaundry.online";
+const SITE = SITE_URL;
 type Row = Record<string, unknown>;
 const u = <T>(v: unknown) => (v ?? undefined) as T | undefined;
 

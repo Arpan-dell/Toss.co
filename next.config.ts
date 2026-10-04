@@ -43,6 +43,8 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // pages get the CSP; invoice PDFs are files, and a page policy on them can stop the browser's PDF viewer
       { source: "/((?!invoice/).*)", headers: [{ key: "Content-Security-Policy", value: csp }] },
+      // the app host (sign-in and portals) stays out of search; only the website on the main host is indexed
+      { source: "/:path*", has: [{ type: "host", value: "app.tosslaundry.online" }], headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     ];
   },
 };

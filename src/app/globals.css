@@ -3,7 +3,7 @@
 /* `light:` utilities apply under the light theme, except inside a forced-dark island (data-theme="dark"). */
 @custom-variant light (&:where([data-theme="light"], [data-theme="light"] *):not(:where([data-theme="dark"], [data-theme="dark"] *)));
 
-/* Design tokens. Dark: midnight base, aqua accent (the Toss logo teal). Light: cool white base, blue accent.
+/* Design tokens. Dark: near-black base, orange accent. Light: cool white base, blue accent.
    Components use these via Tailwind (bg-surface, text-muted, bg-ink/10, ...). --ink-rgb is the foreground
    channel for translucent overlays; --accent-rgb feeds every glow and tinted shadow. The theme lives on
    <html data-theme>; any element with data-theme="dark" stays dark inside a light page (device mockups). */
@@ -11,25 +11,25 @@
 [data-theme="dark"] {
   color-scheme: dark;
   --ink-rgb: 255 255 255;
-  --btn-bg: #f4f6ff;
-  --btn-bg-hover: #ffffff;
-  --btn-fg: #0c1128;
-  --btn-glow: rgb(255 255 255 / 0.18);
-  --btn-glow-hover: rgb(255 255 255 / 0.32);
-  --header-bg: rgb(12 17 40 / 0.6);
-  --bg: #0c1128;
+  --btn-bg: #ff6a1f;
+  --btn-bg-hover: #ff7f3d;
+  --btn-fg: #130800;
+  --btn-glow: rgb(255 106 31 / 0.3);
+  --btn-glow-hover: rgb(255 106 31 / 0.5);
+  --header-bg: rgb(10 10 11 / 0.65);
+  --bg: #0a0a0b;
   --surface: rgb(255 255 255 / 0.04);
-  --surface-solid: #121a3c;
+  --surface-solid: #141416;
   --surface-2: rgb(255 255 255 / 0.07);
   --border: rgb(255 255 255 / 0.1);
   --border-strong: rgb(255 255 255 / 0.2);
-  --text: #f4f6ff;
-  --text-secondary: #c3c8da;
-  --text-muted: #8a93ae;
-  --accent: #2ee6d6;
-  --accent-rgb: 46 230 214;
-  --accent-2: #00b4ff;
-  --accent-contrast: #04131c;
+  --text: #f6f3ee;
+  --text-secondary: #c9c4bc;
+  --text-muted: #918b82;
+  --accent: #ff6a1f;
+  --accent-rgb: 255 106 31;
+  --accent-2: #ffa531;
+  --accent-contrast: #130800;
   --good: #4ade80;
   --good-bg: rgb(74 222 128 / 0.12);
   --warn: #fbbf24;
@@ -41,7 +41,12 @@
   --series-1: #9085e9; /* validated dark-mode categorical slot */
   --series-1-wash: rgb(144 133 233 / 0.14);
   --grid: rgb(255 255 255 / 0.06);
-  --gradient: linear-gradient(135deg, #2ee6d6 0%, #19cbe9 50%, #00b4ff 100%);
+  --gradient: linear-gradient(135deg, #ff6a1f 0%, #ff8a2a 50%, #ffa531 100%);
+  --glow-1: #ff6a1f;
+  --glow-2: #ffa531;
+  --glow-3: #ff3d00;
+  --glow-4: #ffc46b;
+  --text-sheen: linear-gradient(90deg, #fff1e6, #ff6a1f, #ffa531, #fff1e6);
 }
 
 [data-theme="light"] {
@@ -78,6 +83,11 @@
   --btn-glow: rgb(31 94 255 / 0.25);
   --btn-glow-hover: rgb(31 94 255 / 0.4);
   --header-bg: rgb(255 255 255 / 0.75);
+  --glow-1: #1f5eff;
+  --glow-2: #0ea5e9;
+  --glow-3: #7aa2ff;
+  --glow-4: #3b82f6;
+  --text-sheen: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #0b1430);
 }
 
 @theme inline {
@@ -133,7 +143,7 @@ html[data-theme] { background-color: var(--bg); }
 .btn-ghost:hover { background: rgb(var(--ink-rgb) / 0.08); border-color: rgb(var(--ink-rgb) / 0.28); }
 
 .text-gradient {
-  background: linear-gradient(90deg, #e6fffb, #2ee6d6, #00b4ff, #e6fffb);
+  background: var(--text-sheen);
   background-size: 300% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -393,3 +403,42 @@ html[data-theme] { background-color: var(--bg); }
 [data-theme="dark"] .area-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.6); }
 [data-theme="dark"] .area-map .leaflet-control-attribution { color: var(--text-muted); }
 [data-theme="dark"] .area-map .leaflet-control-attribution a { color: var(--text-secondary); }
+
+/* ---------- Toss orbit (hero): rings of text spin on the compositor ---------- */
+.orbit-ring {
+  animation: orbit-spin var(--orbit-dur, 60s) linear infinite;
+  animation-direction: var(--orbit-dir, normal);
+  will-change: transform;
+}
+@keyframes orbit-spin {
+  to { transform: rotate(360deg); }
+}
+.orbit-pulse { animation: orbit-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+@keyframes orbit-pulse {
+  from { transform: scale(0.9); opacity: 0.9; }
+  to { transform: scale(1.9); opacity: 0; }
+}
+[data-paused] .orbit-ring,
+[data-paused] .orbit-pulse { animation-play-state: paused; }
+
+/* hero headline: words land with a motion-blur smear, like a frame snapping into place */
+.kinetic-word,
+.kinetic-rise {
+  animation: kinetic-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 90ms + 120ms);
+}
+.kinetic-word { display: inline-block; }
+@keyframes kinetic-in {
+  from { opacity: 0; transform: translateX(-0.6em) skewX(-14deg); filter: blur(10px); }
+  60% { filter: blur(0); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+.kinetic-bracket { animation: bracket-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: 0.85s; }
+@keyframes bracket-in {
+  from { opacity: 0; transform: scale(1.25); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring, .orbit-pulse, .kinetic-word, .kinetic-rise, .kinetic-bracket { animation: none; }
+}

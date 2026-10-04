@@ -1,6 +1,7 @@
 "use client";
 
-import { animate, motion, useInView, useReducedMotion } from "framer-motion";
+import { animate, motion, useInView } from "framer-motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { useEffect, useRef } from "react";
 
 // Split section: the belief on the left, how it shows up on the right. The figures are product facts,

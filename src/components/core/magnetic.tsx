@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { motion, useMotionValue, useReducedMotion, useSpring, type SpringOptions } from "framer-motion";
+import { motion, useMotionValue, useSpring, type SpringOptions } from "framer-motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 const SPRING: SpringOptions = { stiffness: 26.7, damping: 4.1, mass: 0.2 };
 

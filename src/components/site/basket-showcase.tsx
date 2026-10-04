@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { motion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { BASKET_COLORS, colorOf, type BasketColor } from "./basket-colors";
 import { useBasketColor } from "./basket-color-store";
 
@@ -129,7 +130,7 @@ function StepText({ step, progress, color, onColor, reduce }: { step: Step; prog
 export function BasketShowcase() {
   const [color, onColor] = useBasketColor();
   const runway = useRef<HTMLElement>(null);
-  const reduce = useReducedMotion() ?? false;
+  const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: runway, offset: ["start start", "end end"] });
   const [near, setNear] = useState(false);
   const [active, setActive] = useState(false);

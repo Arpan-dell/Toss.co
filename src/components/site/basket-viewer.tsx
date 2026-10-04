@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import type { Pose } from "./basket-scene";
 
 // The 3D Toss box for the order form: the same model as the scroll story, in the chosen filament colour.

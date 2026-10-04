@@ -2,7 +2,7 @@ import { HowScrolly } from "@/components/how-scrolly";
 import { BasketShowcase } from "@/components/site/basket-showcase";
 import { BotDemo } from "@/components/site/bot-demo";
 import { GetBasket } from "@/components/site/get-basket";
-import { HeroReveal } from "@/components/site/hero-reveal";
+import { HeroOrbit } from "@/components/site/hero-orbit";
 import { InsideGallery } from "@/components/site/inside-gallery";
 import { Manifesto } from "@/components/site/manifesto";
 import { Reveal } from "@/components/site/reveal";
@@ -48,7 +48,7 @@ export default function Home() {
       <SiteNav logo={<Logo className="h-9" />} />
 
       <main className="flex-1">
-        <HeroReveal />
+        <HeroOrbit />
 
         <WorksWith />
 

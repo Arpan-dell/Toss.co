@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { Basket, ChartLineUp, Sparkle, Truck, type Icon } from "@phosphor-icons/react";
 
 // Who Toss is for, as a 4-cell bento. Each card tilts toward the pointer in 3D (spring-damped motion

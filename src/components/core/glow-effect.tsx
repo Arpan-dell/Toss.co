@@ -1,6 +1,7 @@
 "use client";
 
-import { motion, useReducedMotion, type Transition } from "framer-motion";
+import { motion, type Transition } from "framer-motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 type Mode = "rotate" | "pulse" | "breathe" | "colorShift" | "flowHorizontal" | "static";
 type Blur = "softest" | "soft" | "medium" | "strong" | "stronger" | "strongest" | "none" | number;
@@ -26,7 +27,7 @@ type Props = {
 
 // An animated, blurred gradient that sits behind its sibling (put both in a `relative` wrapper and give the
 // sibling `relative` so it stacks on top).
-export function GlowEffect({ colors = ["#2ee6d6", "#00b4ff", "#7aa2ff", "#19cbe9"], mode = "rotate", blur = "medium", duration = 5, scale = 1, className = "" }: Props) {
+export function GlowEffect({ colors = ["var(--glow-1)", "var(--glow-2)", "var(--glow-3)", "var(--glow-4)"], mode = "rotate", blur = "medium", duration = 5, scale = 1, className = "" }: Props) {
   const reduce = useReducedMotion();
   const loop: Transition = { duration, repeat: Infinity, ease: "linear" };
   const conic = (deg: number) => `conic-gradient(from ${deg}deg at 50% 50%, ${colors.join(", ")}, ${colors[0]})`;

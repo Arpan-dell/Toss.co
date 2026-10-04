@@ -2,17 +2,8 @@
 
 import Link from "next/link";
 import { createContext, useContext, useMemo, useRef, useState } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useMotionValue,
-  useMotionValueEvent,
-  useReducedMotion,
-  useSpring,
-  useTransform,
-  type MotionValue,
-  type SpringOptions,
-} from "framer-motion";
+import { AnimatePresence, motion, useMotionValue, useMotionValueEvent, useSpring, useTransform, type MotionValue, type SpringOptions } from "framer-motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 // macOS-style dock: items grow as the pointer nears them. All sizing runs on motion values, so moving the
 // mouse along the dock never re-renders React.

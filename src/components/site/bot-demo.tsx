@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useInView, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useInView } from "framer-motion";
+import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 // Toss Control (the customer bot) in daily use. The keyboard is the real one from the basket firmware and
 // every reply below is the firmware's own text, so this is exactly what a customer sees in Telegram.

@@ -14,13 +14,15 @@ import { useBasketColor } from "./basket-color-store";
 
 const BasketScene = dynamic(() => import("./basket-scene"), {
   ssr: false,
-  loading: () => <PhotoFallback />,
+  loading: () => <ModelPlaceholder />,
 });
 
-function PhotoFallback() {
+// While three.js loads: a soft glow where the box will sit, not the real photo (which flashed in and then
+// jumped to the 3D model on every refresh). The model fades in over it.
+function ModelPlaceholder() {
   return (
-    <div className="grid h-full place-items-center">
-      <Image src="/brand/basket/hero-black.webp" alt="" width={520} height={360} className="h-auto w-[min(70vw,520px)]" priority={false} />
+    <div aria-hidden className="grid h-full place-items-center">
+      <div className="size-[min(46vw,360px)] animate-pulse rounded-full bg-accent/[0.07] blur-3xl" />
     </div>
   );
 }
@@ -169,7 +171,13 @@ export function BasketShowcase() {
       <div className="sticky top-0 h-[100dvh] overflow-hidden">
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_55%,rgb(var(--accent-rgb)/0.08),transparent_60%)]" />
         <div className="absolute inset-x-0 top-0 h-[58%] lg:inset-0 lg:h-full">
-          {near ? <BasketScene color={colorOf(color).hex} progress={scrollYProgress} active={active} /> : <PhotoFallback />}
+          {near ? (
+            <div className="model-fade-in h-full">
+              <BasketScene color={colorOf(color).hex} progress={scrollYProgress} active={active} />
+            </div>
+          ) : (
+            <ModelPlaceholder />
+          )}
         </div>
         {STEPS.map((s) => (
           <StepText key={s.kicker} step={s} progress={scrollYProgress} color={color} onColor={onColor} reduce={false} />

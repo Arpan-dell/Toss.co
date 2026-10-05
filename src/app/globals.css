@@ -451,3 +451,11 @@ html[data-theme] { background-color: var(--bg); }
   caret-color: var(--text);
   transition: background-color 600000s 0s;
 }
+
+/* 3D basket: fade the canvas in once three.js has loaded, instead of popping in */
+.model-fade-in { animation: model-fade-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes model-fade-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .model-fade-in { animation: none; } }

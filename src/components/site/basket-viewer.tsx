@@ -84,7 +84,11 @@ export function BasketViewer({ color }: { color: string }) {
         role="img"
         aria-label="3D model of the Toss basket box. Drag to turn it."
       >
-        {near && <BasketScene color={color} pose={pose} active={onScreen} near />}
+        {near && (
+          <div className="model-fade-in size-full">
+            <BasketScene color={color} pose={pose} active={onScreen} near />
+          </div>
+        )}
         <span className="pointer-events-none absolute bottom-3 left-3 font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Drag to turn</span>
       </div>
       <div className="mt-3 grid grid-cols-4 gap-2" role="group" aria-label="Views">

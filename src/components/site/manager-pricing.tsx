@@ -41,7 +41,13 @@ function Count({ to, prefix = "", suffix = "" }: { to: number; prefix?: string; 
     });
     return () => c.stop();
   }, [seen, to, prefix, suffix, reduce]);
-  return <span ref={ref}>{`${prefix}0${suffix}`}</span>;
+  // The counter starts at 0, so crawlers and screen readers get the real figure from the sr-only copy.
+  return (
+    <>
+      <span className="sr-only">{`${prefix}${to.toLocaleString("en-IN")}${suffix}`}</span>
+      <span ref={ref} aria-hidden>{`${prefix}0${suffix}`}</span>
+    </>
+  );
 }
 
 function FeatureCard({ icon: I, title, body, i }: { icon: Icon; title: string; body: string; i: number }) {

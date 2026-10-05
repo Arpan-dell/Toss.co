@@ -11,10 +11,10 @@ import { appHref } from "@/lib/hosts";
 const ITEMS: { title: string; href: string; icon: Icon; section?: string; desktopOnly?: boolean }[] = [
   { title: "Home", href: "#top", icon: House, section: "top", desktopOnly: true },
   { title: "The basket", href: "#basket", icon: Cube, section: "basket" },
+  { title: "For managers", href: "#manager", icon: Storefront, section: "manager" },
   { title: "How it works", href: "#how", icon: PlayCircle, section: "how" },
   { title: "Inside Toss", href: "#inside", icon: SquaresFour, section: "inside" },
   { title: "Who it's for", href: "#roles", icon: UsersThree, section: "roles" },
-  { title: "For managers", href: "#manager", icon: Storefront, section: "manager" },
   { title: "Why Toss", href: "#why", icon: Sparkle, section: "why", desktopOnly: true },
   { title: "Find a laundry", href: "/laundries", icon: MapPinArea, section: "laundries" },
   { title: "Sign in", href: appHref("/login"), icon: SignIn },

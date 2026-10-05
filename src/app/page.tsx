@@ -75,6 +75,10 @@ export default async function Home() {
           <BotDemo />
         </section>
 
+        <section id="manager" className="mx-auto flex max-w-7xl scroll-mt-6 flex-col justify-center px-4 py-16 sm:px-6 lg:min-h-[100dvh] lg:px-8 lg:pt-10 lg:pb-28">
+          <ManagerPricing plan={plan} />
+        </section>
+
         <section id="how" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
           <Reveal as="h2" className="max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1.05] font-black tracking-tight">
             Three people, one basket. See your side.
@@ -109,10 +113,6 @@ export default async function Home() {
             Built for everyone who touches the laundry.
           </Reveal>
           <RolesBento />
-        </section>
-
-        <section id="manager" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
-          <ManagerPricing plan={plan} />
         </section>
 
         <section id="why" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">

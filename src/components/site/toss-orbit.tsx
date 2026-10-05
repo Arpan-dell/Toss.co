@@ -230,9 +230,9 @@ export function TossOrbit({ className = "" }: { className?: string }) {
             {!reduce && !held && onScreen && (
               <motion.span
                 key={`bar-${step}`}
-                className="absolute inset-y-0 left-0 bg-accent"
-                initial={{ width: "0%" }}
-                animate={{ width: "100%" }}
+                className="absolute inset-0 origin-left bg-accent"
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
                 transition={{ duration: STEP_MS / 1000, ease: "linear" }}
               />
             )}

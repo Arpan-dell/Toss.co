@@ -37,8 +37,8 @@ const WELCOME: Record<Mode, { title: string; body: string; cta: string }> = {
 };
 
 // Sign-in / create-account card, after the "glassy login" reference: one sheet of glass split by a slanted bevel,
-// the form on one side and a welcome pane on the other. Switching modes swaps the sides: the card's contents
-// blur away into the frosted glass, the halves trade places (the bevel mirrors), and they blur back in.
+// the form on one side and a welcome pane on the other. Switching modes swaps the sides: the two halves glide past
+// each other while the slanted pane and its bevel sweep across, and the text in each half cross-fades.
 export function AuthForm({ notice, next, logo }: { notice?: string; next?: string; logo: React.ReactNode }) {
   const [mode, setMode] = useState<Mode>("signin");
   const [showPw, setShowPw] = useState(false);
@@ -59,8 +59,15 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
 
   const signin = mode === "signin";
 
+  // contents of each half cross-fade (quickly, so they're gone before the halves pass each other)
+  const fade = {
+    initial: reduce ? false : ({ opacity: 0, y: 8 } as const),
+    animate: { opacity: 1, y: 0, transition: { duration: 0.32, delay: 0.3, ease: EASE } },
+    exit: { opacity: 0, y: -6, transition: { duration: 0.16, ease: "easeIn" as const } },
+  };
+
   const form = (
-    <div className="relative z-10 flex flex-col justify-center p-8 md:p-11">
+    <motion.div key={`form-${mode}`} {...fade} className="flex flex-col justify-center">
       <h1 className="text-2xl font-bold tracking-tight text-fg">{signin ? "Sign in" : "Create account"}</h1>
       <p className="mt-1 mb-6 text-sm text-secondary">Track your pickups and pay invoices in one place.</p>
 
@@ -156,12 +163,11 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
           {signin ? "Create an account" : "Sign in"}
         </button>
       </p>
-    </div>
+    </motion.div>
   );
 
-  // phones keep it minimal: the welcome pane is desktop-only, the link under the form switches modes
   const welcome = (
-    <div className="relative z-10 hidden flex-col justify-between p-11 md:flex">
+    <motion.div key={`welcome-${mode}`} {...fade} className="flex h-full flex-col justify-between">
       <div className={signin ? "self-end" : ""}>{logo}</div>
       <div className={signin ? "text-right" : ""}>
         <h2 className="text-4xl leading-[1.02] font-black tracking-tight text-fg uppercase">{WELCOME[mode].title}</h2>
@@ -172,16 +178,17 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
         </button>
       </div>
       <span aria-hidden className="h-10" />
-    </div>
+    </motion.div>
   );
 
   // the welcome pane's own sheet of glass, slanted along the bevel; mirrored when it moves to the right
   const pane = signin ? "polygon(52% 0, 100% 0, 100% 100%, 58% 100%)" : "polygon(0 0, 48% 0, 42% 100%, 0 100%)";
   const bevel = signin ? { x1: 52, x2: 58 } : { x1: 48, x2: 42 };
+  const swap = reduce ? { duration: 0 } : { duration: 0.75, ease: [0.65, 0, 0.35, 1] as const };
 
   return (
     // no filter on this wrapper, even blur(0): any filter on an ancestor stops the card's backdrop-filter from
-    // seeing the shard wall behind it, and the glass turns clear
+    // seeing the backdrop behind it, and the glass turns clear
     <motion.div
       initial={reduce ? false : { opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
@@ -200,49 +207,52 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
           py.set(0);
         }}
         style={reduce ? undefined : { rotateX: rx, rotateY: ry }}
-        className="glass-auth relative overflow-hidden rounded-[28px] border border-white/15 bg-white/[0.06] shadow-[0_40px_100px_-30px_rgb(0_0_0/0.85),inset_0_1px_0_rgb(255_255_255/0.18)] backdrop-blur-2xl backdrop-saturate-150 light:border-white/70 light:bg-white/40 light:shadow-[0_40px_90px_-30px_rgb(11_20_48/0.45),inset_0_1px_0_rgb(255_255_255/0.9)]"
+        className="glass-auth relative overflow-hidden rounded-[28px] border border-white/15 bg-white/[0.06] shadow-[0_40px_100px_-30px_rgb(0_0_0/0.85),inset_0_1px_0_rgb(255_255_255/0.18)] backdrop-blur-[10px] backdrop-saturate-150 light:border-white/70 light:bg-white/40 light:shadow-[0_40px_90px_-30px_rgb(11_20_48/0.45),inset_0_1px_0_rgb(255_255_255/0.9)]"
       >
         <motion.span aria-hidden className="pointer-events-none absolute inset-0 z-0" style={{ background: sheen }} />
 
-        {/* The swap. Filters here are fine: they sit inside the glass, not above it. */}
-        <AnimatePresence mode="wait" initial={false}>
+        {/* The swap: the two halves glide past each other (a layout animation, transforms only), the slanted
+            glass pane and its bevel sweep across with them, and only the text inside each half cross-fades. */}
+        <div className="relative grid md:min-h-[560px] md:grid-cols-2">
           <motion.div
-            key={mode}
-            initial={reduce ? false : { opacity: 0, filter: "blur(14px)", scale: 0.985 }}
-            animate={{ opacity: 1, filter: "blur(0px)", scale: 1, transitionEnd: { filter: "none" } }}
-            exit={reduce ? undefined : { opacity: 0, filter: "blur(14px)", scale: 0.985 }}
-            transition={{ duration: 0.38, ease: EASE }}
-            className="relative grid md:min-h-[560px] md:grid-cols-2"
-          >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 z-0 hidden bg-white/[0.05] md:block light:bg-white/35"
-              style={{ clipPath: pane }}
+            aria-hidden
+            className="pointer-events-none absolute inset-0 z-0 hidden bg-white/[0.05] md:block light:bg-white/35"
+            initial={false}
+            animate={{ clipPath: pane }}
+            transition={swap}
+          />
+          <svg aria-hidden className="pointer-events-none absolute inset-0 z-0 hidden size-full md:block" preserveAspectRatio="none" viewBox="0 0 100 100">
+            <defs>
+              <linearGradient id="bevel" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="white" stopOpacity="0.55" />
+                <stop offset="0.6" stopColor="white" stopOpacity="0.12" />
+                <stop offset="1" stopColor="white" stopOpacity="0.3" />
+              </linearGradient>
+            </defs>
+            <motion.line
+              initial={false}
+              animate={{ x1: bevel.x1, x2: bevel.x2 }}
+              transition={swap}
+              y1="0"
+              y2="100"
+              stroke="url(#bevel)"
+              strokeWidth={1.5}
+              vectorEffect="non-scaling-stroke"
             />
-            <svg aria-hidden className="pointer-events-none absolute inset-0 z-0 hidden size-full md:block" preserveAspectRatio="none" viewBox="0 0 100 100">
-              <defs>
-                <linearGradient id="bevel" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stopColor="white" stopOpacity="0.55" />
-                  <stop offset="0.6" stopColor="white" stopOpacity="0.12" />
-                  <stop offset="1" stopColor="white" stopOpacity="0.3" />
-                </linearGradient>
-              </defs>
-              <line x1={bevel.x1} y1="0" x2={bevel.x2} y2="100" stroke="url(#bevel)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
-            </svg>
+          </svg>
 
-            {signin ? (
-              <>
-                {form}
-                {welcome}
-              </>
-            ) : (
-              <>
-                {welcome}
-                {form}
-              </>
-            )}
+          <motion.div layout="position" transition={swap} className="relative z-10 p-8 md:p-11" style={{ order: signin ? 0 : 1 }}>
+            <AnimatePresence mode="wait" initial={false}>
+              {form}
+            </AnimatePresence>
           </motion.div>
-        </AnimatePresence>
+          {/* phones keep it minimal: the welcome half is desktop-only, the link under the form switches modes */}
+          <motion.div layout="position" transition={swap} className="relative z-10 hidden p-11 md:block" style={{ order: signin ? 1 : 0 }}>
+            <AnimatePresence mode="wait" initial={false}>
+              {welcome}
+            </AnimatePresence>
+          </motion.div>
+        </div>
       </motion.div>
     </motion.div>
   );

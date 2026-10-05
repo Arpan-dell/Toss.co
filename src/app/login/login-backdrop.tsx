@@ -5,9 +5,10 @@ import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { useEffect } from "react";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
-// Faceted shard wall behind the sign-in card (rendered offline, one image per theme). It drifts a little
+// Line-art solar system behind the sign-in card: the planets line up through the middle of the screen, so they
+// show softly through the frosted glass. One image per theme (cream on black, navy on light). It drifts a little
 // against the pointer so the glass in front reads as a separate layer.
-export function ShardBackdrop() {
+export function LoginBackdrop() {
   const reduce = useReducedMotion();
   const px = useMotionValue(0);
   const py = useMotionValue(0);
@@ -33,8 +34,8 @@ export function ShardBackdrop() {
         style={{ x, y }}
         className="absolute inset-0"
       >
-        <Image src="/brand/login/shards-dark.webp" alt="" fill priority sizes="100vw" className="object-cover light:hidden" />
-        <Image src="/brand/login/shards-light.webp" alt="" fill priority sizes="100vw" className="hidden object-cover light:block" />
+        <Image src="/brand/login/cosmos-dark.webp" alt="" fill priority sizes="100vw" className="object-cover light:hidden" />
+        <Image src="/brand/login/cosmos-light.webp" alt="" fill priority sizes="100vw" className="hidden object-cover light:block" />
       </motion.div>
       {/* accent light leaking through the cracks, behind the card */}
       <div className="absolute top-1/2 left-1/2 size-[640px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent/10 blur-[140px]" />

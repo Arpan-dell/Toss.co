@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { AuthForm } from "./auth-form";
-import { ShardBackdrop } from "./shard-backdrop";
+import { LoginBackdrop } from "./login-backdrop";
 import { siteHref } from "@/lib/hosts";
 
 export const metadata: Metadata = { title: "Sign in" };
@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { notice, next } = await searchParams;
   return (
     <main className="relative isolate grid min-h-[100dvh] flex-1 place-items-center px-4 py-10">
-      <ShardBackdrop />
+      <LoginBackdrop />
       <AuthForm
         notice={typeof notice === "string" ? NOTICES[notice] : undefined}
         next={typeof next === "string" ? next : undefined}

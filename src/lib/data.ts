@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { createClient } from "./supabase/server";
+import { isSupabaseConfigured, supabaseAdmin } from "./supabase/admin";
 import type { Report } from "./ai/brain";
 import type { AiAction, Customer, CustomerOffer, Device, Driver, Order, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
 
@@ -263,6 +264,31 @@ export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => 
     discount12m: (r?.discount_12m as number) ?? 0,
   };
 });
+
+// Public (signed-out) view of the plan for the landing page. platform_settings is readable only by signed-in
+// users, so this uses the service-role client and selects just the non-sensitive pricing columns (never the
+// owner's UPI ID). Returns null when unavailable so the page still renders.
+export type PublicPlan = { monthlyPrice: number; trialDays: number; discount3m: number; discount6m: number; discount12m: number };
+export async function getPublicPlan(): Promise<PublicPlan | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const { data, error } = await supabaseAdmin()
+      .from("platform_settings")
+      .select("monthly_price, trial_days, discount_3m, discount_6m, discount_12m")
+      .eq("id", 1)
+      .maybeSingle();
+    if (error || !data) return null;
+    return {
+      monthlyPrice: Number(data.monthly_price) || 0,
+      trialDays: Number(data.trial_days) || 0,
+      discount3m: Number(data.discount_3m) || 0,
+      discount6m: Number(data.discount_6m) || 0,
+      discount12m: Number(data.discount_12m) || 0,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function listTenants(): Promise<Tenant[]> {
   const supabase = await db();

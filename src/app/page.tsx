@@ -4,6 +4,7 @@ import { BotDemo } from "@/components/site/bot-demo";
 import { GetBasket } from "@/components/site/get-basket";
 import { HeroOrbit } from "@/components/site/hero-orbit";
 import { InsideGallery } from "@/components/site/inside-gallery";
+import { ManagerPricing } from "@/components/site/manager-pricing";
 import { Manifesto } from "@/components/site/manifesto";
 import { Reveal } from "@/components/site/reveal";
 import { RolesBento } from "@/components/site/roles-bento";
@@ -12,11 +13,15 @@ import { SiteDock } from "@/components/site/site-dock";
 import { SiteNav } from "@/components/site/site-nav";
 import { WorksWith } from "@/components/site/works-with";
 import { Logo } from "@/components/ui";
+import { getPublicPlan } from "@/lib/data";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Metadata } from "next";
 import { appHref } from "@/lib/hosts";
 
 export const metadata: Metadata = { alternates: { canonical: "/" }, openGraph: { url: "/" } };
+
+// Static page, refreshed every 5 minutes so a price change in /owner/settings shows up without a deploy.
+export const revalidate = 300;
 
 // Tells search engines who runs the site and what it is (shown as the knowledge panel / sitelinks search).
 const STRUCTURED_DATA = {
@@ -39,8 +44,10 @@ const STRUCTURED_DATA = {
 };
 
 // Landing page. Midnight theme, Outfit, one aqua accent. Interactive pieces are client islands under
-// components/site; this page stays a Server Component that only lays them out.
-export default function Home() {
+// components/site; this page stays a Server Component that only lays them out. Async so the manager
+// pricing section can read the live price/trial/discounts from platform_settings.
+export default async function Home() {
+  const plan = await getPublicPlan();
   return (
     <div id="top" className="relative flex min-h-[100dvh] w-full flex-1 flex-col overflow-x-clip bg-bg text-fg selection:bg-accent/30">
       {/* constant data, no user input, so plain JSON is safe here */}
@@ -102,6 +109,10 @@ export default function Home() {
             Built for everyone who touches the laundry.
           </Reveal>
           <RolesBento />
+        </section>
+
+        <section id="manager" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
+          <ManagerPricing plan={plan} />
         </section>
 
         <section id="why" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">

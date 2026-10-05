@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Cube, House, MapPinArea, Moon, PlayCircle, SignIn, Sparkle, SquaresFour, Sun, UsersThree, type Icon } from "@phosphor-icons/react";
+import { Cube, House, MapPinArea, Moon, PlayCircle, SignIn, Sparkle, SquaresFour, Storefront, Sun, UsersThree, type Icon } from "@phosphor-icons/react";
 import { Dock, DockIcon, DockItem, DockLabel } from "@/components/core/dock";
 import { switchTheme } from "@/components/theme-toggle";
 import { useDocked } from "./use-docked";
@@ -14,6 +14,7 @@ const ITEMS: { title: string; href: string; icon: Icon; section?: string; deskto
   { title: "How it works", href: "#how", icon: PlayCircle, section: "how" },
   { title: "Inside Toss", href: "#inside", icon: SquaresFour, section: "inside" },
   { title: "Who it's for", href: "#roles", icon: UsersThree, section: "roles" },
+  { title: "For managers", href: "#manager", icon: Storefront, section: "manager" },
   { title: "Why Toss", href: "#why", icon: Sparkle, section: "why", desktopOnly: true },
   { title: "Find a laundry", href: "/laundries", icon: MapPinArea, section: "laundries" },
   { title: "Sign in", href: appHref("/login"), icon: SignIn },

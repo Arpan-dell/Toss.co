@@ -5,7 +5,10 @@ import { GoogleLogo } from "@phosphor-icons/react";
 
 // "Continue with Google": /auth/google sends the browser to Google, which returns to /auth/callback. Signing in and
 // signing up are the same tap; a new Google account becomes a customer and adds its mobile number after.
-export function GoogleButton({ next }: { next?: string }) {
+const DEFAULT_CLASS =
+  "flex w-full items-center justify-center gap-2.5 rounded-full border border-border-strong bg-surface-solid px-4 py-3 text-sm font-medium text-fg transition-colors hover:bg-ink/[0.04] disabled:opacity-70";
+
+export function GoogleButton({ next, className = DEFAULT_CLASS }: { next?: string; className?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -34,7 +37,7 @@ export function GoogleButton({ next }: { next?: string }) {
         type="button"
         onClick={go}
         disabled={busy}
-        className="flex w-full items-center justify-center gap-2.5 rounded-full border border-border-strong bg-surface-solid px-4 py-3 text-sm font-medium text-fg transition-colors hover:bg-ink/[0.04] disabled:opacity-70"
+        className={className}
       >
         <GoogleLogo size={18} weight="bold" aria-hidden />
         {busy ? "Opening Google…" : "Continue with Google"}

@@ -442,3 +442,12 @@ html[data-theme] { background-color: var(--bg); }
 @media (prefers-reduced-motion: reduce) {
   .orbit-ring, .orbit-pulse, .kinetic-word, .kinetic-rise, .kinetic-bracket { animation: none; }
 }
+
+/* ---------- Glass sign-in: keep autofill from painting a solid box over the glass ---------- */
+.glass-auth input:-webkit-autofill,
+.glass-auth input:-webkit-autofill:hover,
+.glass-auth input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  transition: background-color 600000s 0s;
+}

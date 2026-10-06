@@ -17,6 +17,7 @@
     "@react-three/fiber": "^9.8.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
+    "fflate": "^0.8.3",
     "framer-motion": "^13.5.0",
     "jose": "^6.2.12",
     "leaflet": "^1.9.4",

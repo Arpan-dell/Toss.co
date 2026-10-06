@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { planGate } from "@/components/plan-gate";
 import Link from "next/link";
+import { MicrosoftExcelLogo } from "@phosphor-icons/react/dist/ssr";
 import { OrderTable } from "@/components/order-table";
 import { Card, PageTitle } from "@/components/ui";
 import { listOrders } from "@/lib/data";
@@ -23,6 +24,12 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
   const status = FILTERS.find((f) => f.status === params.status)?.status;
   const q = typeof params.q === "string" ? params.q : undefined;
   const orders = await listOrders({ status, q });
+
+  // the export takes the same filter and search, so the file matches what's on screen
+  const exportQs = new URLSearchParams();
+  if (status) exportQs.set("status", status);
+  if (q) exportQs.set("q", q);
+  const exportHref = `/admin/orders/export${exportQs.size ? `?${exportQs}` : ""}`;
 
   const href = (s?: OrderStatus) => {
     const p = new URLSearchParams();
@@ -60,6 +67,15 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
           />
         </form>
         <p className="text-sm text-muted">{orders.length} orders</p>
+        <a
+          href={exportHref}
+          download
+          className="btn-ghost ml-auto inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium text-fg"
+          aria-disabled={orders.length === 0 || undefined}
+        >
+          <MicrosoftExcelLogo size={16} weight="fill" className="text-good" aria-hidden />
+          Download Excel
+        </a>
       </div>
 
       <Card>

@@ -187,11 +187,12 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
   const swap = reduce ? { duration: 0 } : { duration: 0.75, ease: [0.65, 0, 0.35, 1] as const };
 
   return (
-    // no filter on this wrapper, even blur(0): any filter on an ancestor stops the card's backdrop-filter from
-    // seeing the backdrop behind it, and the glass turns clear
+    // no filter and no opacity animation on this wrapper: a filter (even blur(0)) or opacity below 1 on any
+    // ancestor stops the card's backdrop-filter from seeing what's behind it, so the glass would start clear and
+    // only frost once the fade finished. It slides in already frosted.
     <motion.div
-      initial={reduce ? false : { opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={reduce ? false : { y: 30 }}
+      animate={{ y: 0 }}
       transition={{ duration: 0.9, ease: EASE }}
       className="w-full max-w-[920px] [perspective:1400px]"
     >

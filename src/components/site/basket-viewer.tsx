@@ -85,7 +85,7 @@ export function BasketViewer({ color }: { color: string }) {
         aria-label="3D model of the Toss basket box. Drag to turn it."
       >
         {near && (
-          <div className="model-fade-in size-full">
+          <div className="size-full">
             <BasketScene color={color} pose={pose} active={onScreen} near />
           </div>
         )}

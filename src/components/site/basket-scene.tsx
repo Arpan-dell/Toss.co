@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer, RoundedBox } from "@react-three/drei";
 import { transform, type MotionValue } from "framer-motion";
@@ -205,6 +205,22 @@ function Box({ color, progress, pose }: { color: string; progress?: MotionValue<
   );
 }
 
+// Compiles every shader in the scene in the background (KHR_parallel_shader_compile where the browser has it)
+// before the first frame. Without this the first render compiled them synchronously, and three's error check
+// (getProgramInfoLog) blocked the page for up to ~2 s right as you started scrolling.
+function Warmup({ onReady }: { onReady: () => void }) {
+  const { gl, scene, camera } = useThree();
+  useEffect(() => {
+    let live = true;
+    const done = () => live && onReady();
+    gl.compileAsync(scene, camera).then(done, done);
+    return () => {
+      live = false;
+    };
+  }, [gl, scene, camera, onReady]);
+  return null;
+}
+
 export default function BasketScene({
   color,
   progress,
@@ -219,13 +235,21 @@ export default function BasketScene({
   /** closer camera for the smaller viewer in the order form */
   near?: boolean;
 }) {
+  const [ready, setReady] = useState(false);
+  const onReady = useCallback(() => setReady(true), []);
   return (
     <Canvas
-      frameloop={active ? "always" : "never"}
+      // nothing draws until the shaders are compiled; then the canvas fades in
+      frameloop={ready && active ? "always" : "never"}
+      style={{ opacity: ready ? 1 : 0, transition: "opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1)" }}
       dpr={[1, 1.75]}
       camera={{ position: near ? [0, 0.75, 2.5] : [0, 0.9, 3.1], fov: 34 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-      onCreated={({ camera }) => camera.lookAt(0, 0.05, 0)}
+      onCreated={({ camera, gl }) => {
+        camera.lookAt(0, 0.05, 0);
+        // don't ask the driver for shader logs: each query waits for that shader to finish compiling
+        gl.debug.checkShaderErrors = false;
+      }}
       aria-hidden
     >
       <ambientLight intensity={0.35} />
@@ -240,6 +264,7 @@ export default function BasketScene({
       </Environment>
       <Box color={color} progress={progress} pose={pose} />
       <ContactShadows position={[0, -0.2, 0]} opacity={0.42} scale={5} blur={2.6} far={1.6} resolution={512} />
+      <Warmup onReady={onReady} />
     </Canvas>
   );
 }

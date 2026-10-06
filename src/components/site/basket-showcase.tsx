@@ -137,17 +137,24 @@ export function BasketShowcase() {
   const [near, setNear] = useState(false);
   const [active, setActive] = useState(false);
 
-  // load three.js a screen ahead; render frames only while the section is actually on screen
+  // load three.js a screen ahead, but only once the browser is idle (the section starts just under the hero,
+  // so "a screen ahead" is true at page load, when the hero is still animating in); render frames only while
+  // the section is actually on screen
   useEffect(() => {
     const el = runway.current;
     if (!el) return;
-    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "100% 0px" });
+    let idle = 0;
+    const whenIdle = (fn: () => void) =>
+      typeof window.requestIdleCallback === "function" ? (idle = window.requestIdleCallback(fn, { timeout: 2500 })) : (idle = window.setTimeout(fn, 1200));
+    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && whenIdle(() => setNear(true)), { rootMargin: "100% 0px" });
     const onScreen = new IntersectionObserver(([e]) => setActive(e.isIntersecting));
     ahead.observe(el);
     onScreen.observe(el);
     return () => {
       ahead.disconnect();
       onScreen.disconnect();
+      if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
+      window.clearTimeout(idle);
     };
   }, []);
 
@@ -172,7 +179,7 @@ export function BasketShowcase() {
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_55%,rgb(var(--accent-rgb)/0.08),transparent_60%)]" />
         <div className="absolute inset-x-0 top-0 h-[58%] lg:inset-0 lg:h-full">
           {near ? (
-            <div className="model-fade-in h-full">
+            <div className="h-full">
               <BasketScene color={colorOf(color).hex} progress={scrollYProgress} active={active} />
             </div>
           ) : (

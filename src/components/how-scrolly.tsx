@@ -70,6 +70,7 @@ const BLOBS: Record<Role, string[]> = {
 type Listener = (p: number) => void;
 const listeners = new Set<Listener>();
 let lastP = 0; // so a scene that mounts mid-step starts from the current scroll position
+let forceP = false; // write --p on the next measure even if progress hasn't moved (new elements mounted)
 function useProgress(fn: Listener) {
   const ref = useRef(fn);
   useEffect(() => {
@@ -153,8 +154,8 @@ function CustomerScene({ step }: { step: number }) {
             </linearGradient>
           </defs>
           <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="rgb(255 255 255 / 0.1)" strokeWidth="14" strokeLinecap="round" />
-          <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="rgb(2 169 161 / 0.25)" strokeWidth="26" strokeLinecap="round" strokeDasharray="252" style={{ strokeDashoffset: "calc(252px * (1 - min(1, var(--p) * 1.25)))" }} />
-          <path d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#hs-g)" strokeWidth="14" strokeLinecap="round" strokeDasharray="252" style={{ strokeDashoffset: "calc(252px * (1 - min(1, var(--p) * 1.25)))" }} />
+          <path data-p d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="rgb(2 169 161 / 0.25)" strokeWidth="26" strokeLinecap="round" strokeDasharray="252" style={{ strokeDashoffset: "calc(252px * (1 - min(1, var(--p) * 1.25)))" }} />
+          <path data-p d="M20 110 A80 80 0 0 1 180 110" fill="none" stroke="url(#hs-g)" strokeWidth="14" strokeLinecap="round" strokeDasharray="252" style={{ strokeDashoffset: "calc(252px * (1 - min(1, var(--p) * 1.25)))" }} />
         </svg>
         <p className="-mt-14 text-4xl font-semibold tabular-nums text-fg">
           <ProgressNumber to={5} decimals={1} />
@@ -284,8 +285,8 @@ function DriverScene({ step }: { step: number }) {
             <path key={i} d={`M${i * 45 - 20} 0 L${i * 45 + 40} 330`} stroke="rgb(255 255 255 / 0.04)" strokeWidth="10" />
           ))}
           <path d={path} fill="none" stroke="rgb(255 255 255 / 0.1)" strokeWidth="7" strokeLinecap="round" />
-          <path d={path} fill="none" stroke="rgb(94 234 212 / 0.25)" strokeWidth="13" strokeLinecap="round" strokeDasharray="520" style={{ strokeDashoffset: "calc(520px * (1 - min(1, var(--p) * 1.2)))" }} />
-          <path d={path} fill="none" stroke="#5eead4" strokeWidth="5" strokeLinecap="round" strokeDasharray="520" style={{ strokeDashoffset: "calc(520px * (1 - min(1, var(--p) * 1.2)))" }} />
+          <path data-p d={path} fill="none" stroke="rgb(94 234 212 / 0.25)" strokeWidth="13" strokeLinecap="round" strokeDasharray="520" style={{ strokeDashoffset: "calc(520px * (1 - min(1, var(--p) * 1.2)))" }} />
+          <path data-p d={path} fill="none" stroke="#5eead4" strokeWidth="5" strokeLinecap="round" strokeDasharray="520" style={{ strokeDashoffset: "calc(520px * (1 - min(1, var(--p) * 1.2)))" }} />
           <text x="24" y="314" textAnchor="middle" fontSize="16">🚚</text>
           <text x="110" y="142" textAnchor="middle" fontSize="15">🏠</text>
           <text x="150" y="42" textAnchor="middle" fontSize="15">🏠</text>
@@ -390,7 +391,7 @@ function ManagerScene({ step }: { step: number }) {
           <p className="text-[10px] text-ink/50">Next 7 days · pickups</p>
           <div className="mt-2 flex flex-1 items-end gap-1.5">
             {bars.map((b, i) => (
-              <span key={i} className="flex-1 rounded-t" style={{ height: `calc(${b}% * min(1, var(--p) * 1.3))`, background: i === 6 ? "#d95926" : "#3987e5", transition: "height 0.2s linear" }} />
+              <span key={i} data-p className="flex-1 rounded-t" style={{ height: `calc(${b}% * min(1, var(--p) * 1.3))`, background: i === 6 ? "#d95926" : "#3987e5", transition: "height 0.2s linear" }} />
             ))}
           </div>
           <p className="mt-1.5 text-[9px] text-ink/40">Backtested accuracy 86%</p>
@@ -398,7 +399,7 @@ function ManagerScene({ step }: { step: number }) {
         <div className="col-span-2 flex flex-col items-center justify-center gap-1 rounded-xl bg-ink/[0.04] p-3">
           <svg viewBox="0 0 80 80" className="size-16 -rotate-90">
             <circle cx="40" cy="40" r="32" fill="none" stroke="rgb(255 255 255 / 0.08)" strokeWidth="8" />
-            <circle cx="40" cy="40" r="32" fill="none" stroke="#4ade80" strokeWidth="8" strokeLinecap="round" strokeDasharray="201" style={{ strokeDashoffset: "calc(201px * (1 - 0.82 * min(1, var(--p) * 1.3)))" }} />
+            <circle data-p cx="40" cy="40" r="32" fill="none" stroke="#4ade80" strokeWidth="8" strokeLinecap="round" strokeDasharray="201" style={{ strokeDashoffset: "calc(201px * (1 - 0.82 * min(1, var(--p) * 1.3)))" }} />
           </svg>
           <p className="text-sm font-semibold text-fg"><ProgressNumber to={82} /></p>
           <p className="text-[9px] text-ink/50">Health</p>
@@ -485,7 +486,6 @@ const PARTICLES = Array.from({ length: 18 }, (_, i) => ({
   left: (i * 53) % 100,
   top: (i * 37 + 11) % 100,
   size: 2 + (i % 3),
-  speed: [-90, -50, -20, 30, 70][i % 5],
   delay: (i % 6) * 0.45,
 }));
 
@@ -495,7 +495,7 @@ function MotionLayer({ role, step }: { role: Role; step: number }) {
     <div aria-hidden className="pointer-events-none absolute inset-0 grid place-items-center">
       {/* kinetic keyword, sliding with scroll */}
       <div key={`w-${role}-${step}`} className="absolute inset-x-0 top-[8%] overflow-hidden text-center">
-        <span
+        <span data-p
           className="hs-outline hs-word-in inline-block whitespace-nowrap leading-none font-black will-change-transform"
           style={{ fontSize: `min(9.5rem, ${Math.round(118 / WORDS[role][step].length)}cqw)`, transform: "translateX(calc((0.5 - var(--p)) * 14%))" }}
         >
@@ -504,7 +504,7 @@ function MotionLayer({ role, step }: { role: Role; step: number }) {
       </div>
 
       {/* shape that morphs from step to step and turns with scroll */}
-      <div
+      <div data-p
         className="absolute aspect-square w-[52%] max-w-[440px] border-2 will-change-transform transition-[border-radius,border-color] duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)]"
         style={{ borderRadius: SHAPES[step], borderColor: `${c1}55`, transform: `rotate(calc(${step * 45}deg + var(--p) * 90deg))`, boxShadow: `0 0 60px -20px ${c1}` }}
       />
@@ -520,6 +520,7 @@ function MotionLayer({ role, step }: { role: Role; step: number }) {
         <circle cx="200" cy="200" r="188" fill="none" stroke="rgb(255 255 255 / 0.07)" strokeDasharray="2 9" className="mg-orbit" />
         <circle cx="200" cy="200" r="150" fill="none" stroke="rgb(255 255 255 / 0.06)" strokeDasharray="40 18" className="mg-orbit-rev" />
         <circle
+          data-p
           cx="200"
           cy="200"
           r="170"
@@ -533,6 +534,7 @@ function MotionLayer({ role, step }: { role: Role; step: number }) {
           style={{ strokeDashoffset: "calc(1068px * (1 - var(--p)))" }}
         />
         <circle
+          data-p
           cx="200"
           cy="200"
           r="170"
@@ -546,12 +548,12 @@ function MotionLayer({ role, step }: { role: Role; step: number }) {
         />
       </svg>
 
-      {/* parallax particles */}
+      {/* twinkling particles (no scroll parallax: 18 per-frame style writes for a few pixels of drift) */}
       {PARTICLES.map((pt, i) => (
         <span
           key={i}
           className="hs-twinkle absolute rounded-full bg-white"
-          style={{ left: `${pt.left}%`, top: `${pt.top}%`, width: pt.size, height: pt.size, transform: `translateY(calc(var(--p) * ${pt.speed}px))`, animationDelay: `${pt.delay}s` }}
+          style={{ left: `${pt.left}%`, top: `${pt.top}%`, width: pt.size, height: pt.size, animationDelay: `${pt.delay}s` }}
         />
       ))}
 
@@ -568,7 +570,7 @@ function Satellites({ role, step, device }: { role: Role; step: number; device: 
   return (
     <div key={`s-${role}-${step}`} aria-hidden className="pointer-events-none absolute inset-0 z-20 hidden sm:block">
       {CHIPS[role][step].map(([icon, text], i) => (
-        <div key={text} className="absolute will-change-transform" style={{ ...CHIP_POS[device][i], transform: `translateY(calc((var(--p) - 0.5) * ${CHIP_DRIFT[i]}px))` }}>
+        <div key={text} data-p className="absolute will-change-transform" style={{ ...CHIP_POS[device][i], transform: `translateY(calc((var(--p) - 0.5) * ${CHIP_DRIFT[i]}px))` }}>
           <div className="mg-pop" style={{ animationDelay: `${450 + i * 220}ms` }}>
             <div className="mg-bob flex items-center gap-2 rounded-2xl border border-ink/15 bg-surface-solid/90 px-3 py-2 text-xs font-medium whitespace-nowrap text-fg shadow-[0_12px_40px_-12px_rgb(0_0_0/0.8)]" style={{ animationDelay: `${i * 0.7}s` }}>
               <span className="grid size-6 place-items-center rounded-lg bg-ink/10 text-accent">{icon && (() => { const I = icon; return <I size={15} weight="bold" />; })()}</span>
@@ -612,6 +614,10 @@ function Window({ app, children }: { app: string; children: React.ReactNode }) {
   );
 }
 
+// the device leans with scroll progress through the step
+const tiltFor = (p: number) =>
+  `perspective(1400px) rotateY(${((p - 0.5) * -16).toFixed(2)}deg) rotateX(${((0.5 - p) * 7).toFixed(2)}deg) translateY(${((0.5 - p) * 14).toFixed(1)}px)`;
+
 // ---------- section ----------
 export function HowScrolly() {
   const [role, setRole] = useState<Role>("customer");
@@ -635,8 +641,16 @@ export function HowScrolly() {
       const r = el.getBoundingClientRect();
       p = Math.min(1, Math.max(0, (mid - r.top) / Math.max(r.height, 1)));
     }
-    // --p restyles the whole stage, so skip writes too small to see
-    if (Math.abs(p - lastP) > 0.002 || p === 0 || p === 1) stage.current?.style.setProperty("--p", p.toFixed(3));
+    // --p goes only onto the elements that use it (marked data-p): setting it on the stage made every frame
+    // restyle and re-lay-out the whole device. The device tilt is written as a plain transform for the same
+    // reason. Skip writes too small to see.
+    if (forceP || Math.abs(p - lastP) > 0.002 || p === 0 || p === 1) {
+      forceP = false;
+      const v = p.toFixed(3);
+      stage.current?.querySelectorAll<HTMLElement | SVGElement>("[data-p]").forEach((n) => n.style.setProperty("--p", v));
+      const tilt = stage.current?.querySelector<HTMLElement>("[data-p-tilt]");
+      if (tilt) tilt.style.transform = tiltFor(p);
+    }
     lastP = p;
     listeners.forEach((l) => l(p));
     setStep((s) => (s === active ? s : active));
@@ -668,6 +682,13 @@ export function HowScrolly() {
       window.removeEventListener("resize", onScroll);
     };
   }, [measure, role]);
+
+  // a new step's (or role's) elements mount after the last write; give them the current value right away
+  useEffect(() => {
+    forceP = true;
+    const id = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(id);
+  }, [step, role, measure]);
 
   const pick = (r: Role) => {
     setRole(r);
@@ -720,9 +741,9 @@ export function HowScrolly() {
             <MotionLayer role={role} step={step} />
             <Satellites role={role} step={step} device={R.device} />
             <div className="relative z-10 w-full scale-[0.78] px-4 sm:scale-90 lg:scale-100">
-              <div
+              <div data-p-tilt
                 className="transition-transform duration-150 ease-out"
-                style={{ transform: "perspective(1400px) rotateY(calc((var(--p) - 0.5) * -16deg)) rotateX(calc((0.5 - var(--p)) * 7deg)) translateY(calc((0.5 - var(--p)) * 14px))" }}
+                style={{ transform: tiltFor(0) }}
               >
               {R.device === "phone" ? (
                 <Phone app={R.app}>

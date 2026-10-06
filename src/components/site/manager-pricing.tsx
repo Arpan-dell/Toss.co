@@ -117,17 +117,17 @@ function BoardScene() {
             transition={{ delay: 0.2 + i * 0.09, duration: 0.6, ease: EASE }}
             className={`flex items-center gap-3 rounded-xl border px-3.5 py-2.5 ${i === 0 ? "border-accent/50 bg-accent/10" : "border-border bg-bg/60"}`}
           >
-            <span className="font-mono text-xs text-fg">{r.code}</span>
-            <span className="text-xs text-muted">{r.area}</span>
-            <span className="ml-auto font-mono text-xs text-secondary tabular-nums">{r.kg} kg</span>
-            <AnimatePresence mode="popLayout" initial={false}>
+            <span className="shrink-0 font-mono text-xs whitespace-nowrap text-fg">{r.code}</span>
+            <span className="min-w-0 truncate text-xs text-muted">{r.area}</span>
+            <span className="ml-auto shrink-0 font-mono text-xs whitespace-nowrap text-secondary tabular-nums">{r.kg} kg</span>
+            <AnimatePresence mode="wait" initial={false}>
               <motion.span
                 key={s.label}
                 initial={{ opacity: 0, y: 8, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.35, ease: EASE }}
-                className={`rounded-[4px] px-2 py-0.5 font-mono text-[10px] tracking-[0.06em] whitespace-nowrap uppercase ${s.cls}`}
+                className={`shrink-0 rounded-[4px] px-2 py-0.5 font-mono text-[10px] tracking-[0.06em] whitespace-nowrap uppercase ${s.cls}`}
               >
                 {s.label}
               </motion.span>
@@ -362,15 +362,15 @@ function InvoiceScene() {
           <p className="font-mono text-[11px] text-muted">TOSS-2026-000142</p>
         </div>
         <div className="mt-4 space-y-1.5 font-mono text-xs text-secondary">
-          <p className="flex justify-between">
+          <p className="flex justify-between gap-3">
             <span>Wash &amp; fold · 6.1 kg × ₹50</span>
             <span>₹305</span>
           </p>
-          <p className="flex justify-between">
+          <p className="flex justify-between gap-3">
             <span>Pickup</span>
             <span>₹0</span>
           </p>
-          <p className="flex justify-between border-t border-border pt-1.5 font-bold text-fg">
+          <p className="flex justify-between gap-3 border-t border-border pt-1.5 font-bold text-fg">
             <span>Total</span>
             <span>₹305</span>
           </p>
@@ -493,9 +493,9 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
 
   useEffect(() => {
     if (reduce || held || !inView) return;
-    const id = window.setInterval(() => setActive((a) => (a + 1) % FEATURES.length), SCENE_MS);
-    return () => window.clearInterval(id);
-  }, [reduce, held, inView]);
+    const id = window.setTimeout(() => setActive((a) => (a + 1) % FEATURES.length), SCENE_MS);
+    return () => window.clearTimeout(id);
+  }, [reduce, held, inView, active]);
 
   const pick = (i: number) => {
     setActive(i);
@@ -508,9 +508,11 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
   return (
     // reducedMotion="user": the scenes' own entrances also hold still for reduced-motion visitors
     <MotionConfig reducedMotion="user">
-      <div ref={root} className="grid items-center gap-10 lg:grid-cols-2 lg:gap-12" onMouseLeave={() => setHeld(false)}>
-        {/* the pitch (min-w-0: the one-line feature descriptions must truncate, not widen the column) */}
-        <div className="min-w-0">
+      {/* Four blocks. Desktop: pitch, feature list and price on the left, the board on the right. Phones read
+          headline -> board -> price (the list is replaced by the board's own tabs), so the demo comes before
+          the price instead of a long scroll below it. min-w-0 keeps long lines truncating, not widening. */}
+      <div ref={root} className="grid gap-8 lg:grid-cols-2 lg:grid-rows-[auto_auto_auto] lg:gap-x-12 lg:gap-y-0" onMouseLeave={() => setHeld(false)}>
+        <div className="order-1 min-w-0 lg:order-none lg:col-start-1 lg:row-start-1 lg:self-end">
           <motion.p
             initial={reduce ? false : { opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -546,8 +548,10 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
           <p className="mt-3 max-w-[50ch] text-base leading-relaxed text-secondary">
             One subscription replaces the booking calendar, the dispatcher, the invoice clerk and the notebook of who owes what.
           </p>
+        </div>
 
-          {/* the features, which drive the demo */}
+        {/* the features, which drive the demo (desktop) */}
+        <div className="order-2 hidden min-w-0 lg:order-none lg:col-start-1 lg:row-start-2 lg:block">
           <ul className="mt-5 space-y-0.5" role="list">
             {FEATURES.map((f, i) => {
               const on = i === active;
@@ -593,9 +597,11 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
               );
             })}
           </ul>
+        </div>
 
-          {/* the price */}
-          <div className="mt-5 flex flex-wrap items-end gap-x-8 gap-y-4 border-t border-border pt-5">
+        {/* the price: after the demo on phones */}
+        <div className="order-4 min-w-0 lg:order-none lg:col-start-1 lg:row-start-3 lg:self-start">
+          <div className="flex flex-wrap items-end gap-x-8 gap-y-4 border-t border-border pt-5 lg:mt-5">
             <div>
               {plan && plan.monthlyPrice > 0 ? (
                 <>
@@ -626,27 +632,30 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
           </div>
         </div>
 
-        {/* the demo board */}
+        {/* the demo board: right column on desktop, straight after the headline on phones */}
         <motion.div
           initial={reduce ? false : { opacity: 0, y: 40, rotateX: 8 }}
           whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
           viewport={{ once: true, margin: "-10%" }}
           transition={{ duration: 0.9, ease: EASE }}
-          className="relative min-w-0 [perspective:1200px]"
+          className="relative order-3 min-w-0 [perspective:1200px] lg:order-none lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-center"
         >
           <div aria-hidden className="pointer-events-none absolute -inset-10 -z-10 rounded-full bg-accent/15 blur-[90px]" />
           <div className="overflow-hidden rounded-2xl border border-border-strong bg-surface-solid shadow-[0_40px_90px_-40px_rgb(0_0_0/0.6)]">
             <div className="flex items-center gap-3 border-b border-border px-4 py-3">
               <span className="size-2 animate-pulse rounded-full bg-good" aria-hidden />
               <span className="text-sm font-semibold text-fg">Fresh Laundry</span>
-              <span className="font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Manager dashboard</span>
+              <span className="hidden font-mono text-[10px] tracking-[0.12em] text-muted uppercase sm:inline">Manager dashboard</span>
               <span className="ml-auto font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Example data</span>
             </div>
             <div className="flex items-center gap-1 overflow-x-auto border-b border-border px-3 py-2 [scrollbar-width:none]">
               {FEATURES.map((f, i) => (
-                <span
+                <button
+                  type="button"
                   key={f.id}
-                  className={`relative shrink-0 rounded-md px-2.5 py-1 text-xs transition-colors ${i === active ? "text-fg" : "text-muted"}`}
+                  onClick={() => setActive(i)}
+                  aria-pressed={i === active}
+                  className={`relative shrink-0 rounded-md px-3 py-1.5 text-xs transition-colors hover:text-fg ${i === active ? "text-fg" : "text-muted"}`}
                 >
                   {i === active && (
                     <motion.span
@@ -660,10 +669,10 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
                     />
                   )}
                   <span className="relative">{f.tab}</span>
-                </span>
+                </button>
               ))}
             </div>
-            <div className="relative h-[340px] p-4" aria-live="off">
+            <div className="relative h-[320px] p-3 sm:h-[340px] sm:p-4" aria-live="off">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.div
                   key={FEATURES[active].id}
@@ -676,6 +685,10 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
                   <Scene />
                 </motion.div>
               </AnimatePresence>
+            </div>
+            <div className="border-t border-border px-4 py-3 lg:hidden">
+              <p className="text-sm font-semibold text-fg">{FEATURES[active].title}</p>
+              <p className="mt-0.5 text-xs text-muted">{FEATURES[active].line}</p>
             </div>
           </div>
         </motion.div>

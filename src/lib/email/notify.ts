@@ -168,3 +168,38 @@ export async function runLowStockAlerts(): Promise<{ sent: number }> {
   }
   return { sent };
 }
+
+/** Daily: one email per Pro business with orders past their promised turnaround and not ready. */
+export async function runLateAlerts(): Promise<{ sent: number }> {
+  if (!emailEnabled()) return { sent: 0 };
+  const db = supabaseAdmin();
+  const nowIso = new Date().toISOString();
+  const { data: late } = await db
+    .from("orders")
+    .select("tenant_id, device_id, device_order_id, ready_by")
+    .eq("status", "COMPLETED")
+    .is("ready_at", null)
+    .lt("ready_by", nowIso)
+    .not("tenant_id", "is", null)
+    .order("ready_by")
+    .limit(500);
+  const byTenant = new Map<string, NonNullable<typeof late>>();
+  for (const o of late ?? []) byTenant.set(o.tenant_id as string, [...(byTenant.get(o.tenant_id as string) ?? []), o]);
+  let sent = 0;
+  for (const [id, orders] of byTenant) {
+    const b = await tenant(id);
+    if (!b || tierOf(planState({ planStatus: b.plan_status, trialEndsAt: b.trial_ends_at ?? undefined, paidUntil: b.paid_until ?? undefined }).state) !== "PRO") continue;
+    const ok = await sendEmail(
+      await managerEmail(b.manager_id),
+      t.managerLateOrders({
+        business: b.name,
+        orders: orders.slice(0, 20).map((o) => {
+          const h = Math.max(1, Math.round((Date.now() - new Date(o.ready_by as string).getTime()) / 3_600_000));
+          return { label: `${String(o.device_id).slice(-5).replace(":", "")}-#${o.device_order_id}`, late: h >= 48 ? `late by ${Math.round(h / 24)} days` : `late by ${h} h` };
+        }),
+      }),
+    );
+    if (ok) sent++;
+  }
+  return { sent };
+}

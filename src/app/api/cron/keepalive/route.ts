@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { runAutopilotAll } from "@/lib/ai/autopilot";
-import { runLowStockAlerts, runPlanReminders } from "@/lib/email/notify";
+import { runLateAlerts, runLowStockAlerts, runPlanReminders } from "@/lib/email/notify";
 import { runWinback } from "@/lib/offers";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { logError } from "@/lib/log";
@@ -36,11 +36,15 @@ export async function GET(request: Request) {
     logError("low-stock alerts failed", err);
     return { error: "stock alerts failed" };
   });
+  const late = await runLateAlerts().catch((err) => {
+    logError("late-order alerts failed", err);
+    return { error: "late alerts failed" };
+  });
   const ai = await runAutopilotAll(200_000).catch((err) => {
     logError("Toss AI daily run failed", err);
     return { error: "ai failed" };
   });
-  return Response.json({ ok: true, winback, reminders, stock, ai });
+  return Response.json({ ok: true, winback, reminders, stock, late, ai });
 }
 
 // Constant-time check of "Bearer <CRON_SECRET>" (hashing first makes the lengths equal).

@@ -26,6 +26,8 @@ export interface Tenant {
   otherCostPerKg: number; // water, power, labour per kg washed (for profit)
   driverPayPerPickup: number; // ₹ a driver earns per pickup
   driverPayPerKm: number; // plus ₹ per km from the store to the basket
+  turnaroundHours: number; // promised time from pickup to ready
+  googleReviewUrl?: string; // happy customers are pointed here
   planStatus: "TRIAL" | "ACTIVE" | "SUSPENDED";
   trialEndsAt?: string;
   paidUntil?: string;
@@ -159,6 +161,11 @@ export interface Order {
   amountBeforeDiscount?: number;
   amountGross?: number; // price before basket credit
   creditApplied?: number; // basket credit taken off this bill (amountDue is after it)
+  readyBy?: string; // promised: pickup completed + the laundry's turnaround
+  readyAt?: string; // the laundry marked it ready
+  rating?: number; // 1-5 from the customer
+  ratingComment?: string;
+  ratedAt?: string;
   reportedWeightKg?: number; // what the basket said, kept once the weight is confirmed at pickup
   weighedKg?: number; // the driver's (or manager's) scale reading
   weightSource?: "driver" | "basket" | "manager"; // where the billed weight came from

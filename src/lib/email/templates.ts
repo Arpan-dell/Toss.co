@@ -134,13 +134,17 @@ export const customerInvoice = (d: {
   customer: { name?: string };
   order: { label: string; weightKg: number; total: number; discountPct?: number; completedAt?: string };
   payment: { method: string; paidAt?: string };
+  rateUrl?: string;
 }) =>
   mail(
     `Your invoice from ${d.business.name} · ${inr(d.order.total)} paid`,
     layout({
       preheader: `Invoice ${d.number} for your laundry pickup is attached.`,
       heading: `Thanks${d.customer.name ? `, ${d.customer.name.split(" ")[0]}` : ""}! Your payment is received`,
-      paragraphs: [`Your invoice from <b>${e(d.business.name)}</b> is attached as a PDF. You can also download it anytime from your Toss dashboard.`],
+      paragraphs: [
+        `Your invoice from <b>${e(d.business.name)}</b> is attached as a PDF. You can also download it anytime from your Toss dashboard.`,
+        ...(d.rateUrl ? [`⭐ How did we do? <a href="${e(d.rateUrl)}">Rate this pickup</a> (it takes one tap).`] : []),
+      ],
       rows: [
         ["Invoice", d.number],
         ["Pickup", d.order.label],
@@ -355,6 +359,22 @@ export const managerLowStock = (p: { business: string; items: { name: string; le
       ],
       rows: p.items.map((i) => [i.name, `${i.left} left`] as Row),
       cta: { label: "Open Supplies", url: `${APP}/admin/stock` },
+      tone: "warn",
+    }),
+  );
+
+/** Daily: picked-up orders past the laundry's promised turnaround and not marked ready (Toss Pro). */
+export const managerLateOrders = (p: { business: string; orders: { label: string; late: string }[] }) =>
+  mail(
+    `⏰ ${p.orders.length} order${p.orders.length === 1 ? " is" : "s are"} past your promised time`,
+    layout({
+      preheader: "Mark them ready when they're done, so customers hear about it.",
+      heading: "Running late",
+      paragraphs: [
+        `These pickups at <b>${e(p.business)}</b> are past the turnaround you promise and not marked ready yet. When they're done, tap <b>Mark ready</b> and the customer is told on Telegram.`,
+      ],
+      rows: p.orders.map((o) => [o.label, o.late] as Row),
+      cta: { label: "Open the live board", url: `${APP}/admin` },
       tone: "warn",
     }),
   );

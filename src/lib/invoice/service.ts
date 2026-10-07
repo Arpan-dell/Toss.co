@@ -34,7 +34,7 @@ export const invoiceFileName = (number: string) => `Toss-invoice-${number}.pdf`;
  * `audience` decides whose copy it is: the customer's own copy shows their email and phone; the business copy
  * (manager or owner downloading it) doesn't, because managers may not see customers' contact details.
  */
-export async function loadInvoice(orderId: string, audience: "customer" | "business" = "customer"): Promise<{ data: InvoiceData; customerEmail?: string; customerTelegram?: string } | null> {
+export async function loadInvoice(orderId: string, audience: "customer" | "business" = "customer"): Promise<{ data: InvoiceData; customerEmail?: string; customerTelegram?: string; rateUrl?: string } | null> {
   const db = supabaseAdmin();
   const { data: number, error } = await db.rpc("issue_invoice", { p_order: orderId });
   if (error) throw error;
@@ -88,6 +88,8 @@ export async function loadInvoice(orderId: string, audience: "customer" | "busin
     data,
     customerEmail: u((c as Row | null)?.email),
     customerTelegram: u((c as Row | null)?.telegram_id) ?? u(o.customer_telegram_id),
+    // one-tap rating page for this order (token set when it was paid; migration 0022)
+    rateUrl: o.rate_token ? `${SITE}/rate/${o.rate_token as string}` : undefined,
   };
 }
 
@@ -111,7 +113,7 @@ export async function sendInvoice(orderId: string): Promise<{ email: boolean; te
     const pdf = await invoicePdf(inv.data);
     const file = invoiceFileName(inv.data.number);
     const email = emailEnabled()
-      ? await sendEmail(inv.customerEmail, customerInvoice(inv.data), {
+      ? await sendEmail(inv.customerEmail, customerInvoice({ ...inv.data, rateUrl: inv.rateUrl }), {
           replyTo: inv.data.business.managerEmail,
           attachments: [{ filename: file, content: Buffer.from(pdf), contentType: "application/pdf" }],
         })
@@ -126,7 +128,8 @@ export async function sendInvoice(orderId: string): Promise<{ email: boolean; te
         pdf,
         file,
         // Telegram parses this caption as HTML and the business name is typed by the manager: escape it.
-        `🧾 <b>Payment received, thank you!</b>\nInvoice ${esc(inv.data.number)} · ${esc(inv.data.business.name)}`,
+        `🧾 <b>Payment received, thank you!</b>\nInvoice ${esc(inv.data.number)} · ${esc(inv.data.business.name)}` +
+          (inv.rateUrl ? `\n\n⭐ How did we do? <a href="${esc(inv.rateUrl)}">Rate this pickup</a>` : ""),
       )
         .then(() => true)
         .catch((err) => {

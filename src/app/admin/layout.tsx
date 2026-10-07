@@ -22,6 +22,7 @@ const nav: PortalNavItem[] = [
   { href: "/admin/analytics", label: "Analytics", icon: "analytics" },
   { href: "/admin/profit", label: "Profit", icon: "profit" },
   { href: "/admin/stock", label: "Supplies", icon: "stock" },
+  { href: "/admin/ratings", label: "Ratings", icon: "ratings" },
   { href: "/admin/business", label: "Business", icon: "business" },
   { href: "/admin/billing", label: "Billing", icon: "billing" },
 ];

@@ -15,4 +15,7 @@ export const PLAN_FEATURES: PlanFeature[] = [
   { name: "Download orders to Excel", free: false, pro: true },
   { name: "Supplies stock with low-stock alerts and WhatsApp reorder", free: false, pro: true },
   { name: "Profit per order and per customer", free: false, pro: true },
+  { name: "Promised turnaround, \"ready\" notices to customers", free: true, pro: true },
+  { name: "Late-order alerts on the live board", free: false, pro: true },
+  { name: "Customer ratings and Google review requests", free: "collected", pro: "with insights" },
 ];

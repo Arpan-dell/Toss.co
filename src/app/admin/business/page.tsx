@@ -4,6 +4,7 @@ import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { IdChip } from "@/components/id-chip";
 import { Card, PageTitle, StatTile } from "@/components/ui";
 import { requestClosure, updateBusiness, updateWeighing, updateWinback } from "@/lib/actions/manager";
+import { updateService } from "@/lib/actions/service";
 import { getOfferStats, getTenantById, listCustomers } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { requireRole } from "@/lib/session";
@@ -85,6 +86,17 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
               <span className="mt-1 block text-xs text-muted">Off: pickups bill the basket&apos;s reading straight away. You can still confirm any unpaid order&apos;s weight on its page.</span>
             </span>
           </label>
+        </ActionForm>
+      </Card>
+
+      <Card title="Turnaround and reviews">
+        <ActionForm action={updateService} submitLabel="Save">
+          <Field label="Ready within (hours)" hint="From pickup. Late orders show on your live board; tap Mark ready to tell the customer.">
+            <input name="turnaroundHours" type="number" min={1} max={720} step={1} required defaultValue={tenant.turnaroundHours} className={fieldClass} />
+          </Field>
+          <Field label="Google review link (optional)" hint="Customers who rate you 4 or 5 stars are asked to post it on Google.">
+            <input name="googleReviewUrl" type="url" defaultValue={tenant.googleReviewUrl ?? ""} placeholder="https://g.page/r/…/review" className={fieldClass} />
+          </Field>
         </ActionForm>
       </Card>
 

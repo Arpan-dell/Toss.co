@@ -7,12 +7,14 @@ import { planGate } from "@/components/plan-gate";
 import { StatusTimeline } from "@/components/status-timeline";
 import { Badge, Card, OrderStatusBadge, PageTitle, PaymentBadge } from "@/components/ui";
 import { confirmPayment, markPaidCash, rejectPayment } from "@/lib/actions/manager";
+import { markReady } from "@/lib/actions/service";
 import { assignDriver, autoAssign, setOrderStatus } from "@/lib/actions/manager-ops";
-import { deviceLabel, getOrder, listCustomers, listDevices, listDrivers, listOrderEvents } from "@/lib/data";
+import { deviceLabel, getOrder, listCustomers, listDevices, listDrivers, listOrderEvents, now } from "@/lib/data";
 import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
 import { AmountForm } from "../../payments/amount-form";
 import { weightGapPct } from "@/lib/dispatch/weighing";
 import type { Order } from "@/lib/types";
+import { dueLabel, isLate } from "@/lib/turnaround";
 import { WeightForm } from "./weight-form";
 
 // Where the billed weight came from, as a tag (never color-only).
@@ -75,7 +77,38 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
             <dd className="tabular-nums">{formatKg(order.weightKg)}</dd>
             <dt className="text-muted">Driver</dt>
             <dd>{driver?.name ?? (order.driverId ? `Telegram ${order.driverId}` : "—")}</dd>
+            {order.status === "COMPLETED" && (
+              <>
+                <dt className="text-muted">Ready</dt>
+                <dd className="flex flex-wrap items-center gap-2">
+                  {order.readyAt ? (
+                    <span>{formatDateTime(order.readyAt)}</span>
+                  ) : (
+                    <>
+                      <Badge tone={isLate(order, now()) ? "critical" : "info"}>{dueLabel(order, now())}</Badge>
+                      {order.readyBy && <span className="text-xs text-muted">promised {formatDateTime(order.readyBy)}</span>}
+                    </>
+                  )}
+                </dd>
+              </>
+            )}
+            {order.rating && (
+              <>
+                <dt className="text-muted">Rating</dt>
+                <dd>
+                  <span className="text-warn" aria-label={`${order.rating} out of 5`}>{"★".repeat(order.rating)}</span>
+                  <span className="text-muted">{"★".repeat(5 - order.rating)}</span>
+                  {order.ratingComment && <span className="mt-1 block text-xs text-secondary">“{order.ratingComment}”</span>}
+                </dd>
+              </>
+            )}
           </dl>
+          {order.status === "COMPLETED" && !order.readyAt && (
+            <form action={markReady} className="mt-4">
+              <input type="hidden" name="orderId" value={order.id} />
+              <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium">Mark ready · tell the customer</button>
+            </form>
+          )}
         </Card>
 
         <Card title="Manage pickup">

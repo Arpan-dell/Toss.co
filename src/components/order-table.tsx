@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Order } from "@/lib/types";
 import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
+import { now } from "@/lib/data";
+import { isLate } from "@/lib/turnaround";
 import { EmptyState, OrderStatusBadge, PaymentBadge } from "./ui";
 
 export const invoiceHref = (orderId: string) => `/invoice/${encodeURIComponent(orderId)}`;
@@ -46,7 +48,10 @@ export function OrderTable({ orders, showAddress = false, emptyText = "No orders
                 {formatINR(o.amountDue)}
                 {o.discountPct ? <span className="ml-1.5 rounded-full bg-good-bg px-1.5 py-0.5 text-[10px] text-good">−{o.discountPct}%</span> : null}
               </td>
-              <td className="px-3 py-2.5"><OrderStatusBadge status={o.status} /></td>
+              <td className="px-3 py-2.5">
+                <OrderStatusBadge status={o.status} />
+                {linkToAdmin && isLate(o, now()) && <span className="ml-1.5 rounded-[4px] bg-critical-bg px-1.5 py-0.5 text-[10px] font-medium text-critical">Late</span>}
+              </td>
               <td className="px-5 py-2.5">
                 <span className="flex items-center gap-2">
                   <PaymentBadge status={o.paymentStatus} />

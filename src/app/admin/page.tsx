@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { planGate } from "@/components/plan-gate";
+import { currentTier, planGate } from "@/components/plan-gate";
+import { markReady } from "@/lib/actions/service";
+import { dueLabel, isLate } from "@/lib/turnaround";
 import { Badge, Card, EmptyState, OrderStatusBadge, PageTitle, StatTile } from "@/components/ui";
 import { deviceLabel, isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, now } from "@/lib/data";
 import { formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
@@ -13,13 +15,16 @@ export default async function LiveBoard() {
   const locked = await planGate();
   if (locked) return locked;
 
-  const [active, devices, drivers, all] = await Promise.all([
+  const [active, devices, drivers, all, tier] = await Promise.all([
     listActiveOrders(),
     listDevices(),
     listDrivers(),
     listOrders(),
+    currentTier(),
   ]);
   const current = now();
+  // promised turnaround: picked up, not ready, past the promise (Pro)
+  const late = tier?.tier === "PRO" ? all.filter((o) => isLate(o, current)).slice(0, 8) : [];
   const pending = active.filter((o) => o.status === "PENDING");
   const enRoute = active.filter((o) => o.status === "ACCEPTED");
   const outstanding = all
@@ -43,6 +48,28 @@ export default async function LiveBoard() {
         />
         <StatTile label="Unpaid invoices" value={formatINR(outstanding)} />
       </div>
+
+      {late.length > 0 && (
+        <Card title={`Running late (${late.length})`} action={<Badge tone="critical">Past promise</Badge>}>
+          <ul className="divide-y divide-border">
+            {late.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                <span className="text-sm">
+                  <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="font-mono text-xs text-accent hover:text-accent-2">
+                    {orderLabel(o)}
+                  </Link>{" "}
+                  <span className="text-muted">{deviceArea(o.deviceId)}</span>
+                  <span className="ml-2 font-medium text-critical">{dueLabel(o, current)}</span>
+                </span>
+                <form action={markReady}>
+                  <input type="hidden" name="orderId" value={o.id} />
+                  <button className="btn-ghost rounded-full px-3.5 py-1.5 text-xs font-medium text-fg">Mark ready</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card title="Active pickups" action={<Badge tone="good" live>Live</Badge>}>
         {active.length === 0 ? (

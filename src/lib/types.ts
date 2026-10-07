@@ -166,6 +166,7 @@ export interface Order {
   rating?: number; // 1-5 from the customer
   ratingComment?: string;
   ratedAt?: string;
+  pickupPhotoAt?: string; // the driver sent a photo of the bag at pickup (shown via /admin/orders/[id]/photo)
   reportedWeightKg?: number; // what the basket said, kept once the weight is confirmed at pickup
   weighedKg?: number; // the driver's (or manager's) scale reading
   weightSource?: "driver" | "basket" | "manager"; // where the billed weight came from

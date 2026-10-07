@@ -46,6 +46,7 @@ function toOrder(r: Row): Order {
     rating: u(r.rating),
     ratingComment: u(r.rating_comment),
     ratedAt: u(r.rated_at),
+    pickupPhotoAt: r.pickup_photo_file_id ? u(r.pickup_photo_at) : undefined,
     reportedWeightKg: u(r.reported_weight_kg),
     weighedKg: u(r.weighed_kg),
     weightSource: u(r.weight_source),

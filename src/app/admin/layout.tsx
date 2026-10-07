@@ -18,6 +18,7 @@ const nav: PortalNavItem[] = [
   { href: "/admin/payments", label: "Payments", icon: "payments" },
   { href: "/admin/customers", label: "Customers", icon: "customers" },
   { href: "/admin/fleet", label: "Fleet", icon: "fleet" },
+  { href: "/admin/driver-pay", label: "Driver pay", icon: "driverpay" },
   { href: "/admin/orders", label: "Orders", icon: "orders" },
   { href: "/admin/analytics", label: "Analytics", icon: "analytics" },
   { href: "/admin/profit", label: "Profit", icon: "profit" },

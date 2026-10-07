@@ -18,4 +18,6 @@ export const PLAN_FEATURES: PlanFeature[] = [
   { name: "Promised turnaround, \"ready\" notices to customers", free: true, pro: true },
   { name: "Late-order alerts on the live board", free: false, pro: true },
   { name: "Customer ratings and Google review requests", free: "collected", pro: "with insights" },
+  { name: "Photo proof at pickup from the driver bot", free: true, pro: true },
+  { name: "Driver pay per pickup and per km, earnings in the driver bot", free: false, pro: true },
 ];

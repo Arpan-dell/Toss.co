@@ -21,6 +21,7 @@ const sendPhoto = safe(api.sendPhoto);
 import { chooseDriver, directionsUrl, routeUrl, searchUrl, type DriverCandidate, type LatLng } from "./core";
 import { geocode } from "./geocode";
 import { MAX_KG, MIN_KG, parseKg, repriceForWeight } from "./weighing";
+import { earnings, monthStartIST, weekStartIST } from "../driver-pay";
 import { logError } from "@/lib/log";
 import { APP_URL, SITE_URL } from "@/lib/site";
 
@@ -89,7 +90,7 @@ async function candidates(tenantId: string): Promise<DriverCandidate[]> {
 async function driverByChat(chatId: string) {
   const { data } = await db()
     .from("drivers")
-    .select("id, tenant_id, name, telegram_chat_id, status, last_lat, last_lng, location_at, route_token, weighing_order_id")
+    .select("id, tenant_id, name, telegram_chat_id, status, last_lat, last_lng, location_at, route_token, weighing_order_id, photo_order_id")
     .eq("telegram_chat_id", chatId)
     .maybeSingle();
   return data as Row | null;
@@ -218,7 +219,7 @@ const MENU = {
   keyboard: [
     [{ text: "🟢 Online" }, { text: "🔴 Offline" }],
     [{ text: "📋 My pickups" }, { text: "🛣 My route" }],
-    [{ text: "👤 My status" }],
+    [{ text: "👤 My status" }, { text: "💰 My earnings" }],
   ],
   resize_keyboard: true,
   is_persistent: true,
@@ -277,6 +278,41 @@ async function statusCard(driver: Row): Promise<string> {
     `🧺 Open pickups: <b>${open ?? 0}</b>`,
     `✅ Done today: <b>${done ?? 0}</b>`,
     ...(!fresh && driver.status !== "OFFLINE" ? ["", "<i>Share your live location so you get the nearest pickups.</i>"] : []),
+  ].join("\n");
+}
+
+// What the driver has earned at their laundry's rates: this week, last week and this month (IST).
+async function earningsCard(driver: Row): Promise<string> {
+  const chatId = driver.telegram_chat_id as string;
+  const now = new Date();
+  const week = weekStartIST(now);
+  const lastWeek = weekStartIST(now, 1);
+  const month = monthStartIST(now);
+  const from = lastWeek < month ? lastWeek : month;
+  const [{ data: t }, { data: done }] = await Promise.all([
+    db().from("tenants").select("store_lat, store_lng, driver_pay_per_pickup, driver_pay_per_km").eq("id", driver.tenant_id as string).maybeSingle(),
+    db().from("orders").select("device_id, completed_at").eq("driver_id", chatId).eq("status", "COMPLETED").gte("completed_at", from),
+  ]);
+  const rates = { driverPayPerPickup: Number(t?.driver_pay_per_pickup) || 0, driverPayPerKm: Number(t?.driver_pay_per_km) || 0 };
+  if (!rates.driverPayPerPickup && !rates.driverPayPerKm) return "💰 Your laundry hasn't set driver pay in Toss yet. Ask your manager.";
+  const ids = [...new Set((done ?? []).map((o) => o.device_id as string))];
+  const { data: devs } = ids.length ? await db().from("devices").select("device_id, lat, lng").in("device_id", ids) : { data: [] };
+  const at = new Map((devs ?? []).filter((d) => d.lat != null && d.lng != null).map((d) => [d.device_id as string, { lat: Number(d.lat), lng: Number(d.lng) }]));
+  const store = t?.store_lat != null && t?.store_lng != null ? { lat: Number(t.store_lat), lng: Number(t.store_lng) } : null;
+  const between = (start: string, end?: string) =>
+    (done ?? []).filter((o) => (o.completed_at as string) >= start && (!end || (o.completed_at as string) < end)).map((o) => ({ deviceId: o.device_id as string }));
+  const line = (label: string, start: string, end?: string) => {
+    const e = earnings(between(start, end), rates, store, (id) => at.get(id));
+    return `${label}: <b>₹${e.pay}</b> · ${e.pickups} pickup${e.pickups === 1 ? "" : "s"}${e.km ? ` · ${e.km} km` : ""}`;
+  };
+  return [
+    `💰 <b>Your earnings</b> · ${esc(driver.name as string)}`,
+    LINE,
+    line("This week", week),
+    line("Last week", lastWeek, week),
+    line("This month", month),
+    "",
+    `<i>₹${rates.driverPayPerPickup} per pickup${rates.driverPayPerKm ? ` + ₹${rates.driverPayPerKm}/km from the store` : ""}. Paid by your laundry.</i>`,
   ].join("\n");
 }
 
@@ -339,6 +375,7 @@ interface TgMessage {
   text?: string;
   contact?: { phone_number: string; user_id?: number };
   location?: { latitude: number; longitude: number; live_period?: number };
+  photo?: { file_id: string; width: number; height: number; file_size?: number }[];
 }
 
 export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
@@ -384,6 +421,27 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
     return;
   }
 
+  // Photo proof: right after a pickup, the next photo belongs to it (the largest size Telegram sent).
+  if (msg.photo?.length) {
+    if (!update.message) return;
+    if (!driver.photo_order_id) {
+      await sendMessage(token, chatId, "📸 Photos are only needed right after a pickup.", { keyboard: MENU });
+      return;
+    }
+    const best = msg.photo[msg.photo.length - 1];
+    const { data: saved } = await db()
+      .from("orders")
+      .update({ pickup_photo_file_id: best.file_id, pickup_photo_at: new Date().toISOString() })
+      .eq("id", driver.photo_order_id as string)
+      .eq("driver_id", chatId)
+      .select("device_order_id");
+    await db().from("drivers").update({ photo_order_id: null }).eq("id", driver.id as string);
+    await sendMessage(token, chatId, saved?.length ? `📸 <b>Photo saved</b> with pickup #${saved[0].device_order_id}. Thank you!` : "This pickup isn't yours anymore.", {
+      keyboard: MENU,
+    });
+    return;
+  }
+
   const text = (msg.text ?? "").trim();
 
   // Mid weigh-in: a number is the bag's weight. Anything else (menu buttons) works as usual.
@@ -421,6 +479,8 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
     await sendMessage(token, chatId, `🔴 <b>You're offline</b>\n${LINE}\nNo new pickups until you go online.\nFinish any open ones from 📋 <b>My pickups</b>.`, { keyboard: MENU });
   } else if (text === "👤 My status" || text === "/status") {
     await sendMessage(token, chatId, await statusCard(driver), { keyboard: MENU });
+  } else if (text === "💰 My earnings" || text === "/earnings") {
+    await sendMessage(token, chatId, await earningsCard(driver), { keyboard: MENU });
   } else if (text === "🛣 My route" || text === "/route") {
     const r = await currentRoute(driver);
     await sendMessage(
@@ -511,10 +571,22 @@ async function finishPickup(token: string, driver: Row, o: Row, kg: number, sour
       store.place ? { inline: [[{ text: "🗺 Navigate to the store", url: directionsUrl({ destination: store.place }) }]] } : {},
     );
   }
+
+  // Photo proof (optional): the next photo this driver sends is attached to this pickup.
+  await db().from("drivers").update({ photo_order_id: o.id as string }).eq("id", driver.id as string);
+  await sendMessage(token, chatId, `📸 <b>Send one photo of the bag</b> for #${o.device_order_id}.\n<i>Proof of pickup: it protects you if anything is questioned later.</i>`, {
+    inline: [[{ text: "Skip", callback_data: "skipphoto" }]],
+  });
 }
 
 async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_query"]>) {
   const chatId = String(cb.from.id);
+  if (cb.data === "skipphoto") {
+    await db().from("drivers").update({ photo_order_id: null }).eq("telegram_chat_id", chatId);
+    await answerCallback(token, cb.id, "No photo, that's fine");
+    if (cb.message) await editMessage(token, String(cb.message.chat.id), cb.message.message_id, "📸 <i>No photo for this pickup.</i>");
+    return;
+  }
   const [action, orderId] = (cb.data ?? "").split(/:(.+)/);
   const driver = await driverByChat(chatId);
   const { data: o } = orderId ? await db().from("orders").select("*").eq("id", orderId).maybeSingle() : { data: null };

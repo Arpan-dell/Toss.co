@@ -92,6 +92,23 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                 </dd>
               </>
             )}
+            {order.pickupPhotoAt && (
+              <>
+                <dt className="text-muted">Photo</dt>
+                <dd>
+                  <a href={`/admin/orders/${encodeURIComponent(order.id)}/photo`} target="_blank" rel="noopener" className="group inline-block">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- private, per-order image streamed from Telegram */}
+                    <img
+                      src={`/admin/orders/${encodeURIComponent(order.id)}/photo`}
+                      alt={`Bag photographed by the driver at pickup, ${formatDateTime(order.pickupPhotoAt)}`}
+                      loading="lazy"
+                      className="h-28 w-28 rounded-[10px] border border-border object-cover transition group-hover:opacity-90"
+                    />
+                    <span className="mt-1 block text-xs text-muted">At pickup · {formatDateTime(order.pickupPhotoAt)}</span>
+                  </a>
+                </dd>
+              </>
+            )}
             {order.rating && (
               <>
                 <dt className="text-muted">Rating</dt>

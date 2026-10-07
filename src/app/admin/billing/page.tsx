@@ -9,6 +9,7 @@ import { planState } from "@/lib/plan";
 import { subscriptionQuote } from "@/lib/pricing";
 import { qrSvg } from "@/lib/qr";
 import { requireRole } from "@/lib/session";
+import { PlanCompare } from "./plan-compare";
 import { buildUpiUri, isValidUpiId } from "@/lib/upi";
 
 export const metadata: Metadata = { title: "Billing" };
@@ -17,7 +18,7 @@ const MONTH_OPTIONS = [1, 3, 6, 12];
 const STATE_BADGE = {
   TRIAL: { tone: "info", label: "Free trial" },
   ACTIVE: { tone: "good", label: "Active" },
-  EXPIRED: { tone: "critical", label: "Expired" },
+  EXPIRED: { tone: "neutral", label: "Free" },
   SUSPENDED: { tone: "critical", label: "Suspended" },
 } as const;
 
@@ -54,7 +55,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
         <p className="text-sm text-secondary">
           {plan.state === "TRIAL" && `Free trial until ${formatDate(plan.until!)} (${plan.daysLeft} days left).`}
           {plan.state === "ACTIVE" && `Paid up until ${formatDate(plan.until!)} (${plan.daysLeft} days left).`}
-          {plan.state === "EXPIRED" && "Your subscription has lapsed. Renew below to unlock the dashboard."}
+          {plan.state === "EXPIRED" && "You're on Toss Free. Upgrade below to turn the Pro tools back on."}
           {plan.state === "SUSPENDED" && "Toss has suspended this business. Contact support."}{" "}
           The plan is <span className="text-fg">{formatINR(platform.monthlyPrice)}/month</span>. Paying early adds time on top of
           what you have left
@@ -64,8 +65,10 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
         </p>
       </Card>
 
+      <PlanCompare current={plan.state === "EXPIRED" ? "FREE" : plan.state === "SUSPENDED" ? null : "PRO"} />
+
       {plan.state !== "SUSPENDED" && (
-        <Card title="Pay for more months">
+        <Card title={plan.state === "EXPIRED" ? "Upgrade to Pro" : "Pay for more months"}>
           {pending ? (
             <p className="rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
               Your payment of {formatINR(pending.amount)} (ref {pending.paymentRef}) is waiting for Toss to confirm it.

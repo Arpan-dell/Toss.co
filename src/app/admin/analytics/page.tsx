@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { planGate } from "@/components/plan-gate";
+import { proGate } from "@/components/plan-gate";
 import { ColumnChart, LineChart } from "@/components/charts";
 import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { computeAggregates } from "@/lib/analytics";
@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/format";
 export const metadata: Metadata = { title: "Analytics" };
 
 export default async function Analytics() {
-  const locked = await planGate();
+  const locked = await proGate("Analytics", "Revenue forecasts, busy-hour heatmaps, churn risk and a driver leaderboard, updated every day.");
   if (locked) return locked;
 
   const agg = computeAggregates(await listOrders());

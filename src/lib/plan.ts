@@ -20,6 +20,14 @@ export function planState(t: PlanFields, now = new Date()): { state: PlanState; 
 
 export const isUsable = (s: PlanState) => s === "TRIAL" || s === "ACTIVE";
 
+/**
+ * What a business can use. PRO: trial or paid (every feature). FREE: the trial or paid time has run out; the
+ * business keeps running (pickups, dispatch, payments, orders, customers, fleet) but the Pro tools are off.
+ * LOCKED: suspended by Toss. Customers are never affected by any of these.
+ */
+export type Tier = "PRO" | "FREE" | "LOCKED";
+export const tierOf = (s: PlanState): Tier => (s === "SUSPENDED" ? "LOCKED" : s === "EXPIRED" ? "FREE" : "PRO");
+
 /** Which renewal reminder (if any) a business is due: 7/3/1 days before, and once when it ends. */
 export function reminderFor(b: PlanFields, now = new Date()) {
   const p = planState(b, now);

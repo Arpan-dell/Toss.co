@@ -618,7 +618,7 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
               ) : (
                 <p className="text-2xl font-black tracking-tight text-fg">One simple monthly plan.</p>
               )}
-              <p className="mt-1 text-xs text-muted">Paid month by month over UPI. 0% fee on your customers&apos; payments.</p>
+              <p className="mt-1 text-xs text-muted">Paid month by month over UPI. 0% fee on your customers&apos; payments. Not ready? Stay on Free: pickups and payments keep working.</p>
             </div>
             <div className="w-fit">
               <MainCta

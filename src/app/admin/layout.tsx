@@ -42,18 +42,18 @@ export default async function ManagerLayout({ children }: LayoutProps<"/admin">)
         <div
           role="status"
           className={`mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[10px] border px-4 py-3 text-sm ${
-            plan.state === "TRIAL" ? "border-accent/30 bg-accent/[0.07] text-secondary" : "border-critical/30 bg-critical-bg text-critical"
+            plan.state === "SUSPENDED" ? "border-critical/30 bg-critical-bg text-critical" : "border-accent/30 bg-accent/[0.07] text-secondary"
           }`}
         >
           <span>
             {plan.state === "TRIAL" &&
               `Free trial: ${plan.daysLeft} day${plan.daysLeft === 1 ? "" : "s"} left (until ${formatDate(plan.until!)}).`}
-            {plan.state === "EXPIRED" && "Your Toss subscription has expired. Renew to keep using the dashboard."}
+            {plan.state === "EXPIRED" && "You're on Toss Free: pickups, payments and orders keep working. Pro adds auto-tools, Toss AI, analytics and more."}
             {plan.state === "SUSPENDED" && "This business has been suspended by Toss. Contact support."}
           </span>
           {plan.state !== "SUSPENDED" && (
             <Link href="/admin/billing" className="btn-ghost rounded-full px-3.5 py-1 text-xs text-fg">
-              {plan.state === "TRIAL" ? "Subscribe" : "Renew now"} →
+              {plan.state === "TRIAL" ? "Subscribe" : "Upgrade to Pro"} →
             </Link>
           )}
         </div>

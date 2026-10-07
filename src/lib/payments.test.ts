@@ -88,3 +88,13 @@ describe("planState", () => {
     expect(planState({ planStatus: "SUSPENDED", paidUntil: "2027-01-01T00:00:00Z" }, now).state).toBe("SUSPENDED");
   });
 });
+
+describe("tierOf", () => {
+  it("is Pro in trial or paid time, Free once it runs out, and locked only when suspended", async () => {
+    const { tierOf } = await import("./plan");
+    expect(tierOf("TRIAL")).toBe("PRO");
+    expect(tierOf("ACTIVE")).toBe("PRO");
+    expect(tierOf("EXPIRED")).toBe("FREE");
+    expect(tierOf("SUSPENDED")).toBe("LOCKED");
+  });
+});

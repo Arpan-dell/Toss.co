@@ -1,14 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTenantById, listCustomers, listDrivers, listOrders } from "@/lib/data";
 import { orderLabel } from "@/lib/format";
-import { isUsable, planState } from "@/lib/plan";
+import { planState, tierOf } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
 import type { OrderStatus, PaymentStatus } from "@/lib/types";
 import { buildXlsx, type XlsxCell, type XlsxColumn } from "@/lib/xlsx";
 
 // "Download Excel" on the manager's Orders page: the same list (same status filter and search) as a real .xlsx
-// workbook. Reads go through the manager's own session, so RLS limits them to their business, and a lapsed or
-// suspended plan gets nothing, the same as the page.
+// workbook. Reads go through the manager's own session, so RLS limits them to their business. Pro only.
 
 const STATUS: Record<OrderStatus, string> = { PENDING: "Awaiting driver", ACCEPTED: "Driver en route", COMPLETED: "Picked up", CANCELLED: "Cancelled" };
 const PAYMENT: Record<PaymentStatus, string> = { UNPAID: "Unpaid", PENDING: "Payment to confirm", PAID: "Paid", REFUNDED: "Refunded" };
@@ -40,8 +39,8 @@ const at = (iso?: string) => (iso ? new Date(iso) : undefined);
 export async function GET(request: NextRequest) {
   const session = await requireRole("MANAGER");
   const tenant = await getTenantById(session.tenantId);
-  if (!tenant || !isUsable(planState(tenant).state)) {
-    return NextResponse.json({ error: "Renew your Toss subscription to export orders." }, { status: 403 });
+  if (!tenant || tierOf(planState(tenant).state) !== "PRO") {
+    return NextResponse.json({ error: "Excel export is a Toss Pro feature. Upgrade under Billing." }, { status: 403 });
   }
 
   const params = request.nextUrl.searchParams;

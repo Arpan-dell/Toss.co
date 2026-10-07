@@ -114,9 +114,9 @@ export const ownerBusinessLapsed = (b: { name: string; joinCode: string; manager
   mail(
     `⏰ ${b.name}'s ${b.wasTrial ? "trial" : "subscription"} has ended`,
     layout({
-      preheader: `${b.name} is now locked until they renew.`,
+      preheader: `${b.name} has moved to Toss Free until they renew.`,
       heading: `${b.name}'s ${b.wasTrial ? "free trial" : "subscription"} ended`,
-      paragraphs: ["Their dashboard is locked until they pay. We've emailed them how to renew."],
+      paragraphs: ["They're on Toss Free now: their customers are served as usual, and the Pro tools are off until they pay. We've emailed them how to upgrade."],
       rows: [
         ["Business ID", b.joinCode],
         ["Manager", b.managerEmail],
@@ -246,19 +246,19 @@ export const managerPlanReminder = (p: { business: string; kind: "TRIAL" | "ACTI
   return mail(
     ended ? `⛔ Your Toss ${what} has ended` : `⏰ Your Toss ${what} ends ${when}`,
     layout({
-      preheader: ended ? "Renew to unlock your dashboard." : `Renew before ${p.until ? day(p.until) : "it ends"} to keep pickups running.`,
+      preheader: ended ? "You're on Toss Free. Upgrade to turn the Pro tools back on." : `Renew before ${p.until ? day(p.until) : "it ends"} to keep the Pro tools on.`,
       heading: ended ? `Your ${what} has ended` : `Your ${what} ends ${when}`,
       paragraphs: [
         ended
-          ? `<b>${e(p.business)}</b>'s dashboard is locked. Your data is safe: renew and everything comes back instantly.`
-          : `Renew <b>${e(p.business)}</b> to keep pickups, drivers and payments running without a break.`,
+          ? `<b>${e(p.business)}</b> is now on Toss Free. Pickups, dispatch and payments keep working for your customers; Toss AI, analytics and Excel export are off until you upgrade. Your data is safe.`
+          : `Renew <b>${e(p.business)}</b> to keep Toss AI, analytics and the other Pro tools on. Pickups keep running either way.`,
         p.bestDiscount > 0 ? `Tip: paying for several months at once saves up to <b>${p.bestDiscount}%</b>.` : "",
       ].filter(Boolean),
       rows: [
         ["Plan", `${inr(p.monthlyPrice)}/month`],
         ...(p.until ? ([[ended ? "Ended on" : "Ends on", day(p.until)]] as Row[]) : []),
       ],
-      cta: { label: ended ? "Renew now" : "Renew", url: `${APP}/admin/billing` },
+      cta: { label: ended ? "Upgrade to Pro" : "Renew", url: `${APP}/admin/billing` },
       tone: ended ? "bad" : "warn",
     }),
   );

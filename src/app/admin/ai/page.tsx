@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { BarList, ForecastChart, Heatmap, SegmentBar, Sparkline } from "@/components/ai-charts";
-import { planGate } from "@/components/plan-gate";
+import { proGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
 import { businessInsights } from "@/lib/ai/autopilot";
 import { geminiEnabled } from "@/lib/ai/gemini";
@@ -114,7 +114,7 @@ function Toggle({ name, label, hint, defaultChecked, big = false }: { name: stri
 }
 
 export default async function TossAi() {
-  const locked = await planGate();
+  const locked = await proGate("Toss AI", "A morning briefing on your business, forecasts of busy days, and an autopilot that wins back quiet customers and chases unpaid invoices within limits you set.");
   if (locked) return locked;
   const session = await requireRole("MANAGER");
   const tenantId = session.tenantId!;

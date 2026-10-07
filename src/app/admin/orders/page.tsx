@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { planGate } from "@/components/plan-gate";
+import { currentTier, planGate } from "@/components/plan-gate";
 import Link from "next/link";
 import { MicrosoftExcelLogo } from "@phosphor-icons/react/dist/ssr";
 import { OrderTable } from "@/components/order-table";
@@ -23,7 +23,8 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
   const params = await searchParams;
   const status = FILTERS.find((f) => f.status === params.status)?.status;
   const q = typeof params.q === "string" ? params.q : undefined;
-  const orders = await listOrders({ status, q });
+  const [orders, tier] = await Promise.all([listOrders({ status, q }), currentTier()]);
+  const pro = tier?.tier === "PRO";
 
   // the export takes the same filter and search, so the file matches what's on screen
   const exportQs = new URLSearchParams();
@@ -67,14 +68,16 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
           />
         </form>
         <p className="text-sm text-muted">{orders.length} orders</p>
+        {/* Pro: the export; Free: the same button leads to the upgrade */}
         <a
-          href={exportHref}
-          download
+          href={pro ? exportHref : "/admin/billing"}
+          download={pro || undefined}
           className="btn-ghost ml-auto inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium text-fg"
-          aria-disabled={orders.length === 0 || undefined}
+          aria-disabled={(pro && orders.length === 0) || undefined}
         >
           <MicrosoftExcelLogo size={16} weight="fill" className="text-good" aria-hidden />
           Download Excel
+          {!pro && <span className="rounded-[4px] bg-accent/15 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.08em] text-accent">PRO</span>}
         </a>
       </div>
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { notifySubscriptionReviewed, notifySuspension } from "../email/notify";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
+import { createClient } from "../supabase/server";
 import { isValidUpiId, normalizeUpiId } from "../upi";
 import { friendlyError, text, type FormState } from "./shared";
 
@@ -57,4 +58,46 @@ export async function setBusinessSuspended(formData: FormData) {
   if (error) throw new Error(friendlyError(error));
   await notifySuspension(tenantId, suspend);
   revalidatePath("/owner", "layout");
+}
+
+// ---------- basket credits ----------
+export async function updateCreditSettings(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireOwner();
+  const n = (k: string) => Number(text(formData, k));
+  const v = {
+    basket_price: n("basketPrice"),
+    basket_credit: n("basketCredit"),
+    credit_per_kg: n("creditPerKg"),
+    credit_max_pct: n("creditMaxPct"),
+    credit_toss_share_pct: n("creditTossSharePct"),
+    credit_sub_max_pct: n("creditSubMaxPct"),
+    credit_valid_days: n("creditValidDays"),
+  };
+  const whole = (x: number, lo: number, hi: number) => Number.isInteger(x) && x >= lo && x <= hi;
+  if (!whole(v.basket_price, 0, 100_000) || !whole(v.basket_credit, 0, 100_000)) return { error: "Basket price and credit must be whole rupees." };
+  if (!(v.credit_per_kg >= 0 && v.credit_per_kg <= 1000)) return { error: "Credit per kg must be 0–1000." };
+  if (![v.credit_max_pct, v.credit_toss_share_pct, v.credit_sub_max_pct].every((x) => whole(x, 0, 100))) return { error: "Percentages must be 0–100." };
+  if (!whole(v.credit_valid_days, 1, 3650)) return { error: "Validity must be 1–3650 days." };
+  const { error } = await supabaseAdmin().from("platform_settings").update(v).eq("id", 1);
+  if (error) return { error: friendlyError(error) };
+  revalidatePath("/", "layout");
+  return { message: "Saved. New bills and grants use these settings." };
+}
+
+// Runs as the owner (not the service role): grant_basket_credit() checks the caller's JWT itself.
+export async function grantBasketCredit(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireOwner();
+  const code = text(formData, "customerCode").toUpperCase();
+  const device = text(formData, "deviceId").slice(0, 64);
+  const note = text(formData, "note").slice(0, 200);
+  const amountRaw = text(formData, "amount");
+  const amount = amountRaw ? Number(amountRaw) : null;
+  if (!/^C-[A-Z0-9]{6}$/.test(code)) return { error: "Enter the customer's ID, like C-AB12CD (on their dashboard)." };
+  if (amount !== null && !(Number.isFinite(amount) && amount > 0 && amount <= 100_000)) return { error: "Enter an amount in rupees." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("grant_basket_credit", { p_customer_code: code, p_device_id: device, p_amount: amount, p_note: note });
+  if (error) return { error: error.message.includes("customer_not_found") ? "No customer with that ID." : friendlyError(error) };
+  revalidatePath("/owner/credits");
+  const r = data as { customer?: string; amount?: number };
+  return { message: `Added ₹${r.amount} basket credit for ${r.customer ?? code}.` };
 }

@@ -76,6 +76,14 @@ export interface PlatformSettings {
   discount3m: number; // % off a subscription paid 3–5 months at once
   discount6m: number; // 6–11 months
   discount12m: number; // 12 months
+  // basket credits (migration 0020)
+  basketPrice: number; // what a Toss basket sells for
+  basketCredit: number; // laundry credit that comes with it
+  creditPerKg: number; // credit taken per kg of a pickup
+  creditMaxPct: number; // at most this % of any one bill
+  creditTossSharePct: number; // Toss's share of each credit used, given back as subscription discount
+  creditSubMaxPct: number; // at most this % of a subscription payment can be covered by it
+  creditValidDays: number;
 }
 
 export interface SubscriptionPayment {
@@ -146,6 +154,8 @@ export interface Order {
   invoiceNumber?: string; // set once the order is paid and its invoice is issued
   discountPct?: number; // a customer offer applied to this pickup
   amountBeforeDiscount?: number;
+  amountGross?: number; // price before basket credit
+  creditApplied?: number; // basket credit taken off this bill (amountDue is after it)
   reportedWeightKg?: number; // what the basket said, kept once the weight is confirmed at pickup
   weighedKg?: number; // the driver's (or manager's) scale reading
   weightSource?: "driver" | "basket" | "manager"; // where the billed weight came from

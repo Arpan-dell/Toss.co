@@ -98,3 +98,13 @@ describe("tierOf", () => {
     expect(tierOf("SUSPENDED")).toBe("LOCKED");
   });
 });
+
+describe("withBasketCredit", () => {
+  it("takes Toss's credit share off a subscription payment, up to the cap, in whole rupees", async () => {
+    const { withBasketCredit } = await import("./pricing");
+    expect(withBasketCredit(499, 120.7, 50)).toEqual({ credit: 120, toPay: 379 }); // balance below the cap
+    expect(withBasketCredit(499, 1000, 50)).toEqual({ credit: 249, toPay: 250 }); // capped at 50%
+    expect(withBasketCredit(499, 0, 50)).toEqual({ credit: 0, toPay: 499 });
+    expect(withBasketCredit(499, -5, 50)).toEqual({ credit: 0, toPay: 499 });
+  });
+});

@@ -104,7 +104,7 @@ export async function confirmOrderWeight(_prev: FormState, formData: FormData): 
   const supabase = await createClient();
   const { data: o } = await supabase
     .from("orders")
-    .select("id, weight_kg, amount_due, amount_before_discount, discount_pct, payment_status, reported_weight_kg, tenant_id")
+    .select("id, weight_kg, amount_due, amount_gross, amount_before_discount, discount_pct, payment_status, reported_weight_kg, tenant_id")
     .eq("id", orderId)
     .maybeSingle();
   if (!o || o.tenant_id !== session.tenantId) return { error: "Order not found in your business." };
@@ -114,7 +114,8 @@ export async function confirmOrderWeight(_prev: FormState, formData: FormData): 
   const priced = repriceForWeight(
     {
       weightKg: Number(o.weight_kg) || 0,
-      amountDue: Number(o.amount_due) || 0,
+      // price before basket credit: the database takes the credit off again after repricing
+      amountDue: Number(o.amount_gross ?? o.amount_due) || 0,
       amountBeforeDiscount: o.amount_before_discount as number | null,
       discountPct: o.discount_pct as number | null,
     },

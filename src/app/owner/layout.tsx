@@ -9,6 +9,7 @@ export const metadata: Metadata = { robots: { index: false, follow: false } };
 const nav: PortalNavItem[] = [
   { href: "/owner", label: "Businesses", icon: "businesses" },
   { href: "/owner/payments", label: "Subscription payments", icon: "subscriptions" },
+  { href: "/owner/credits", label: "Basket credits", icon: "credits" },
   { href: "/owner/settings", label: "Plan & UPI", icon: "plan" },
 ];
 

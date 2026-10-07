@@ -9,6 +9,7 @@ export const PLAN_FEATURES: PlanFeature[] = [
   { name: "UPI payments and numbered invoices", free: true, pro: true },
   { name: "Live board, orders, customers, fleet", free: true, pro: true },
   { name: "Listed on Find a laundry", free: true, pro: true },
+  { name: "Toss basket credit: Toss pays back its share", free: "on renewal", pro: "off each payment" },
   { name: "Toss AI briefing and autopilot", free: false, pro: true },
   { name: "Analytics and forecasts", free: false, pro: true },
   { name: "Download orders to Excel", free: false, pro: true },

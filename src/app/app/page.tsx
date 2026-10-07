@@ -6,7 +6,7 @@ import { UpiPay } from "@/components/upi-pay";
 import { StatusTimeline } from "@/components/status-timeline";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, OrderStatusBadge, PageTitle } from "@/components/ui";
 import { reportPayment } from "@/lib/actions/customer";
-import { getCustomer, getDeviceForCustomer, getOpenOffer, getTenantById, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
+import { getCustomer, getCustomerCredit, getDeviceForCustomer, getOpenOffer, getTenantById, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
 import { formatDate, formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
 import { qrSvg } from "@/lib/qr";
 import { requireRole } from "@/lib/session";
@@ -14,10 +14,11 @@ import { buildUpiUri, isValidUpiId } from "@/lib/upi";
 
 export default async function CustomerOverview() {
   const session = await requireRole("CUSTOMER");
-  const [orders, device, customer] = await Promise.all([
+  const [orders, device, customer, credit] = await Promise.all([
     listOrdersForCustomer(session.userId),
     getDeviceForCustomer(session.userId),
     getCustomer(session.userId),
+    getCustomerCredit(session.userId),
   ]);
 
   const active = orders.find((o) => o.status === "PENDING" || o.status === "ACCEPTED");
@@ -60,6 +61,21 @@ export default async function CustomerOverview() {
           </p>
           <p className="mt-1 text-sm text-secondary">
             Just fill your basket. The discount is applied automatically. Valid until {formatDate(offer.expiresAt)}.
+          </p>
+        </div>
+      )}
+
+      {credit && !credit.expired && credit.left > 0 && (
+        <div role="status" className="relative rounded-[10px] border border-l-4 border-border border-l-accent bg-surface-solid p-5">
+          <p className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">Basket credit</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums">
+            {formatINR(credit.left)} left <span className="text-sm font-normal text-muted">of {formatINR(credit.granted)}</span>
+          </p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-ink/10" aria-hidden>
+            <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (credit.left / Math.max(credit.granted, 1)) * 100)}%` }} />
+          </div>
+          <p className="mt-2 text-sm text-secondary">
+            Comes off your pickups automatically, a little each time. Valid until {formatDate(credit.expiresAt)}.
           </p>
         </div>
       )}
@@ -180,6 +196,11 @@ export default async function CustomerOverview() {
                   </p>
                   <p className="text-muted tabular-nums">
                     {formatKg(o.weightKg)} · {formatINR(o.amountDue)}
+                    {o.creditApplied ? (
+                      <span className="ml-1.5 text-accent">
+                        (basket credit −{formatINR(o.creditApplied)})
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 {pay && business && (

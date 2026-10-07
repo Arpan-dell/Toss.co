@@ -20,3 +20,12 @@ export function subscriptionQuote(monthlyPrice: number, d: SubscriptionDiscounts
   const amount = Math.round((full * (100 - pct)) / 100);
   return { pct, full, amount, saved: full - amount };
 }
+
+/**
+ * Toss's share of basket credit, taken off a subscription payment: at most creditSubMaxPct of the amount.
+ * Mirrors submit_subscription_payment() in migration 0020, so the UPI amount equals the recorded one.
+ */
+export function withBasketCredit(amount: number, balance: number, creditSubMaxPct: number) {
+  const credit = Math.min(Math.floor(Math.max(0, balance)), Math.floor((amount * creditSubMaxPct) / 100));
+  return { credit, toPay: amount - credit };
+}

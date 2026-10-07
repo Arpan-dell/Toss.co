@@ -3,8 +3,15 @@
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
+  Briefcase,
   Broadcast,
   Buildings,
+  Coins,
+  Drop,
+  Gift,
+  Star,
+  TreeStructure,
+  Wallet,
   ChartLineUp,
   ClockCounterClockwise,
   CreditCard,
@@ -41,6 +48,13 @@ const ICONS = {
   subscriptions: CreditCard,
   plan: Sliders,
   find: MapPinArea,
+  credits: Gift,
+  stock: Drop,
+  profit: Coins,
+  accounts: Briefcase,
+  branches: TreeStructure,
+  driverpay: Wallet,
+  ratings: Star,
 } satisfies Record<string, Icon>;
 
 export type PortalNavItem = { href: string; label: string; icon: keyof typeof ICONS };

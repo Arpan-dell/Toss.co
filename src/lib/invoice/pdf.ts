@@ -18,6 +18,7 @@ export interface InvoiceData {
     weightKg: number;
     subtotal: number; // before discount
     discountPct?: number;
+    basketCredit?: number; // Toss basket credit taken off this bill
     total: number;
   };
   driver?: { name: string };
@@ -187,7 +188,9 @@ export async function renderInvoicePdf(d: InvoiceData, logoPng?: Uint8Array): Pr
     y -= o.strong ? 22 : 17;
   };
   totalRow("Subtotal", money(d.order.subtotal));
-  if (d.order.discountPct) totalRow(`Discount (${d.order.discountPct}%)`, `- ${money(d.order.subtotal - d.order.total)}`, { color: GOOD });
+  const credit = d.order.basketCredit ?? 0;
+  if (d.order.discountPct) totalRow(`Discount (${d.order.discountPct}%)`, `- ${money(d.order.subtotal - d.order.total - credit)}`, { color: GOOD });
+  if (credit > 0) totalRow("Toss basket credit", `- ${money(credit)}`, { color: GOOD });
   y -= 8;
   page.drawRectangle({ x: cols.rate - 120, y: y - 8, width: cols.amt - cols.rate + 128, height: 26, color: rgb(0.95, 0.98, 0.97) });
   totalRow("Total paid", money(d.order.total), { strong: true });

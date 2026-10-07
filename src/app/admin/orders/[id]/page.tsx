@@ -170,6 +170,12 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                   {order.amountBeforeDiscount ? ` (was ${formatINR(order.amountBeforeDiscount)})` : ""}
                 </p>
               )}
+              {order.creditApplied ? (
+                <p className="text-xs text-accent">
+                  Toss basket credit −{formatINR(order.creditApplied)}
+                  {order.amountGross ? ` (bill was ${formatINR(order.amountGross)})` : ""}. Toss pays back its share off your subscription.
+                </p>
+              ) : null}
               {order.paymentRef && (
                 <p className="text-xs text-muted">
                   {order.paymentMethod ?? "UPI"} ref <span className="font-mono text-fg">{order.paymentRef}</span>

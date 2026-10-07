@@ -471,7 +471,8 @@ async function finishPickup(token: string, driver: Row, o: Row, kg: number, sour
     const priced = repriceForWeight(
       {
         weightKg: Number(o.weight_kg) || 0,
-        amountDue: Number(o.amount_due) || 0,
+        // price before basket credit: the database takes the credit off again after repricing
+        amountDue: Number(o.amount_gross ?? o.amount_due) || 0,
         amountBeforeDiscount: o.amount_before_discount as number | null,
         discountPct: o.discount_pct as number | null,
       },

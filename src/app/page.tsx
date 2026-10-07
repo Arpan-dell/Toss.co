@@ -127,7 +127,20 @@ export default async function Home() {
             Want one? Pick a colour.
           </Reveal>
           <Reveal as="p" delay={0.1} className="mb-12 max-w-[56ch] text-lg leading-relaxed font-light text-secondary">
-            Each box is printed to order. Leave your details and we&apos;ll get back to you about availability, price and delivery.
+            {plan && plan.basketPrice > 0 ? (
+              <>
+                <span className="font-medium text-fg">₹{plan.basketPrice.toLocaleString("en-IN")}</span>
+                {plan.basketCredit > 0 && (
+                  <>
+                    , and it comes with <span className="font-medium text-accent">₹{plan.basketCredit.toLocaleString("en-IN")} of laundry credit</span>{" "}
+                    that comes off your pickups
+                  </>
+                )}
+                . Each box is printed to order: leave your details and we&apos;ll get back to you about availability and delivery.
+              </>
+            ) : (
+              <>Each box is printed to order. Leave your details and we&apos;ll get back to you about availability, price and delivery.</>
+            )}
           </Reveal>
           <GetBasket />
         </section>

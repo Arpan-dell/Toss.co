@@ -39,6 +39,8 @@ function toOrder(r: Row): Order {
     invoiceNumber: u(r.invoice_number),
     discountPct: u(r.discount_pct),
     amountBeforeDiscount: u(r.amount_before_discount),
+    amountGross: u(r.amount_gross),
+    creditApplied: (r.credit_applied as number) || undefined,
     reportedWeightKg: u(r.reported_weight_kg),
     weighedKg: u(r.weighed_kg),
     weightSource: u(r.weight_source),
@@ -252,7 +254,7 @@ export async function listOrderEvents(orderId: string): Promise<OrderEventRow[]>
 export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => {
   const supabase = await db();
   const r = orThrow(
-    await supabase.from("platform_settings").select("monthly_price, trial_days, owner_upi_id, owner_upi_name, discount_3m, discount_6m, discount_12m").eq("id", 1).maybeSingle(),
+    await supabase.from("platform_settings").select("monthly_price, trial_days, owner_upi_id, owner_upi_name, discount_3m, discount_6m, discount_12m, basket_price, basket_credit, credit_per_kg, credit_max_pct, credit_toss_share_pct, credit_sub_max_pct, credit_valid_days").eq("id", 1).maybeSingle(),
   ) as Row | null;
   return {
     monthlyPrice: (r?.monthly_price as number) ?? 0,
@@ -262,19 +264,26 @@ export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => 
     discount3m: (r?.discount_3m as number) ?? 0,
     discount6m: (r?.discount_6m as number) ?? 0,
     discount12m: (r?.discount_12m as number) ?? 0,
+    basketPrice: (r?.basket_price as number) ?? 800,
+    basketCredit: (r?.basket_credit as number) ?? 500,
+    creditPerKg: (r?.credit_per_kg as number) ?? 8,
+    creditMaxPct: (r?.credit_max_pct as number) ?? 30,
+    creditTossSharePct: (r?.credit_toss_share_pct as number) ?? 50,
+    creditSubMaxPct: (r?.credit_sub_max_pct as number) ?? 50,
+    creditValidDays: (r?.credit_valid_days as number) ?? 180,
   };
 });
 
 // Public (signed-out) view of the plan for the landing page. platform_settings is readable only by signed-in
 // users, so this uses the service-role client and selects just the non-sensitive pricing columns (never the
 // owner's UPI ID). Returns null when unavailable so the page still renders.
-export type PublicPlan = { monthlyPrice: number; trialDays: number; discount3m: number; discount6m: number; discount12m: number };
+export type PublicPlan = { monthlyPrice: number; trialDays: number; discount3m: number; discount6m: number; discount12m: number; basketPrice: number; basketCredit: number };
 export async function getPublicPlan(): Promise<PublicPlan | null> {
   if (!isSupabaseConfigured()) return null;
   try {
     const { data, error } = await supabaseAdmin()
       .from("platform_settings")
-      .select("monthly_price, trial_days, discount_3m, discount_6m, discount_12m")
+      .select("monthly_price, trial_days, discount_3m, discount_6m, discount_12m, basket_price, basket_credit")
       .eq("id", 1)
       .maybeSingle();
     if (error || !data) return null;
@@ -284,6 +293,8 @@ export async function getPublicPlan(): Promise<PublicPlan | null> {
       discount3m: Number(data.discount_3m) || 0,
       discount6m: Number(data.discount_6m) || 0,
       discount12m: Number(data.discount_12m) || 0,
+      basketPrice: Number(data.basket_price) || 0,
+      basketCredit: Number(data.basket_credit) || 0,
     };
   } catch {
     return null;
@@ -407,4 +418,51 @@ export function isDeviceOnline(device: Device): boolean {
 // Human label for a basket: manager-set area, else the address, else the device ID.
 export function deviceLabel(device?: Device): string {
   return device?.area || device?.address || device?.deviceId || "Unknown basket";
+}
+
+// ---------- basket credits (migration 0020) ----------
+export type CustomerCredit = { granted: number; used: number; left: number; expiresAt: string; expired: boolean };
+
+/** The signed-in customer's basket credit, or null if they have none. RLS limits both reads to their own rows. */
+export async function getCustomerCredit(customerId: string): Promise<CustomerCredit | null> {
+  const supabase = await db();
+  const w = orThrow(await supabase.from("customer_credits").select("granted, expires_at").eq("customer_id", customerId).maybeSingle()) as Row | null;
+  if (!w) return null;
+  const used = (orThrow(await supabase.from("orders").select("credit_applied").eq("customer_id", customerId).neq("status", "CANCELLED").gt("credit_applied", 0)) as Row[]).reduce(
+    (a, r) => a + ((r.credit_applied as number) ?? 0),
+    0,
+  );
+  const granted = w.granted as number;
+  const expired = new Date(w.expires_at as string).getTime() <= Date.now();
+  return { granted, used, left: expired ? 0 : Math.max(0, granted - used), expiresAt: w.expires_at as string, expired };
+}
+
+/** Toss's share of basket credit this laundry has given, not yet used against a subscription payment. */
+export async function getTenantCreditBalance(tenantId: string): Promise<number> {
+  const supabase = await db();
+  const { data, error } = await supabase.rpc("tenant_credit_balance", { p_tenant: tenantId });
+  if (error) return 0;
+  return Math.max(0, Math.floor(Number(data) || 0));
+}
+
+export type CreditGrant = { id: number; customerName?: string; customerCode?: string; deviceId?: string; amount: number; note?: string; grantedAt: string };
+
+/** Owner: the latest basket credit grants. */
+export async function listCreditGrants(limit = 20): Promise<CreditGrant[]> {
+  const supabase = await db();
+  const rows = orThrow(
+    await supabase.from("credit_grants").select("id, device_id, amount, note, granted_at, customers(name, customer_code)").order("granted_at", { ascending: false }).limit(limit),
+  ) as Row[];
+  return rows.map((r) => {
+    const c = (Array.isArray(r.customers) ? r.customers[0] : r.customers) as Row | null;
+    return {
+      id: r.id as number,
+      customerName: u(c?.name),
+      customerCode: u(c?.customer_code),
+      deviceId: u(r.device_id),
+      amount: r.amount as number,
+      note: u(r.note),
+      grantedAt: r.granted_at as string,
+    };
+  });
 }

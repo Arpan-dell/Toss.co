@@ -3,10 +3,10 @@ import Link from "next/link";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
 import { UpiPay } from "@/components/upi-pay";
 import { submitSubscriptionPayment } from "@/lib/actions/manager";
-import { getPlatformSettings, getTenantById, listSubscriptionPayments } from "@/lib/data";
+import { getPlatformSettings, getTenantById, getTenantCreditBalance, listSubscriptionPayments } from "@/lib/data";
 import { formatDate, formatDateTime, formatINR } from "@/lib/format";
 import { planState } from "@/lib/plan";
-import { subscriptionQuote } from "@/lib/pricing";
+import { subscriptionQuote, withBasketCredit } from "@/lib/pricing";
 import { qrSvg } from "@/lib/qr";
 import { requireRole } from "@/lib/session";
 import { PlanCompare } from "./plan-compare";
@@ -27,11 +27,13 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
   const [tenant, platform, params] = await Promise.all([getTenantById(session.tenantId), getPlatformSettings(), searchParams]);
   if (!tenant) return <Card>This manager account isn&apos;t linked to a business.</Card>;
 
-  const history = await listSubscriptionPayments({ tenantId: tenant.id });
+  const [history, creditBalance] = await Promise.all([listSubscriptionPayments({ tenantId: tenant.id }), getTenantCreditBalance(tenant.id)]);
   const plan = planState(tenant);
   const months = MONTH_OPTIONS.includes(Number(params.months)) ? Number(params.months) : 1;
   const quote = (m: number) => subscriptionQuote(platform.monthlyPrice, platform, m);
-  const { amount, pct, full, saved } = quote(months);
+  const { amount: beforeCredit, pct, full, saved } = quote(months);
+  // Toss's share of the basket credit this laundry has honoured comes off the payment (same rule as the database)
+  const { credit, toPay: amount } = withBasketCredit(beforeCredit, creditBalance, platform.creditSubMaxPct);
   const pending = history.find((p) => p.status === "PENDING");
   const canPay = isValidUpiId(platform.ownerUpiId) && amount > 0;
 
@@ -91,10 +93,16 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
                   </Link>
                 ))}
               </div>
+              {credit > 0 && (
+                <p className="rounded-[8px] border border-accent/30 bg-accent/[0.07] px-3 py-2 text-sm text-secondary">
+                  Basket credit from Toss: <span className="font-semibold text-fg">−{formatINR(credit)}</span>. Toss pays back{" "}
+                  {platform.creditTossSharePct}% of the basket credit your customers use, off your subscription.
+                </p>
+              )}
               {pct > 0 && (
                 <p className="rounded-[8px] border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
                   {pct}% off for paying {months} months at once: <s className="opacity-70">{formatINR(full)}</s>{" "}
-                  <span className="font-semibold">{formatINR(amount)}</span>. You save {formatINR(saved)}.
+                  <span className="font-semibold">{formatINR(beforeCredit)}</span>. You save {formatINR(saved)}.
                 </p>
               )}
               <UpiPay

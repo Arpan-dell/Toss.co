@@ -67,6 +67,8 @@ async function remove(tenantId: string) {
     await admin.from("devices").delete().in("device_id", ids);
   }
   await admin.from("drivers").delete().eq("tenant_id", tenantId).like("telegram_chat_id", "7100%");
+  // demo supplies from supabase/demo/fresh-sorting-demo.sql
+  await admin.from("supplies").delete().eq("tenant_id", tenantId).like("name", "% (demo)");
   const { data: users } = await admin.from("customers").select("id, email").like("email", `%${DEMO_DOMAIN}`);
   for (const u of users ?? []) await admin.auth.admin.deleteUser(u.id as string);
   console.log(`Removed ${ids.length} demo baskets, their orders, demo drivers and ${users?.length ?? 0} demo customers.`);

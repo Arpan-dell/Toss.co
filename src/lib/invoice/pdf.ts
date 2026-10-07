@@ -16,6 +16,7 @@ export interface InvoiceData {
     completedAt?: string;
     address: string;
     weightKg: number;
+    bags?: string; // "Whites 2.1 kg · Coloured 3.4 kg" when whites and coloured clothes were bagged apart
     subtotal: number; // before discount
     discountPct?: number;
     basketCredit?: number; // Toss basket credit taken off this bill
@@ -178,6 +179,10 @@ export async function renderInvoicePdf(d: InvoiceData, logoPng?: Uint8Array): Pr
   text(`${d.order.weightKg.toFixed(2)} kg`, cols.qty, y, { size: 10, right: true });
   text(`${money(rate)}/kg`, cols.rate, y, { size: 10, right: true });
   text(money(d.order.subtotal), cols.amt, y, { size: 10, right: true });
+  if (d.order.bags) {
+    y -= 13;
+    text(pdfSafe(d.order.bags), cols.desc, y, { size: 8.5, color: MUTED });
+  }
   y -= 22;
   rule(y);
   y -= 18;

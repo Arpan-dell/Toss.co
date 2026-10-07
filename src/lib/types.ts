@@ -23,6 +23,7 @@ export interface Tenant {
   serviceRadiusKm: number; // the business picks up within this distance of its store (1-20 km)
   listed: boolean; // shown in the public "Find a laundry" directory
   weighAtPickup: boolean; // drivers must enter the scale reading when they pick up
+  sortWhites: boolean; // drivers bag and weigh whites and coloured clothes separately (needs weighAtPickup)
   otherCostPerKg: number; // water, power, labour per kg washed (for profit)
   driverPayPerPickup: number; // ₹ a driver earns per pickup
   driverPayPerKm: number; // plus ₹ per km from the store to the basket
@@ -170,6 +171,8 @@ export interface Order {
   ratingComment?: string;
   ratedAt?: string;
   accountId?: string; // on a business account's monthly bill instead of paid per pickup
+  whitesKg?: number; // set when the driver bagged whites and coloured clothes separately (weightKg = their sum)
+  colouredKg?: number;
   pickupPhotoAt?: string; // the driver sent a photo of the bag at pickup (shown via /admin/orders/[id]/photo)
   reportedWeightKg?: number; // what the basket said, kept once the weight is confirmed at pickup
   weighedKg?: number; // the driver's (or manager's) scale reading

@@ -86,6 +86,18 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
               <span className="mt-1 block text-xs text-muted">Off: pickups bill the basket&apos;s reading straight away. You can still confirm any unpaid order&apos;s weight on its page.</span>
             </span>
           </label>
+          <label className="flex items-start gap-2.5 border-t border-dotted border-border-strong pt-3 text-sm">
+            <input name="sortWhites" type="checkbox" defaultChecked={tenant.sortWhites} className="mt-0.5 size-4 accent-[var(--accent)]" />
+            <span>
+              <span className="font-medium text-fg">Keep whites and coloured clothes apart</span>
+              <span className="mt-0.5 block text-secondary">
+                At pickup the driver packs <b>whites</b> and <b>coloured clothes</b> in two bags, tags them (like <code>#104-W</code> and{" "}
+                <code>#104-C</code>) and weighs each one. Your live board then shows how many kg of each are waiting to be washed, and supplies like
+                bleach can come off the whites only.
+              </span>
+              <span className="mt-1 block text-xs text-muted">Needs weighing at pickup. The price per kg is the same for both bags.</span>
+            </span>
+          </label>
         </ActionForm>
       </Card>
 

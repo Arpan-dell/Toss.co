@@ -44,6 +44,13 @@ function SupplyFields({ s }: { s?: Supply }) {
           <input name="costPerUnit" type="number" min={0} step="any" defaultValue={s?.costPerUnit ?? 0} className={fieldClass} />
         </Field>
       </div>
+      <Field label="Used for" hint="Whites only or coloured only needs drivers to bag them apart (Business page).">
+        <select name="appliesTo" defaultValue={s?.appliesTo ?? "ALL"} className={fieldClass}>
+          <option value="ALL">Every wash</option>
+          <option value="WHITES">Whites only (like bleach)</option>
+          <option value="COLOURED">Coloured only (like colour care)</option>
+        </select>
+      </Field>
       <Field label="Supplier's WhatsApp (optional)" hint="Adds a one-tap reorder button.">
         <input name="supplierPhone" type="tel" defaultValue={s?.supplierPhone ?? ""} placeholder="98765 43210" className={fieldClass} />
       </Field>
@@ -64,6 +71,12 @@ export default async function Stock() {
   const recent = orders.filter((o) => new Date(o.completedAt ?? o.createdAt).getTime() >= since);
   const kgPerDay = recent.reduce((a, o) => a + (o.weightKg || 0), 0) / 30;
   const ordersPerDay = recent.length / 30;
+  // whites-only and coloured-only supplies go at that kind's pace
+  const pace = {
+    ALL: { kg: kgPerDay, orders: ordersPerDay },
+    WHITES: { kg: recent.reduce((a, o) => a + (o.whitesKg ?? 0), 0) / 30, orders: recent.filter((o) => (o.whitesKg ?? 0) > 0).length / 30 },
+    COLOURED: { kg: recent.reduce((a, o) => a + (o.colouredKg ?? 0), 0) / 30, orders: recent.filter((o) => (o.colouredKg ?? 0) > 0).length / 30 },
+  };
 
   return (
     <div className="stagger max-w-4xl space-y-6">
@@ -75,7 +88,7 @@ export default async function Stock() {
         ) : (
           <ul className="divide-y divide-border">
             {supplies.map((s) => {
-              const perDay = s.perKg * kgPerDay + s.perOrder * ordersPerDay;
+              const perDay = s.perKg * pace[s.appliesTo].kg + s.perOrder * pace[s.appliesTo].orders;
               const days = perDay > 0 ? Math.max(0, Math.floor(s.stock / perDay)) : null;
               const low = s.stock <= s.lowAt;
               const fill = s.lowAt > 0 ? Math.min(100, (s.stock / (s.lowAt * 4)) * 100) : 100;
@@ -92,6 +105,7 @@ export default async function Stock() {
                       <p className="text-xs text-muted">
                         {[s.perKg > 0 && `${qty(s.perKg, s.unit)} per kg`, s.perOrder > 0 && `${qty(s.perOrder, s.unit)} per order`].filter(Boolean).join(" + ")}
                         {s.costPerUnit > 0 && ` · ${formatINR(s.costPerUnit)}/${s.unit}`}
+                        {s.appliesTo !== "ALL" && ` · ${s.appliesTo === "WHITES" ? "whites only" : "coloured only"}`}
                       </p>
                     </div>
                     <div className="text-right">

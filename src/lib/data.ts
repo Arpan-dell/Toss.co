@@ -47,6 +47,8 @@ function toOrder(r: Row): Order {
     ratingComment: u(r.rating_comment),
     ratedAt: u(r.rated_at),
     accountId: u(r.account_id),
+    whitesKg: u(r.whites_kg),
+    colouredKg: u(r.coloured_kg),
     pickupPhotoAt: r.pickup_photo_file_id ? u(r.pickup_photo_at) : undefined,
     reportedWeightKg: u(r.reported_weight_kg),
     weighedKg: u(r.weighed_kg),
@@ -88,7 +90,7 @@ function orThrow<T>(res: { data: T | null; error: { message: string } | null }):
 }
 
 const TENANT_COLUMNS =
-  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, store_lng, service_radius_km, listed, weigh_at_pickup, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason, autopilot_enabled, autopilot_staffing, autopilot_winback, autopilot_nudges, autopilot_pricing, ai_max_discount, ai_price_min, ai_price_max, ai_price_step_pct, other_cost_per_kg, driver_pay_per_pickup, driver_pay_per_km, turnaround_hours, google_review_url, parent_tenant_id";
+  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, store_lng, service_radius_km, listed, weigh_at_pickup, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason, autopilot_enabled, autopilot_staffing, autopilot_winback, autopilot_nudges, autopilot_pricing, ai_max_discount, ai_price_min, ai_price_max, ai_price_step_pct, other_cost_per_kg, driver_pay_per_pickup, driver_pay_per_km, turnaround_hours, google_review_url, parent_tenant_id, sort_whites";
 
 function toTenant(r: Row): Tenant {
   return {
@@ -107,6 +109,7 @@ function toTenant(r: Row): Tenant {
     serviceRadiusKm: (r.service_radius_km as number) ?? 10,
     listed: r.listed !== false,
     weighAtPickup: r.weigh_at_pickup !== false,
+    sortWhites: r.sort_whites === true,
     otherCostPerKg: (r.other_cost_per_kg as number) ?? 0,
     driverPayPerPickup: (r.driver_pay_per_pickup as number) ?? 0,
     driverPayPerKm: (r.driver_pay_per_km as number) ?? 0,
@@ -494,6 +497,7 @@ export type Supply = {
   costPerUnit: number;
   supplierPhone?: string;
   alertedAt?: string;
+  appliesTo: "ALL" | "WHITES" | "COLOURED"; // used on every wash, or only whites / only coloured clothes
 };
 
 // Business accounts (PGs, hostels, offices) of the manager's business; RLS limits the rows.
@@ -514,7 +518,7 @@ export const listAccounts = cache(async (): Promise<BusinessAccount[]> => {
 export const listSupplies = cache(async (): Promise<Supply[]> => {
   const supabase = await db();
   const rows = orThrow(
-    await supabase.from("supplies").select("id, name, unit, per_kg, per_order, stock, low_at, cost_per_unit, supplier_phone, alerted_at").order("name"),
+    await supabase.from("supplies").select("id, name, unit, per_kg, per_order, stock, low_at, cost_per_unit, supplier_phone, alerted_at, applies_to").order("name"),
   ) as Row[];
   return rows.map((r) => ({
     id: r.id as string,
@@ -527,5 +531,6 @@ export const listSupplies = cache(async (): Promise<Supply[]> => {
     costPerUnit: r.cost_per_unit as number,
     supplierPhone: u(r.supplier_phone),
     alertedAt: u(r.alerted_at),
+    appliesTo: ((r.applies_to as string) ?? "ALL") as Supply["appliesTo"],
   }));
 });

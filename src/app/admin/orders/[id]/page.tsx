@@ -9,7 +9,9 @@ import { Badge, Card, OrderStatusBadge, PageTitle, PaymentBadge } from "@/compon
 import { confirmPayment, markPaidCash, rejectPayment } from "@/lib/actions/manager";
 import { markReady } from "@/lib/actions/service";
 import { assignDriver, autoAssign, setOrderStatus } from "@/lib/actions/manager-ops";
-import { deviceLabel, getOrder, listCustomers, listDevices, listDrivers, listOrderEvents, now } from "@/lib/data";
+import { deviceLabel, getOrder, getTenantById, listCustomers, listDevices, listDrivers, listOrderEvents, now } from "@/lib/data";
+import { getSession } from "@/lib/session";
+import { bagTag, isSorted } from "@/lib/sorting";
 import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
 import { AmountForm } from "../../payments/amount-form";
 import { weightGapPct } from "@/lib/dispatch/weighing";
@@ -43,7 +45,9 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
   const order = await getOrder(id);
   if (!order) notFound(); // RLS: other businesses' orders simply don't exist for this manager
 
-  const [events, drivers, customers, devices] = await Promise.all([listOrderEvents(id), listDrivers(), listCustomers(), listDevices()]);
+  const session = await getSession();
+  const [events, drivers, customers, devices, tenant] = await Promise.all([listOrderEvents(id), listDrivers(), listCustomers(), listDevices(), getTenantById(session?.tenantId)]);
+  const sorted = isSorted(order);
   const customer = customers.find((c) => c.id === order.customerId);
   const device = devices.find((d) => d.deviceId === order.deviceId);
   const driver = drivers.find((d) => d.telegramChatId === order.driverId);
@@ -75,6 +79,23 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
             <dd>{order.address || "—"}</dd>
             <dt className="text-muted">Weight</dt>
             <dd className="tabular-nums">{formatKg(order.weightKg)}</dd>
+            {sorted && (
+              <>
+                <dt className="text-muted">Bags</dt>
+                <dd className="space-y-0.5 tabular-nums">
+                  {(order.whitesKg ?? 0) > 0 && (
+                    <span className="block">
+                      Whites {formatKg(order.whitesKg!)} <span className="font-mono text-xs text-muted">{bagTag(order.deviceOrderId, "WHITES")}</span>
+                    </span>
+                  )}
+                  {(order.colouredKg ?? 0) > 0 && (
+                    <span className="block">
+                      Coloured {formatKg(order.colouredKg!)} <span className="font-mono text-xs text-muted">{bagTag(order.deviceOrderId, "COLOURED")}</span>
+                    </span>
+                  )}
+                </dd>
+              </>
+            )}
             <dt className="text-muted">Driver</dt>
             <dd>{driver?.name ?? (order.driverId ? `Telegram ${order.driverId}` : "—")}</dd>
             {order.status === "COMPLETED" && (
@@ -291,7 +312,11 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
         {order.paymentStatus === "UNPAID" ? (
           <div className="mt-5 border-t border-dotted border-border-strong pt-4">
             <p className="mb-2 text-sm text-secondary">Weighed it again at the store? Confirm or correct the weight; the amount updates.</p>
-            <WeightForm orderId={order.id} current={order.weighedKg ?? order.weightKg} />
+            <WeightForm
+              orderId={order.id}
+              current={order.weighedKg ?? order.weightKg}
+              bags={sorted || tenant?.sortWhites ? { whites: order.whitesKg ?? 0, coloured: order.colouredKg ?? 0 } : undefined}
+            />
           </div>
         ) : (
           <p className="mt-4 text-xs text-muted">The weight is locked once the customer has paid or reported a payment.</p>

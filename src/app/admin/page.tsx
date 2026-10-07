@@ -6,6 +6,7 @@ import { dueLabel, isLate } from "@/lib/turnaround";
 import { Badge, Card, EmptyState, OrderStatusBadge, PageTitle, StatTile } from "@/components/ui";
 import { deviceLabel, isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, now } from "@/lib/data";
 import { formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
+import { washQueue } from "@/lib/sorting";
 
 export const metadata: Metadata = { title: "Live board" };
 
@@ -34,6 +35,8 @@ export default async function LiveBoard() {
   const driverName = (chatId?: string) =>
     chatId ? (drivers.find((d) => d.telegramChatId === chatId)?.name ?? `Driver …${chatId.slice(-4)}`) : "—";
   const deviceArea = (id: string) => deviceLabel(devices.find((d) => d.deviceId === id));
+  // picked up and not ready yet: what's waiting to be washed, whites and coloured apart
+  const wash = washQueue(all);
 
   return (
     <div className="stagger space-y-6">
@@ -68,6 +71,25 @@ export default async function LiveBoard() {
               </li>
             ))}
           </ul>
+        </Card>
+      )}
+
+      {wash.orders > 0 && (
+        <Card title="To wash" action={<span className="text-xs text-muted">{wash.orders} order{wash.orders === 1 ? "" : "s"} not ready yet</span>}>
+          <dl className="grid grid-cols-3 gap-4">
+            <div className="border-t-2 border-fg pt-3">
+              <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Whites</dt>
+              <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatKg(wash.whites)}</dd>
+            </div>
+            <div className="border-t-2 border-fg pt-3">
+              <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Coloured</dt>
+              <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatKg(wash.coloured)}</dd>
+            </div>
+            <div className="border-t-2 border-fg pt-3">
+              <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Not sorted</dt>
+              <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatKg(wash.unsorted)}</dd>
+            </div>
+          </dl>
         </Card>
       )}
 

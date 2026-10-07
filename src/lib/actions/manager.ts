@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { geocodeStore } from "../dispatch/service";
 import { parseKg, repriceForWeight } from "../dispatch/weighing";
+import { sortedTotal } from "../sorting";
 import { notifyClosureRequested, notifySubscriptionSubmitted } from "../email/notify";
 import { sendInvoice } from "../invoice/service";
 import { getSession } from "../session";
@@ -85,11 +86,14 @@ export async function updateServiceArea(_prev: FormState, formData: FormData): P
 export async function updateWeighing(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireManager();
   const on = formData.get("weighAtPickup") === "on";
+  // whites and coloured bags are weighed separately, so sorting needs weighing on
+  const sort = on && formData.get("sortWhites") === "on";
   // not in the manager's column grants: written server-side after the role check
-  const { error } = await supabaseAdmin().from("tenants").update({ weigh_at_pickup: on }).eq("id", session.tenantId);
+  const { error } = await supabaseAdmin().from("tenants").update({ weigh_at_pickup: on, sort_whites: sort }).eq("id", session.tenantId);
   if (error) return { error: friendlyError(error) };
   done();
-  return { message: on ? "Saved. Drivers will weigh every bag at pickup." : "Saved. Pickups use the basket's reading." };
+  if (!on) return { message: "Saved. Pickups use the basket's reading." + (formData.get("sortWhites") === "on" ? " Sorting whites needs weighing at pickup, so it's off too." : "") };
+  return { message: sort ? "Saved. Drivers will bag whites and coloured clothes separately and weigh each bag." : "Saved. Drivers will weigh every bag at pickup." };
 }
 
 // The manager confirms or corrects an unpaid order's weight (e.g. weighed again at the store). Re-priced at
@@ -97,8 +101,19 @@ export async function updateWeighing(_prev: FormState, formData: FormData): Prom
 export async function confirmOrderWeight(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireManager();
   const orderId = text(formData, "orderId");
-  const kg = parseKg(text(formData, "kg"));
-  if (kg === null || kg === "range") return { error: "Enter the weight in kg, between 0.2 and 60." };
+  // sorted orders are corrected bag by bag (whites + coloured); others by total
+  const split = formData.has("whites");
+  const bag = (k: string) => {
+    const v = text(formData, k);
+    if (v === "" || v === "0") return 0;
+    const n = parseKg(v);
+    return n === null || n === "range" ? null : n;
+  };
+  const whites = split ? bag("whites") : 0;
+  const coloured = split ? bag("coloured") : 0;
+  if (whites === null || coloured === null) return { error: "Enter each bag's weight in kg (0 if there's none), up to 60." };
+  const kg = split ? sortedTotal(whites, coloured) : parseKg(text(formData, "kg"));
+  if (kg === null || kg === "range") return { error: split ? "At least one bag needs clothes." : "Enter the weight in kg, between 0.2 and 60." };
 
   // read through RLS first: only an order of this manager's own business is found
   const supabase = await createClient();
@@ -130,6 +145,8 @@ export async function confirmOrderWeight(_prev: FormState, formData: FormData): 
       weighed_at: new Date().toISOString(),
       weight_source: "manager",
       reported_weight_kg: o.reported_weight_kg ?? o.weight_kg,
+      whites_kg: split ? whites : null,
+      coloured_kg: split ? coloured : null,
       amount_due: priced.amountDue,
       amount_before_discount: priced.amountBeforeDiscount,
     })

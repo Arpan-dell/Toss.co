@@ -12,7 +12,20 @@ describe("supplyRates", () => {
         { perKg: 4, perOrder: 0, costPerUnit: 0.5 },
         { perKg: 0, perOrder: 1, costPerUnit: 2 },
       ]),
-    ).toEqual({ perKg: 5, perOrder: 2 });
+    ).toEqual({ perKg: 5, perOrder: 2, whites: { perKg: 0, perOrder: 0 }, coloured: { perKg: 0, perOrder: 0 } });
+  });
+
+  it("keeps whites-only and coloured-only supplies apart", () => {
+    const r = supplyRates([
+      { perKg: 12, perOrder: 0, costPerUnit: 0.25 },
+      { perKg: 10, perOrder: 0, costPerUnit: 0.1, appliesTo: "WHITES" },
+      { perKg: 0, perOrder: 1, costPerUnit: 3, appliesTo: "COLOURED" },
+    ]);
+    expect(r).toEqual({ perKg: 3, perOrder: 0, whites: { perKg: 1, perOrder: 0 }, coloured: { perKg: 0, perOrder: 3 } });
+    // 2 kg whites + 3 kg coloured: 5 kg x 3 + 2 kg x 1 + one coloured bag x 3
+    expect(orderProfit({ amountDue: 250, weightKg: 5, whitesKg: 2, colouredKg: 3 }, r, { ...costs, otherCostPerKg: 0, driverPayPerPickup: 0 }).supplies).toBe(20);
+    // not sorted: only the every-wash supplies
+    expect(orderProfit({ amountDue: 250, weightKg: 5 }, r, { ...costs, otherCostPerKg: 0, driverPayPerPickup: 0 }).supplies).toBe(15);
   });
 });
 

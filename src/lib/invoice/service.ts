@@ -3,6 +3,7 @@ import { customerInvoice } from "../email/templates";
 import { emailEnabled, sendEmail } from "../email/mailer";
 import { orderLabel } from "../format";
 import { formatPhone } from "../phone";
+import { bagsLine } from "../sorting";
 import { supabaseAdmin } from "../supabase/admin";
 import { esc, sendDocument } from "../telegram-api";
 import { renderInvoicePdf, type InvoiceData } from "./pdf";
@@ -75,6 +76,7 @@ export async function loadInvoice(orderId: string, audience: "customer" | "busin
       completedAt: u(o.completed_at),
       address: (o.address as string) ?? "",
       weightKg: Number(o.weight_kg),
+      bags: bagsLine({ whitesKg: o.whites_kg as number | null, colouredKg: o.coloured_kg as number | null }) || undefined,
       subtotal: Number(o.amount_before_discount ?? o.amount_gross ?? o.amount_due),
       discountPct: u(o.discount_pct),
       basketCredit: Number(o.credit_applied) || undefined,

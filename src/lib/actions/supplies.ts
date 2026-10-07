@@ -38,6 +38,8 @@ export async function saveSupply(_prev: FormState, fd: FormData): Promise<FormSt
   const cost = num(fd, "costPerUnit");
   const phoneRaw = text(fd, "supplierPhone");
   const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
+  const appliesTo = text(fd, "appliesTo") || "ALL";
+  if (!["ALL", "WHITES", "COLOURED"].includes(appliesTo)) return { error: "Choose what the supply is used for." };
   if (!name) return { error: "Name the supply, like Detergent." };
   if (!UNITS.includes(unit)) return { error: "Pick a unit." };
   if (![perKg, perOrder, lowAt, cost].every((x) => Number.isFinite(x) && x >= 0 && x <= 100_000)) return { error: "Amounts must be 0 or more." };
@@ -45,7 +47,7 @@ export async function saveSupply(_prev: FormState, fd: FormData): Promise<FormSt
   if (phoneRaw && !phone) return { error: "That supplier number doesn't look right. Try 98765 43210." };
 
   const supabase = await createClient();
-  const row = { name, unit, per_kg: perKg, per_order: perOrder, low_at: lowAt, cost_per_unit: cost, supplier_phone: phone, updated_at: new Date().toISOString() };
+  const row = { name, unit, per_kg: perKg, per_order: perOrder, low_at: lowAt, cost_per_unit: cost, supplier_phone: phone, applies_to: appliesTo, updated_at: new Date().toISOString() };
   const { error } = id
     ? await supabase.from("supplies").update(row).eq("id", id).eq("tenant_id", session.tenantId!)
     : await supabase.from("supplies").insert({ ...row, tenant_id: session.tenantId!, stock: Math.max(0, num(fd, "stock")) });

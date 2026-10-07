@@ -1,5 +1,5 @@
 import "server-only";
-import { reminderFor } from "../plan";
+import { planState, reminderFor, tierOf } from "../plan";
 import { supabaseAdmin } from "../supabase/admin";
 import { emailEnabled, ownerEmail, sendEmail } from "./mailer";
 import * as t from "./templates";
@@ -131,6 +131,39 @@ export async function runPlanReminders(): Promise<{ sent: number }> {
     if (ok) {
       sent++;
       await db.from("tenants").update({ reminder_key: r.key }).eq("id", b.id);
+    }
+  }
+  return { sent };
+}
+
+/** Daily: one email per Pro business whose supplies dropped below their alert level (once per drop). */
+export async function runLowStockAlerts(): Promise<{ sent: number }> {
+  if (!emailEnabled()) return { sent: 0 };
+  const db = supabaseAdmin();
+  const { data: low } = await db.from("supplies").select("id, tenant_id, name, unit, stock, low_at, supplier_phone").gt("low_at", 0).is("alerted_at", null);
+  const due = (low ?? []).filter((s) => Number(s.stock) <= Number(s.low_at));
+  const byTenant = new Map<string, typeof due>();
+  for (const s of due) byTenant.set(s.tenant_id as string, [...(byTenant.get(s.tenant_id as string) ?? []), s]);
+  let sent = 0;
+  for (const [id, items] of byTenant) {
+    const b = await tenant(id);
+    if (!b || tierOf(planState({ planStatus: b.plan_status, trialEndsAt: b.trial_ends_at ?? undefined, paidUntil: b.paid_until ?? undefined }).state) !== "PRO") continue;
+    const ok = await sendEmail(
+      await managerEmail(b.manager_id),
+      t.managerLowStock({
+        business: b.name,
+        items: items.map((s) => ({
+          name: s.name as string,
+          left: `${Math.max(0, Math.round(Number(s.stock) * 10) / 10)} ${s.unit as string}`,
+          reorder: s.supplier_phone
+            ? `https://wa.me/${String(s.supplier_phone).replace(/\D/g, "")}?text=${encodeURIComponent(`Hi, please send more ${s.name} for ${b.name}. Thank you.`)}`
+            : undefined,
+        })),
+      }),
+    );
+    if (ok) {
+      sent++;
+      await db.from("supplies").update({ alerted_at: new Date().toISOString() }).in("id", items.map((s) => s.id as string));
     }
   }
   return { sent };

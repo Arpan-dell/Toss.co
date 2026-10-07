@@ -80,7 +80,7 @@ function orThrow<T>(res: { data: T | null; error: { message: string } | null }):
 }
 
 const TENANT_COLUMNS =
-  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, store_lng, service_radius_km, listed, weigh_at_pickup, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason, autopilot_enabled, autopilot_staffing, autopilot_winback, autopilot_nudges, autopilot_pricing, ai_max_discount, ai_price_min, ai_price_max, ai_price_step_pct";
+  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, store_lng, service_radius_km, listed, weigh_at_pickup, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason, autopilot_enabled, autopilot_staffing, autopilot_winback, autopilot_nudges, autopilot_pricing, ai_max_discount, ai_price_min, ai_price_max, ai_price_step_pct, other_cost_per_kg, driver_pay_per_pickup, driver_pay_per_km";
 
 function toTenant(r: Row): Tenant {
   return {
@@ -99,6 +99,9 @@ function toTenant(r: Row): Tenant {
     serviceRadiusKm: (r.service_radius_km as number) ?? 10,
     listed: r.listed !== false,
     weighAtPickup: r.weigh_at_pickup !== false,
+    otherCostPerKg: (r.other_cost_per_kg as number) ?? 0,
+    driverPayPerPickup: (r.driver_pay_per_pickup as number) ?? 0,
+    driverPayPerKm: (r.driver_pay_per_km as number) ?? 0,
     planStatus: r.plan_status as Tenant["planStatus"],
     trialEndsAt: u(r.trial_ends_at),
     paidUntil: u(r.paid_until),
@@ -466,3 +469,36 @@ export async function listCreditGrants(limit = 20): Promise<CreditGrant[]> {
     };
   });
 }
+
+// ---------- supplies (migration 0021) ----------
+export type Supply = {
+  id: string;
+  name: string;
+  unit: "ml" | "l" | "g" | "kg" | "pcs";
+  perKg: number;
+  perOrder: number;
+  stock: number;
+  lowAt: number;
+  costPerUnit: number;
+  supplierPhone?: string;
+  alertedAt?: string;
+};
+
+export const listSupplies = cache(async (): Promise<Supply[]> => {
+  const supabase = await db();
+  const rows = orThrow(
+    await supabase.from("supplies").select("id, name, unit, per_kg, per_order, stock, low_at, cost_per_unit, supplier_phone, alerted_at").order("name"),
+  ) as Row[];
+  return rows.map((r) => ({
+    id: r.id as string,
+    name: r.name as string,
+    unit: r.unit as Supply["unit"],
+    perKg: r.per_kg as number,
+    perOrder: r.per_order as number,
+    stock: r.stock as number,
+    lowAt: r.low_at as number,
+    costPerUnit: r.cost_per_unit as number,
+    supplierPhone: u(r.supplier_phone),
+    alertedAt: u(r.alerted_at),
+  }));
+});

@@ -67,3 +67,13 @@ describe("email templates", () => {
     expect(t.managerPlanReminder({ ...base, daysLeft: 3 }).html).toContain("up to <b>25%</b>");
   });
 });
+
+describe("managerLowStock", () => {
+  it("escapes supply names and links each reorder", () => {
+    const m = t.managerLowStock({ business: "Fresh", items: [{ name: "Soap <b>x</b>", left: "200 ml", reorder: "https://wa.me/919876543210?text=Hi" }, { name: "Bags", left: "3 pcs" }] });
+    expect(m.subject).toContain("2 supplies");
+    expect(m.html).toContain("Soap &lt;b&gt;x&lt;/b&gt;");
+    expect(m.html).not.toContain("<b>x</b>");
+    expect(m.html).toContain('href="https://wa.me/919876543210?text=Hi"');
+  });
+});

@@ -341,3 +341,20 @@ export const customerBasketRequestReceived = (r: { name: string; colour: string;
       ],
     }),
   );
+
+/** Daily: supplies that dropped below the level the manager set (Toss Pro). */
+export const managerLowStock = (p: { business: string; items: { name: string; left: string; reorder?: string }[] }) =>
+  mail(
+    p.items.length === 1 ? `🧴 ${p.items[0].name} is running low` : `🧴 ${p.items.length} supplies are running low`,
+    layout({
+      preheader: `${p.items.map((i) => i.name).join(", ")}: time to reorder.`,
+      heading: "Time to reorder",
+      paragraphs: [
+        `These supplies at <b>${e(p.business)}</b> dropped below the level you set. Stock comes down as pickups are completed, so they'll run out at this pace.`,
+        ...p.items.filter((i) => i.reorder).map((i) => `<a href="${e(i.reorder!)}">Reorder ${e(i.name)} on WhatsApp</a>`),
+      ],
+      rows: p.items.map((i) => [i.name, `${i.left} left`] as Row),
+      cta: { label: "Open Supplies", url: `${APP}/admin/stock` },
+      tone: "warn",
+    }),
+  );

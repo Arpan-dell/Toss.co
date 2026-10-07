@@ -13,4 +13,6 @@ export const PLAN_FEATURES: PlanFeature[] = [
   { name: "Toss AI briefing and autopilot", free: false, pro: true },
   { name: "Analytics and forecasts", free: false, pro: true },
   { name: "Download orders to Excel", free: false, pro: true },
+  { name: "Supplies stock with low-stock alerts and WhatsApp reorder", free: false, pro: true },
+  { name: "Profit per order and per customer", free: false, pro: true },
 ];

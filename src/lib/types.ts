@@ -23,6 +23,9 @@ export interface Tenant {
   serviceRadiusKm: number; // the business picks up within this distance of its store (1-20 km)
   listed: boolean; // shown in the public "Find a laundry" directory
   weighAtPickup: boolean; // drivers must enter the scale reading when they pick up
+  otherCostPerKg: number; // water, power, labour per kg washed (for profit)
+  driverPayPerPickup: number; // ₹ a driver earns per pickup
+  driverPayPerKm: number; // plus ₹ per km from the store to the basket
   planStatus: "TRIAL" | "ACTIVE" | "SUSPENDED";
   trialEndsAt?: string;
   paidUntil?: string;

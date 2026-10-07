@@ -20,6 +20,7 @@ export const PLAN_FEATURES: PlanFeature[] = [
   { name: "Customer ratings and Google review requests", free: "collected", pro: "with insights" },
   { name: "Photo proof at pickup from the driver bot", free: true, pro: true },
   { name: "Whites and coloured clothes bagged and weighed apart, wash queue", free: true, pro: true },
+  { name: "Delivery back to the customer, with handover codes and cash at the door", free: true, pro: true },
   { name: "Driver pay per pickup and per km, earnings in the driver bot", free: false, pro: true },
   { name: "Business accounts for PGs and hostels, billed monthly", free: false, pro: true },
   { name: "More branches on one dashboard", free: false, pro: "add-on per branch" },

@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Driver pay" };
 
-// Driver pay (Pro): what each driver earned from completed pickups at the laundry's rates, this week, last week
+// Driver pay (Pro): what each driver earned from completed pickups and deliveries at the laundry's rates, this week, last week
 // and this month (IST weeks run Monday to Sunday). Drivers see the same numbers under "My earnings" in the bot.
 export default async function DriverPay() {
   const locked = await proGate("Driver pay", "Pay drivers per pickup and per km without a notebook: Toss counts every pickup and the distance for you, and drivers can check their own earnings in the bot.");
@@ -36,9 +36,14 @@ export default async function DriverPay() {
   const lastWeek = weekStartIST(today, 1);
   const month = monthStartIST(today);
   const done = orders.filter((o) => o.driverId && o.completedAt);
+  // every trip is paid the same: a pickup (to the store) or a delivery (back to the customer)
+  const trips = [
+    ...done.map((o) => ({ chatId: o.driverId!, deviceId: o.deviceId, at: o.completedAt! })),
+    ...orders.filter((o) => o.deliveryStatus === "DELIVERED" && o.deliveryDriverId && o.deliveredAt).map((o) => ({ chatId: o.deliveryDriverId!, deviceId: o.deviceId, at: o.deliveredAt! })),
+  ];
   const pay = (chatId: string, start: string, end?: string): Earnings =>
     earnings(
-      done.filter((o) => o.driverId === chatId && o.completedAt! >= start && (!end || o.completedAt! < end)),
+      trips.filter((t) => t.chatId === chatId && t.at >= start && (!end || t.at < end)),
       rates,
       store,
       (id) => where.get(id),
@@ -103,7 +108,7 @@ export default async function DriverPay() {
                         <td key={i} className="px-2 py-2.5 text-right tabular-nums">
                           <span className="font-semibold text-fg">{formatINR(e.pay)}</span>
                           <span className="block text-xs text-muted">
-                            {e.pickups} pickup{e.pickups === 1 ? "" : "s"}
+                            {e.pickups} trip{e.pickups === 1 ? "" : "s"}
                             {e.km ? ` · ${e.km} km` : ""}
                           </span>
                         </td>
@@ -121,7 +126,7 @@ export default async function DriverPay() {
         <Card title="Your rates">
           <ActionForm action={updateCosts} submitLabel="Save rates">
             <input type="hidden" name="otherCostPerKg" value={tenant.otherCostPerKg} />
-            <Field label="Pay per pickup (₹)">
+            <Field label="Pay per trip (₹)" hint="Each pickup and each delivery.">
               <input name="driverPayPerPickup" type="number" min={0} step="any" defaultValue={tenant.driverPayPerPickup} className={fieldClass} />
             </Field>
             <Field label="Plus per km (₹)" hint="Store to basket. Leave 0 for a flat rate.">

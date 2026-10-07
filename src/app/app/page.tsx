@@ -22,6 +22,19 @@ export default async function CustomerOverview() {
   ]);
 
   const active = orders.find((o) => o.status === "PENDING" || o.status === "ACCEPTED");
+  // picked up and not back with the customer yet: being washed, ready to collect, or on its way back
+  const weekAgo = now().getTime() - 7 * 86_400_000;
+  const returning = orders
+    .filter(
+      (o) =>
+        o.status === "COMPLETED" &&
+        (o.deliveryStatus === "WAITING" ||
+          o.deliveryStatus === "ASSIGNED" ||
+          o.deliveryStatus === "OUT" ||
+          (!o.deliveryStatus && o.readyAt && o.deliveryCode) ||
+          (!o.deliveryStatus && !o.readyAt && new Date(o.completedAt ?? o.createdAt).getTime() >= weekAgo)),
+    )
+    .slice(0, 3);
   // pickups on a business account (PG, hostel) are paid monthly by the account, not here
   const unpaid = orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID" && !o.accountId);
   const verifying = orders.filter((o) => o.paymentStatus === "PENDING");
@@ -123,6 +136,46 @@ export default async function CustomerOverview() {
           {customer && <IdChip label="Your Customer ID" value={customer.customerCode} />}
         </div>
       </Card>
+
+      {returning.length > 0 && (
+        <Card title="Coming back to you">
+          <ul className="divide-y divide-border">
+            {returning.map((o) => {
+              const collect = !o.deliveryStatus && !!o.readyAt;
+              const headline = !o.readyAt
+                ? "Being washed"
+                : collect
+                  ? "Ready to collect at the store"
+                  : o.deliveryStatus === "OUT"
+                    ? "Out for delivery"
+                    : o.deliveryStatus === "ASSIGNED"
+                      ? "A driver is collecting it from the store"
+                      : "Ready, a driver will bring it soon";
+              return (
+                <li key={o.id} className="grid gap-5 py-5 first:pt-0 last:pb-0 sm:grid-cols-2">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="font-mono text-xs text-muted">{orderLabel(o)}</p>
+                      <p className="text-lg font-semibold">{headline}</p>
+                      {(o.deliveryAttempts ?? 0) > 0 && o.deliveryStatus === "WAITING" && (
+                        <p className="text-sm text-warn">We missed you last time. Your laundry will try again soon.</p>
+                      )}
+                    </div>
+                    {o.deliveryCode && o.readyAt && (
+                      <div className="rounded-[10px] border border-border bg-ink/[0.03] px-4 py-3">
+                        <p className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">Your handover code</p>
+                        <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.3em] tabular-nums">{o.deliveryCode}</p>
+                        <p className="mt-1 text-xs text-secondary">{collect ? "Show it at the store." : "Tell it to the driver at your door."}</p>
+                      </div>
+                    )}
+                  </div>
+                  <StatusTimeline order={o} />
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Active pickup" className="lg:col-span-2" action={active && <OrderStatusBadge status={active.status} />}>

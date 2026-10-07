@@ -23,6 +23,7 @@ export interface Tenant {
   serviceRadiusKm: number; // the business picks up within this distance of its store (1-20 km)
   listed: boolean; // shown in the public "Find a laundry" directory
   weighAtPickup: boolean; // drivers must enter the scale reading when they pick up
+  delivers: boolean; // ready orders go back to the customer with a driver; off: the customer collects at the store
   sortWhites: boolean; // drivers bag and weigh whites and coloured clothes separately (needs weighAtPickup)
   otherCostPerKg: number; // water, power, labour per kg washed (for profit)
   driverPayPerPickup: number; // ₹ a driver earns per pickup
@@ -171,6 +172,14 @@ export interface Order {
   ratingComment?: string;
   ratedAt?: string;
   accountId?: string; // on a business account's monthly bill instead of paid per pickup
+  // the trip back to the customer (migration 0027)
+  deliveryStatus?: "WAITING" | "ASSIGNED" | "OUT" | "DELIVERED" | "COLLECTED";
+  deliveryDriverId?: string; // Telegram chat ID, like driverId
+  outForDeliveryAt?: string;
+  deliveredAt?: string;
+  deliveryCode?: string; // 4 digits the customer reads to the driver at the door
+  deliveryVerified?: boolean;
+  deliveryAttempts?: number; // "customer not home" count
   whitesKg?: number; // set when the driver bagged whites and coloured clothes separately (weightKg = their sum)
   colouredKg?: number;
   pickupPhotoAt?: string; // the driver sent a photo of the bag at pickup (shown via /admin/orders/[id]/photo)

@@ -54,7 +54,13 @@ export default async function Payments() {
                   </p>
                   <p className="text-secondary">{who(o, customers)}</p>
                   <p className="text-xs text-muted">
-                    UPI ref <span className="font-mono text-fg">{o.paymentRef}</span>
+                    {o.paymentMethod === "CASH" ? (
+                      <span className="text-fg">Cash collected by the driver at delivery</span>
+                    ) : (
+                      <>
+                        UPI ref <span className="font-mono text-fg">{o.paymentRef}</span>
+                      </>
+                    )}
                     {o.paymentReportedAt ? ` · reported ${timeAgo(o.paymentReportedAt, current)}` : ""}
                   </p>
                 </div>

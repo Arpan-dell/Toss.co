@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getTenantById, listCustomers, listDrivers, listOrders } from "@/lib/data";
+import { DELIVERY_LABEL } from "@/lib/dispatch/delivery";
 import { orderLabel } from "@/lib/format";
 import { planState, tierOf } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
@@ -34,6 +35,10 @@ const COLUMNS: XlsxColumn[] = [
   { header: "Driver", width: 18 },
   { header: "Driver accepted", width: 18, type: "datetime" },
   { header: "Picked up", width: 18, type: "datetime" },
+  { header: "Ready", width: 18, type: "datetime" },
+  { header: "Back to customer", width: 18 },
+  { header: "Delivered by", width: 18 },
+  { header: "Delivered", width: 18, type: "datetime" },
 ];
 
 const at = (iso?: string) => (iso ? new Date(iso) : undefined);
@@ -77,6 +82,10 @@ export async function GET(request: NextRequest) {
       o.driverId ? (driver.get(o.driverId) ?? o.driverId) : undefined,
       at(o.acceptedAt),
       at(o.completedAt),
+      at(o.readyAt),
+      o.deliveryStatus ? DELIVERY_LABEL[o.deliveryStatus] : undefined,
+      o.deliveryDriverId ? (driver.get(o.deliveryDriverId) ?? o.deliveryDriverId) : undefined,
+      at(o.deliveredAt),
     ];
   });
 

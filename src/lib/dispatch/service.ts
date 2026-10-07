@@ -1,4 +1,5 @@
 import "server-only";
+import { randomInt } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { orderLabel } from "../format";
 import { supabaseAdmin } from "../supabase/admin";
@@ -18,11 +19,12 @@ const sendLocation = safe(api.sendLocation);
 const editMessage = safe(api.editMessage);
 const answerCallback = safe(api.answerCallback);
 const sendPhoto = safe(api.sendPhoto);
-import { chooseDriver, directionsUrl, routeUrl, searchUrl, type DriverCandidate, type LatLng } from "./core";
+import { chooseDriver, directionsUrl, searchUrl, type DriverCandidate, type LatLng } from "./core";
 import { geocode } from "./geocode";
 import { MAX_KG, MIN_KG, parseKg, repriceForWeight } from "./weighing";
 import { earnings, monthStartIST, weekStartIST } from "../driver-pay";
-import { bagTag, bagsLine, sortedTotal } from "../sorting";
+import { bagTag, bagsLine, isSorted, sortedTotal } from "../sorting";
+import { codeMatches, deliveryCode, looksLikeCode, tripRouteUrl } from "./delivery";
 import { logError } from "@/lib/log";
 import { APP_URL, SITE_URL } from "@/lib/site";
 
@@ -38,6 +40,8 @@ export const dispatchEnabled = () => !!driverToken();
 type Row = Record<string, unknown>;
 const db = (): SupabaseClient => supabaseAdmin();
 const ACTIVE = ["PENDING", "ACCEPTED"];
+// a delivery the driver is holding: collecting it from the store, or on the way to the customer
+const DELIVERING = ["ASSIGNED", "OUT"];
 
 // ---------- geocoding (cached on the row) ----------
 
@@ -74,8 +78,10 @@ async function candidates(tenantId: string): Promise<DriverCandidate[]> {
       .not("telegram_chat_id", "is", null), // not connected to the bot yet: can't be told about pickups
     db().from("orders").select("driver_id").eq("tenant_id", tenantId).in("status", ACTIVE).not("driver_id", "is", null),
   ]);
+  const { data: trips } = await db().from("orders").select("delivery_driver_id").eq("tenant_id", tenantId).in("delivery_status", DELIVERING);
   const load = new Map<string, number>();
   for (const j of jobs ?? []) load.set(j.driver_id as string, (load.get(j.driver_id as string) ?? 0) + 1);
+  for (const j of trips ?? []) if (j.delivery_driver_id) load.set(j.delivery_driver_id as string, (load.get(j.delivery_driver_id as string) ?? 0) + 1);
   return (drivers ?? []).map((d: Row) => ({
     id: d.id as string,
     chatId: d.telegram_chat_id as string,
@@ -91,24 +97,30 @@ async function candidates(tenantId: string): Promise<DriverCandidate[]> {
 async function driverByChat(chatId: string) {
   const { data } = await db()
     .from("drivers")
-    .select("id, tenant_id, name, telegram_chat_id, status, last_lat, last_lng, location_at, route_token, weighing_order_id, weighing_step, photo_order_id")
+    .select("id, tenant_id, name, telegram_chat_id, status, last_lat, last_lng, location_at, route_token, weighing_order_id, weighing_step, photo_order_id, delivering_order_id")
     .eq("telegram_chat_id", chatId)
     .maybeSingle();
   return data as Row | null;
 }
 
-/** The driver's current route as a Google Maps link, or null when they have no open pickups. */
+/**
+ * The driver's current trip as a Google Maps link: open pickups, then the store, then deliveries. Null when they
+ * have nothing open.
+ */
 export async function currentRoute(driver: Row): Promise<{ url: string | null; stops: number }> {
-  const { data: jobs } = await db()
-    .from("orders")
-    .select("device_id, address")
-    .eq("driver_id", driver.telegram_chat_id as string)
-    .in("status", ACTIVE);
-  const pickups = await Promise.all((jobs ?? []).map(async (j: Row) => ({ point: await basketPoint(j.device_id as string), address: j.address as string })));
-  if (!pickups.length) return { url: null, stops: 0 };
+  const chatId = driver.telegram_chat_id as string;
+  const [{ data: jobs }, { data: drops }] = await Promise.all([
+    db().from("orders").select("device_id, address").eq("driver_id", chatId).in("status", ACTIVE),
+    db().from("orders").select("device_id, address, delivery_status").eq("delivery_driver_id", chatId).in("delivery_status", DELIVERING),
+  ]);
+  const stop = async (j: Row) => ({ point: await basketPoint(j.device_id as string), address: j.address as string });
+  const pickups = await Promise.all((jobs ?? []).map(stop));
+  const deliveries = await Promise.all((drops ?? []).map(stop));
+  if (!pickups.length && !deliveries.length) return { url: null, stops: 0 };
   const store = await storeOf(driver.tenant_id as string);
   const here = driver.last_lat != null ? { lat: driver.last_lat as number, lng: driver.last_lng as number } : undefined;
-  return { url: routeUrl({ driver: here, pickups, store: store.place }), stops: pickups.length };
+  const collectFirst = (drops ?? []).some((d) => d.delivery_status === "ASSIGNED");
+  return { url: tripRouteUrl({ driver: here, pickups, deliveries, collectFirst, store: store.place }), stops: pickups.length + deliveries.length };
 }
 
 export async function routeByToken(token: string) {
@@ -166,9 +178,253 @@ export async function dispatchWaiting(tenantId: string): Promise<number> {
   for (const w of waiting ?? []) {
     const r = await dispatchOrder(w.id as string);
     if (r.assigned) placed++;
+    else if (r.reason === "no driver available") return placed;
+  }
+  // deliveries waiting at the store; a "customer not home" one waits for the laundry to send it again
+  const { data: ready } = await db()
+    .from("orders")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("delivery_status", "WAITING")
+    .eq("delivery_attempts", 0)
+    .is("delivery_driver_id", null)
+    .order("ready_at");
+  for (const w of ready ?? []) {
+    const r = await dispatchDelivery(w.id as string);
+    if (r.assigned) placed++;
     else if (r.reason === "no driver available") break;
   }
   return placed;
+}
+
+// ---------- deliveries (migration 0027) ----------
+
+const unpaidAmount = (o: Row) => (o.payment_status === "UNPAID" && !o.account_id ? Math.round(Number(o.amount_due) || 0) : 0);
+const bagNames = (o: Row) =>
+  isSorted({ whitesKg: o.whites_kg as number | null, colouredKg: o.coloured_kg as number | null })
+    ? [Number(o.whites_kg) > 0 && bagTag(o.device_order_id as number, "WHITES"), Number(o.coloured_kg) > 0 && bagTag(o.device_order_id as number, "COLOURED")]
+        .filter(Boolean)
+        .join(" + ")
+    : `#${o.device_order_id}`;
+
+/**
+ * The laundry marked an order ready. If it delivers, the order waits at the store for a driver (dispatched now) and
+ * the customer gets a 4-digit handover code; otherwise the customer is told to collect it. Safe to call twice.
+ */
+export async function orderReady(orderId: string, opts: { deliver?: boolean } = {}): Promise<void> {
+  const { data: o } = await db().from("orders").select("*").eq("id", orderId).maybeSingle();
+  if (!o || o.status !== "COMPLETED" || o.delivery_status) return;
+  const { data: t } = await db().from("tenants").select("name, delivers, store_address").eq("id", o.tenant_id as string).maybeSingle();
+  const code = (o.delivery_code as string | null) ?? deliveryCode(randomInt(10_000));
+  const business = esc((t?.name as string) ?? "Your laundry");
+  if (t?.delivers === false && !opts.deliver) {
+    await db().from("orders").update({ delivery_code: code }).eq("id", orderId).is("delivery_status", null);
+    await notifyCustomer(
+      o as Row,
+      `👕 <b>Your clothes are ready!</b>\n${business} has finished order #${o.device_order_id}.\n\n🏪 Collect them at ${esc((t?.store_address as string) || "the store")}` +
+        `\n🔢 Your code: <b>${code}</b>`,
+    ).catch((e) => logError("ready notice failed", e));
+    return;
+  }
+  const { data: started } = await db()
+    .from("orders")
+    .update({ delivery_status: "WAITING", delivery_code: code })
+    .eq("id", orderId)
+    .is("delivery_status", null)
+    .select("id");
+  if (!started?.length) return;
+  await notifyCustomer(
+    o as Row,
+    `👕 <b>Your clothes are ready!</b>\n${business} has finished order #${o.device_order_id} and will bring it back to you.\n\n` +
+      `🔢 Your handover code: <b>${code}</b>\n<i>Tell it to the driver when they arrive, so we know it reached you.</i>`,
+  ).catch((e) => logError("ready notice failed", e));
+  await dispatchDelivery(orderId).catch((e) => logError("delivery dispatch failed", e));
+}
+
+/** Gives a waiting delivery to the best driver (nearest to the store, where the clothes are). Safe to repeat. */
+export async function dispatchDelivery(orderId: string): Promise<DispatchResult> {
+  const { data: o } = await db().from("orders").select("*").eq("id", orderId).maybeSingle();
+  if (!o) return { assigned: false, reason: "order not found" };
+  if (o.delivery_status !== "WAITING" || o.delivery_driver_id) return { assigned: false, reason: "already handled" };
+  const store = await storeOf(o.tenant_id as string);
+  const from = store.place && typeof store.place !== "string" ? store.place : await basketPoint(o.device_id as string);
+  const choice = chooseDriver(from, await candidates(o.tenant_id as string), { exclude: (o.delivery_declined_by as string[]) ?? [] });
+  if (!choice) return { assigned: false, reason: "no driver available" };
+  const { data: won } = await db()
+    .from("orders")
+    .update({ delivery_driver_id: choice.driver.chatId, delivery_status: "ASSIGNED", delivery_assigned_at: new Date().toISOString() })
+    .eq("id", orderId)
+    .eq("delivery_status", "WAITING")
+    .is("delivery_driver_id", null)
+    .select("id");
+  if (!won?.length) return { assigned: false, reason: "assigned concurrently" };
+  await db().from("drivers").update({ status: "ON_JOB" }).eq("id", choice.driver.id);
+  await notifyDelivery(o as Row, choice.driver.chatId).catch((e) => logError("driver notify failed", e));
+  return { assigned: true, driver: choice.driver.name, distanceKm: choice.distanceKm };
+}
+
+/** Tells a driver about a delivery they've been given (also used when the manager assigns one). */
+export async function notifyDelivery(order: Row, chatId: string) {
+  const token = driverToken();
+  if (!token) return;
+  const driver = await driverByChat(chatId);
+  const store = await storeOf(order.tenant_id as string);
+  const { data: c } = order.customer_id
+    ? await db().from("customers").select("name, phone").eq("id", order.customer_id as string).maybeSingle()
+    : { data: null };
+  const id = order.id as string;
+  const due = unpaidAmount(order);
+  const lines = [
+    `📦 <b>NEW DELIVERY</b> · ${esc(orderLabel({ deviceId: order.device_id as string, deviceOrderId: order.device_order_id as number }))}`,
+    LINE,
+    `🏪 Collect from <b>${esc(store.name)}</b>: bag${isSorted({ whitesKg: order.whites_kg as number | null, colouredKg: order.coloured_kg as number | null }) ? "s" : ""} <code>${bagNames(order)}</code>`,
+    `📍 Deliver to ${esc((order.address as string) || "Address not set")}`,
+    c?.name ? `👤 ${esc(c.name as string)}` : null,
+    c?.phone ? `📞 ${formatPhone(c.phone as string)}` : null,
+    due ? `💵 To collect: <b>₹${due}</b> (or the customer pays online)` : order.account_id ? "🧾 On a monthly account: nothing to collect" : "✅ Already paid",
+  ].filter(Boolean);
+  const buttons: InlineButton[][] = [
+    ...(store.place ? [[{ text: "🗺 Navigate to the store", url: directionsUrl({ destination: store.place }) }]] : []),
+    ...(driver ? [[{ text: "🛣 My full route (always up to date)", url: routeLink(driver) }]] : []),
+    [
+      { text: "📦 Collected from store", callback_data: `dgot:${id}` },
+      { text: "↩️ Can't take it", callback_data: `ddecline:${id}` },
+    ],
+  ];
+  await sendMessage(token, chatId, lines.join("\n"), { inline: buttons });
+}
+
+const deliveryButtons = (o: Row, navigate: string): InlineButton[][] => [
+  [{ text: "🗺 Navigate to customer", url: navigate }],
+  [
+    { text: "✅ Delivered", callback_data: `ddone:${o.id}` },
+    { text: "🚪 Not home", callback_data: `dnothome:${o.id}` },
+  ],
+];
+
+// The handover: the customer's code matched (verified) or the driver delivered without it.
+async function completeDelivery(token: string, driver: Row, o: Row, verified: boolean) {
+  const chatId = driver.telegram_chat_id as string;
+  const { data: done } = await db()
+    .from("orders")
+    .update({ delivery_status: "DELIVERED", delivered_at: new Date().toISOString(), delivery_verified: verified })
+    .eq("id", o.id as string)
+    .eq("delivery_driver_id", chatId)
+    .eq("delivery_status", "OUT")
+    .select("id");
+  await db().from("drivers").update({ delivering_order_id: null }).eq("id", driver.id as string);
+  if (!done?.length) {
+    await sendMessage(token, chatId, "This delivery was already closed.", { keyboard: MENU });
+    return;
+  }
+  const due = unpaidAmount(o);
+  await sendMessage(token, chatId, `✅ <b>Delivered</b> · #${o.device_order_id}${verified ? " · code checked ✓" : ""}`, { keyboard: MENU });
+  if (due) {
+    await sendMessage(token, chatId, `💵 <b>₹${due}</b> is still unpaid. Did the customer pay you cash?`, {
+      inline: [[{ text: `Collected ₹${due} cash`, callback_data: `dcash:${o.id}` }], [{ text: "No, they'll pay online", callback_data: `dnocash:${o.id}` }]],
+    });
+  }
+  const { data: t } = await db().from("tenants").select("name").eq("id", o.tenant_id as string).maybeSingle();
+  await notifyCustomer(
+    o,
+    `📦 <b>Delivered!</b> Your clothes from ${esc((t?.name as string) ?? "your laundry")} are back (order #${o.device_order_id}).` +
+      (due ? `\n💵 ₹${due} is due: pay in the Toss app (${APP_URL}/app) or to the driver.` : "") +
+      "\nThank you!",
+  ).catch(() => {});
+  await nextStop(token, driver);
+}
+
+// After a delivery: the rest of the trip, or done for now.
+async function nextStop(token: string, driver: Row) {
+  const chatId = driver.telegram_chat_id as string;
+  const r = await currentRoute(driver);
+  if (r.url) {
+    await sendMessage(token, chatId, `👍 <b>${r.stops} more stop${r.stops > 1 ? "s" : ""}</b> to go.`, {
+      inline: [[{ text: "🛣 Continue route", url: routeLink(driver) }]],
+    });
+    return;
+  }
+  await db().from("drivers").update({ status: "AVAILABLE" }).eq("id", driver.id as string).neq("status", "OFFLINE");
+  await sendMessage(token, chatId, "🏁 <b>All done!</b> New pickups and deliveries will come here.", { keyboard: MENU });
+}
+
+// Buttons on delivery messages. Only the driver holding the delivery can use them.
+async function handleDeliveryButton(token: string, cb: NonNullable<TgUpdate["callback_query"]>, action: string, orderId: string) {
+  const chatId = String(cb.from.id);
+  const driver = await driverByChat(chatId);
+  const { data: o } = await db().from("orders").select("*").eq("id", orderId).maybeSingle();
+  const after = action === "dcash" || action === "dnocash";
+  if (!driver || !o || o.delivery_driver_id !== chatId || (after ? o.delivery_status !== "DELIVERED" : !DELIVERING.includes(o.delivery_status as string))) {
+    await answerCallback(token, cb.id, "This delivery isn't yours anymore.");
+    return;
+  }
+  const msg = cb.message;
+  const edit = (text: string) => (msg ? editMessage(token, String(msg.chat.id), msg.message_id, text) : Promise.resolve(undefined));
+
+  if (action === "dgot") {
+    if (o.delivery_status !== "ASSIGNED") return void (await answerCallback(token, cb.id, "Already on the way"));
+    await db().from("orders").update({ delivery_status: "OUT", out_for_delivery_at: new Date().toISOString() }).eq("id", orderId).eq("delivery_status", "ASSIGNED");
+    await answerCallback(token, cb.id, "On the way 🚚");
+    await edit(`📦 <b>Collected</b> · #${o.device_order_id}`);
+    const point = await basketPoint(o.device_id as string);
+    await sendMessage(
+      token,
+      chatId,
+      `🚚 <b>Deliver</b> · #${o.device_order_id}\n${LINE}\n📍 ${esc((o.address as string) || "Address not set")}\n\nAt the door, ask the customer for their <b>4-digit code</b>.`,
+      { inline: deliveryButtons(o as Row, point ? directionsUrl({ destination: point }) : searchUrl(o.address as string)) },
+    );
+    await notifyCustomer(
+      o as Row,
+      `🚚 <b>${esc(driver.name as string)}</b> is bringing your clothes back (order #${o.device_order_id}).\n🔢 Your code: <b>${o.delivery_code}</b>`,
+    ).catch(() => {});
+  } else if (action === "ddecline") {
+    if (o.delivery_status !== "ASSIGNED") return void (await answerCallback(token, cb.id, "You've collected it: use Not home if you can't deliver"));
+    await db()
+      .from("orders")
+      .update({ delivery_driver_id: null, delivery_status: "WAITING", delivery_assigned_at: null, delivery_declined_by: [...((o.delivery_declined_by as string[]) ?? []), chatId] })
+      .eq("id", orderId)
+      .eq("delivery_status", "ASSIGNED");
+    await answerCallback(token, cb.id, "Passed on. We'll find another driver.");
+    await edit(`↩️ <i>You passed on delivery #${o.device_order_id}.</i>`);
+    await dispatchDelivery(orderId);
+  } else if (action === "ddone") {
+    await db().from("drivers").update({ delivering_order_id: orderId }).eq("id", driver.id as string);
+    await answerCallback(token, cb.id, "Ask for the code 🔢");
+    await sendMessage(token, chatId, `🔢 <b>Handover code</b> · #${o.device_order_id}\nAsk the customer for their 4-digit code and send it here.`, {
+      inline: [[{ text: "Customer doesn't have the code", callback_data: `dnocode:${orderId}` }]],
+    });
+  } else if (action === "dnocode") {
+    await answerCallback(token, cb.id, "Delivered without the code");
+    await edit(`🔢 <i>Delivered without the code.</i>`);
+    await completeDelivery(token, driver, o as Row, false);
+  } else if (action === "dnothome") {
+    await db()
+      .from("orders")
+      .update({ delivery_driver_id: null, delivery_status: "WAITING", delivery_assigned_at: null, out_for_delivery_at: null, delivery_attempts: (Number(o.delivery_attempts) || 0) + 1 })
+      .eq("id", orderId)
+      .eq("delivery_status", "OUT");
+    await db().from("drivers").update({ delivering_order_id: null }).eq("id", driver.id as string).eq("delivering_order_id", orderId);
+    await answerCallback(token, cb.id, "Take it back to the store");
+    await edit(`🚪 <i>Not home · #${o.device_order_id}. Take the bags back to the store.</i>`);
+    const { data: t } = await db().from("tenants").select("name").eq("id", o.tenant_id as string).maybeSingle();
+    await notifyCustomer(
+      o as Row,
+      `🚪 We came to deliver order #${o.device_order_id} but couldn't reach you. ${esc((t?.name as string) ?? "Your laundry")} will try again soon.`,
+    ).catch(() => {});
+    await nextStop(token, driver);
+  } else if (action === "dcash") {
+    const { data: paid } = await db()
+      .from("orders")
+      .update({ payment_status: "PENDING", payment_method: "CASH", payment_ref: null, payment_reported_at: new Date().toISOString() })
+      .eq("id", orderId)
+      .eq("payment_status", "UNPAID")
+      .select("id");
+    await answerCallback(token, cb.id, paid?.length ? "Noted. Hand the cash to the store." : "Already paid");
+    await edit(paid?.length ? `💵 <b>Cash ₹${unpaidAmount(o as Row)} collected</b> · #${o.device_order_id}\n<i>Hand it to the store; they'll confirm it.</i>` : "💵 Already paid.");
+  } else if (action === "dnocash") {
+    await answerCallback(token, cb.id, "OK");
+    await edit("💵 <i>The customer will pay online.</i>");
+  }
 }
 
 /** Tells a driver about a pickup they've been given (also used for manual assignment from the dashboard). */
@@ -219,7 +475,7 @@ const LINE = "━━━━━━━━━━━━━━";
 const MENU = {
   keyboard: [
     [{ text: "🟢 Online" }, { text: "🔴 Offline" }],
-    [{ text: "📋 My pickups" }, { text: "🛣 My route" }],
+    [{ text: "📋 My jobs" }, { text: "🛣 My route" }],
     [{ text: "👤 My status" }, { text: "💰 My earnings" }],
   ],
   resize_keyboard: true,
@@ -239,7 +495,8 @@ const HOW_IT_WORKS = [
   "🟢 <b>Online</b>: tap it when you start working",
   "📍 <b>Live location</b>: 📎 → Location → <i>Share live location</i>, so you get the nearest pickups",
   "🧺 <b>Pickups</b> arrive here with a 🗺 Google Maps button",
-  "🛣 <b>My route</b>: every stop in order, ending at the store",
+  "📦 <b>Deliveries</b>: collect clean clothes from the store and take them back; ask the customer for their 4-digit code",
+  "🛣 <b>My route</b>: every stop in order: pickups, the store, then deliveries",
 ].join("\n");
 
 const WELCOME = (name: string) => `👋 <b>Hi ${esc(name)}, welcome to Toss Handy</b>\n${LINE}\n${HOW_IT_WORKS}`;
@@ -263,9 +520,11 @@ const ago = (iso: string) => {
 
 async function statusCard(driver: Row): Promise<string> {
   const chatId = driver.telegram_chat_id as string;
-  const [{ count: open }, { count: done }, store] = await Promise.all([
+  const [{ count: open }, { count: done }, { count: openDrops }, { count: dropped }, store] = await Promise.all([
     db().from("orders").select("id", { count: "exact", head: true }).eq("driver_id", chatId).in("status", ACTIVE),
     db().from("orders").select("id", { count: "exact", head: true }).eq("driver_id", chatId).eq("status", "COMPLETED").gte("completed_at", startOfTodayIST()),
+    db().from("orders").select("id", { count: "exact", head: true }).eq("delivery_driver_id", chatId).in("delivery_status", DELIVERING),
+    db().from("orders").select("id", { count: "exact", head: true }).eq("delivery_driver_id", chatId).eq("delivery_status", "DELIVERED").gte("delivered_at", startOfTodayIST()),
     storeOf(driver.tenant_id as string),
   ]);
   const status = driver.status === "OFFLINE" ? "🔴 Offline" : driver.status === "ON_JOB" ? "🚚 On a job" : "🟢 Online";
@@ -276,8 +535,8 @@ async function statusCard(driver: Row): Promise<string> {
     LINE,
     `Status: <b>${status}</b>`,
     location,
-    `🧺 Open pickups: <b>${open ?? 0}</b>`,
-    `✅ Done today: <b>${done ?? 0}</b>`,
+    `🧺 Open pickups: <b>${open ?? 0}</b> · 📦 deliveries: <b>${openDrops ?? 0}</b>`,
+    `✅ Done today: <b>${done ?? 0}</b> pickups · <b>${dropped ?? 0}</b> deliveries`,
     ...(!fresh && driver.status !== "OFFLINE" ? ["", "<i>Share your live location so you get the nearest pickups.</i>"] : []),
   ].join("\n");
 }
@@ -294,17 +553,22 @@ async function earningsCard(driver: Row): Promise<string> {
     db().from("tenants").select("store_lat, store_lng, driver_pay_per_pickup, driver_pay_per_km").eq("id", driver.tenant_id as string).maybeSingle(),
     db().from("orders").select("device_id, completed_at").eq("driver_id", chatId).eq("status", "COMPLETED").gte("completed_at", from),
   ]);
+  // deliveries are trips too, paid like pickups
+  const { data: drops } = await db().from("orders").select("device_id, delivered_at").eq("delivery_driver_id", chatId).eq("delivery_status", "DELIVERED").gte("delivered_at", from);
+  const trips = [
+    ...(done ?? []).map((o) => ({ deviceId: o.device_id as string, at: o.completed_at as string })),
+    ...(drops ?? []).map((o) => ({ deviceId: o.device_id as string, at: o.delivered_at as string })),
+  ];
   const rates = { driverPayPerPickup: Number(t?.driver_pay_per_pickup) || 0, driverPayPerKm: Number(t?.driver_pay_per_km) || 0 };
   if (!rates.driverPayPerPickup && !rates.driverPayPerKm) return "💰 Your laundry hasn't set driver pay in Toss yet. Ask your manager.";
-  const ids = [...new Set((done ?? []).map((o) => o.device_id as string))];
+  const ids = [...new Set(trips.map((o) => o.deviceId))];
   const { data: devs } = ids.length ? await db().from("devices").select("device_id, lat, lng").in("device_id", ids) : { data: [] };
   const at = new Map((devs ?? []).filter((d) => d.lat != null && d.lng != null).map((d) => [d.device_id as string, { lat: Number(d.lat), lng: Number(d.lng) }]));
   const store = t?.store_lat != null && t?.store_lng != null ? { lat: Number(t.store_lat), lng: Number(t.store_lng) } : null;
-  const between = (start: string, end?: string) =>
-    (done ?? []).filter((o) => (o.completed_at as string) >= start && (!end || (o.completed_at as string) < end)).map((o) => ({ deviceId: o.device_id as string }));
+  const between = (start: string, end?: string) => trips.filter((o) => o.at >= start && (!end || o.at < end));
   const line = (label: string, start: string, end?: string) => {
     const e = earnings(between(start, end), rates, store, (id) => at.get(id));
-    return `${label}: <b>₹${e.pay}</b> · ${e.pickups} pickup${e.pickups === 1 ? "" : "s"}${e.km ? ` · ${e.km} km` : ""}`;
+    return `${label}: <b>₹${e.pay}</b> · ${e.pickups} trip${e.pickups === 1 ? "" : "s"}${e.km ? ` · ${e.km} km` : ""}`;
   };
   return [
     `💰 <b>Your earnings</b> · ${esc(driver.name as string)}`,
@@ -313,7 +577,7 @@ async function earningsCard(driver: Row): Promise<string> {
     line("Last week", lastWeek, week),
     line("This month", month),
     "",
-    `<i>₹${rates.driverPayPerPickup} per pickup${rates.driverPayPerKm ? ` + ₹${rates.driverPayPerKm}/km from the store` : ""}. Paid by your laundry.</i>`,
+    `<i>₹${rates.driverPayPerPickup} per pickup or delivery${rates.driverPayPerKm ? ` + ₹${rates.driverPayPerKm}/km from the store` : ""}. Paid by your laundry.</i>`,
   ].join("\n");
 }
 
@@ -445,6 +709,24 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
 
   const text = (msg.text ?? "").trim();
 
+  // Handover: four digits after "Delivered" are the customer's code.
+  if (driver.delivering_order_id && update.message && looksLikeCode(text)) {
+    const { data: o } = await db().from("orders").select("*").eq("id", driver.delivering_order_id as string).maybeSingle();
+    if (!o || o.delivery_driver_id !== chatId || o.delivery_status !== "OUT") {
+      await db().from("drivers").update({ delivering_order_id: null }).eq("id", driver.id as string);
+      await sendMessage(token, chatId, "This delivery isn't yours anymore.", { keyboard: MENU });
+      return;
+    }
+    if (!codeMatches(text, o.delivery_code as string)) {
+      await sendMessage(token, chatId, "❌ That code doesn't match. Ask the customer to check the Toss message, then send it again.", {
+        inline: [[{ text: "Customer doesn't have the code", callback_data: `dnocode:${o.id}` }]],
+      });
+      return;
+    }
+    await completeDelivery(token, driver, o as Row, true);
+    return;
+  }
+
   // Mid weigh-in: a number is the bag's weight. Anything else (menu buttons) works as usual.
   if (driver.weighing_order_id && update.message) {
     const kg = parseKg(text);
@@ -492,17 +774,36 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
       r.url ? `🛣 <b>Your route</b>\n${LINE}\n${r.stops} pickup${r.stops > 1 ? "s" : ""}, then the store 🏁\n<i>The link stays up to date as pickups change.</i>` : "🛣 No open pickups right now.",
       r.url ? { inline: [[{ text: "🗺 Open route in Google Maps", url: routeLink(driver) }]] } : { keyboard: MENU },
     );
-  } else if (text === "📋 My pickups" || text === "/pickups") {
+  } else if (text === "📋 My jobs" || text === "📋 My pickups" || text === "/pickups" || text === "/jobs") {
     const { data: jobs } = await db()
       .from("orders")
       .select("id, device_id, device_order_id, address, weight_kg, customer_id")
       .eq("driver_id", chatId)
       .in("status", ACTIVE)
       .order("assigned_at");
-    if (!jobs?.length) {
-      await sendMessage(token, chatId, "📋 No open pickups. Stay 🟢 online and new ones will come here.", { keyboard: MENU });
+    const { data: drops } = await db()
+      .from("orders")
+      .select("*")
+      .eq("delivery_driver_id", chatId)
+      .in("delivery_status", DELIVERING)
+      .order("delivery_assigned_at");
+    if (!jobs?.length && !drops?.length) {
+      await sendMessage(token, chatId, "📋 Nothing open. Stay 🟢 online and new pickups and deliveries will come here.", { keyboard: MENU });
     } else {
-      await sendMessage(token, chatId, `📋 <b>Your pickups</b> (${jobs.length})`, { keyboard: MENU });
+      await sendMessage(token, chatId, `📋 <b>Your jobs</b>: ${jobs?.length ?? 0} pickup${jobs?.length === 1 ? "" : "s"}, ${drops?.length ?? 0} deliver${drops?.length === 1 ? "y" : "ies"}`, {
+        keyboard: MENU,
+      });
+      for (const d of drops ?? []) {
+        if (d.delivery_status === "ASSIGNED") await notifyDelivery(d as Row, chatId);
+        else {
+          const point = await basketPoint(d.device_id as string);
+          await sendMessage(token, chatId, `🚚 <b>Deliver</b> · #${d.device_order_id}\n${LINE}\n📍 ${esc((d.address as string) || "Address not set")}`, {
+            inline: deliveryButtons(d as Row, point ? directionsUrl({ destination: point }) : searchUrl(d.address as string)),
+          });
+        }
+      }
+    }
+    if (jobs?.length) {
       const ids = jobs.map((j) => j.customer_id as string | null).filter((v): v is string => !!v);
       const { data: people } = ids.length ? await db().from("customers").select("id, phone").in("id", ids) : { data: [] };
       const phoneOf = new Map((people ?? []).map((p: Row) => [p.id as string, p.phone as string | null]));
@@ -575,7 +876,7 @@ async function finishPickup(
 
   const r = await currentRoute(driver);
   if (r.url) {
-    await sendMessage(token, chatId, `👍 Nice! <b>${r.stops} more pickup${r.stops > 1 ? "s" : ""}</b> to go.`, {
+    await sendMessage(token, chatId, `👍 Nice! <b>${r.stops} more stop${r.stops > 1 ? "s" : ""}</b> to go.`, {
       inline: [[{ text: "🛣 Continue route", url: routeLink(driver) }]],
     });
   } else {
@@ -629,6 +930,9 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
     return;
   }
   const [action, orderId] = (cb.data ?? "").split(/:(.+)/);
+  if (["dgot", "ddecline", "ddone", "dnocode", "dnothome", "dcash", "dnocash"].includes(action) && orderId) {
+    return handleDeliveryButton(token, cb, action, orderId);
+  }
   const driver = await driverByChat(chatId);
   const { data: o } = orderId ? await db().from("orders").select("*").eq("id", orderId).maybeSingle() : { data: null };
   // Only the driver who holds the pickup can act on it.

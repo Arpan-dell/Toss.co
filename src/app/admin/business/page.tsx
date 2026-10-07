@@ -4,6 +4,7 @@ import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { IdChip } from "@/components/id-chip";
 import { Card, PageTitle, StatTile } from "@/components/ui";
 import { requestClosure, updateBusiness, updateWeighing, updateWinback } from "@/lib/actions/manager";
+import { updateDelivers } from "@/lib/actions/delivery";
 import { updateService } from "@/lib/actions/service";
 import { getOfferStats, getTenantById, listCustomers } from "@/lib/data";
 import { formatDate } from "@/lib/format";
@@ -96,6 +97,23 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
                 bleach can come off the whites only.
               </span>
               <span className="mt-1 block text-xs text-muted">Needs weighing at pickup. The price per kg is the same for both bags.</span>
+            </span>
+          </label>
+        </ActionForm>
+      </Card>
+
+      <Card title="Delivery back to customers">
+        <ActionForm action={updateDelivers} submitLabel="Save">
+          <label className="flex items-start gap-2.5 text-sm">
+            <input name="delivers" type="checkbox" defaultChecked={tenant.delivers} className="mt-0.5 size-4 accent-[var(--accent)]" />
+            <span>
+              <span className="font-medium text-fg">Deliver clean clothes back with our drivers</span>
+              <span className="mt-0.5 block text-secondary">
+                When you tap <b>Mark ready</b>, the order goes to the nearest online driver: they collect the bags from the store and take them back.
+                The customer gets a 4-digit code on Telegram and reads it to the driver at the door, so you know it reached the right person. Unpaid
+                orders can be paid to the driver in cash; you confirm it under Payments.
+              </span>
+              <span className="mt-1 block text-xs text-muted">Off: customers are told to collect ready orders at your store, with the same code.</span>
             </span>
           </label>
         </ActionForm>

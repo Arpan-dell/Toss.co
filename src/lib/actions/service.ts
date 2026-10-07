@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
-import { esc, sendMessage } from "../telegram-api";
+import { orderReady } from "../dispatch/service";
 import { logError } from "../log";
 import { friendlyError, text, type FormState } from "./shared";
 
@@ -29,17 +29,9 @@ export async function markReady(fd: FormData) {
     .eq("tenant_id", session.tenantId!)
     .eq("status", "COMPLETED")
     .is("ready_at", null)
-    .select("customer_telegram_id, device_order_id");
-  const o = data?.[0];
-  const token = process.env.TELEGRAM_CUSTOMER_BOT_TOKEN;
-  if (o?.customer_telegram_id && token) {
-    const { data: t } = await supabaseAdmin().from("tenants").select("name").eq("id", session.tenantId!).maybeSingle();
-    await sendMessage(
-      token,
-      o.customer_telegram_id as string,
-      `👕 <b>Your clothes are ready!</b>\n${esc((t?.name as string) ?? "Your laundry")} has finished pickup #${o.device_order_id as number}.`,
-    ).catch((err) => logError("ready notice failed", err));
-  }
+    .select("id");
+  // the customer is told, and the clothes go out for delivery (or wait at the store to be collected)
+  if (data?.length) await orderReady(orderId).catch((err) => logError("ready failed", err));
   revalidatePath("/admin", "layout");
 }
 

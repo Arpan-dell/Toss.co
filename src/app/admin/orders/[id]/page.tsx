@@ -17,6 +17,7 @@ import { AmountForm } from "../../payments/amount-form";
 import { weightGapPct } from "@/lib/dispatch/weighing";
 import type { Order } from "@/lib/types";
 import { dueLabel, isLate } from "@/lib/turnaround";
+import { DeliveryPanel } from "./delivery-panel";
 import { WeightForm } from "./weight-form";
 
 // Where the billed weight came from, as a tag (never color-only).
@@ -149,7 +150,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
           )}
         </Card>
 
-        <Card title="Manage pickup">
+        <Card title={order.status === "COMPLETED" ? "Delivery" : "Manage pickup"}>
           {open ? (
             <div className="space-y-5">
               <form action={assignDriver} className="space-y-2">
@@ -213,9 +214,11 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
               <p className="text-xs text-muted">Use these if a driver forgot to tap Accept or Complete in the bot.</p>
             </div>
           ) : (
-            <p className="text-sm text-secondary">
-              {order.status === "COMPLETED" ? "This pickup is complete." : "This pickup was cancelled."}
-            </p>
+            order.status === "COMPLETED" ? (
+              <DeliveryPanel order={order} drivers={drivers} />
+            ) : (
+              <p className="text-sm text-secondary">This pickup was cancelled.</p>
+            )
           )}
         </Card>
       </div>

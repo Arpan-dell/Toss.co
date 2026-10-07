@@ -81,7 +81,7 @@ export function orderStops<T extends { point?: LatLng }>(start: LatLng | undefin
 }
 
 const fmt = (p: LatLng) => `${p.lat.toFixed(6)},${p.lng.toFixed(6)}`;
-type Place = LatLng | string; // coordinates, or an address Google can search
+export type Place = LatLng | string; // coordinates, or an address Google can search
 
 const place = (p: Place) => (typeof p === "string" ? p : fmt(p));
 

@@ -4,6 +4,7 @@ import { emailEnabled, sendEmail } from "../email/mailer";
 import { orderLabel } from "../format";
 import { formatPhone } from "../phone";
 import { bagsLine } from "../sorting";
+import { tierOfRow } from "../plan";
 import { supabaseAdmin } from "../supabase/admin";
 import { esc, sendDocument } from "../telegram-api";
 import { renderInvoicePdf, type InvoiceData } from "./pdf";
@@ -43,7 +44,7 @@ export async function loadInvoice(orderId: string, audience: "customer" | "busin
 
   const { data: o } = await db.from("orders").select("*").eq("id", orderId).single();
   const [{ data: t }, { data: c }, { data: d }, { data: dev }] = await Promise.all([
-    db.from("tenants").select("name, join_code, store_address, upi_id, manager_id").eq("id", o.tenant_id).maybeSingle(),
+    db.from("tenants").select("name, join_code, store_address, upi_id, manager_id, plan_status, trial_ends_at, paid_until").eq("id", o.tenant_id).maybeSingle(),
     o.customer_id
       ? db.from("customers").select("name, customer_code, email, phone, telegram_id").eq("id", o.customer_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -90,8 +91,8 @@ export async function loadInvoice(orderId: string, audience: "customer" | "busin
     data,
     customerEmail: u((c as Row | null)?.email),
     customerTelegram: u((c as Row | null)?.telegram_id) ?? u(o.customer_telegram_id),
-    // one-tap rating page for this order (token set when it was paid; migration 0022)
-    rateUrl: o.rate_token ? `${SITE}/rate/${o.rate_token as string}` : undefined,
+    // one-tap rating page for this order (token set when it was paid; migration 0022). Asking for ratings is Pro.
+    rateUrl: o.rate_token && tierOfRow(t) === "PRO" ? `${SITE}/rate/${o.rate_token as string}` : undefined,
   };
 }
 

@@ -1,3 +1,4 @@
+import { BackLink } from "@/components/back-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
@@ -40,6 +41,7 @@ export default async function Accounts() {
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker="Pro">Business accounts</PageTitle>
+      <BackLink />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatTile label="Accounts" value={String(accounts.length)} hint={`${rows.reduce((s, r) => s + r.baskets, 0)} baskets`} />

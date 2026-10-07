@@ -1,9 +1,11 @@
+import { BackLink } from "@/components/back-link";
 import type { Metadata } from "next";
+import { OrderLink } from "@/components/order-link";
 import Link from "next/link";
 import { proGate } from "@/components/plan-gate";
 import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { getTenantById, listCustomers, listOrders } from "@/lib/data";
-import { formatDateTime, orderLabel } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Ratings" };
@@ -27,6 +29,7 @@ export default async function Ratings() {
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker="Pro">Ratings</PageTitle>
+      <BackLink />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Average" value={rated.length ? `${avg.toFixed(1)} ★` : "-"} />
@@ -71,9 +74,7 @@ export default async function Ratings() {
                     <span>
                       <span className={o.rating! <= 2 ? "text-critical" : o.rating === 3 ? "text-warn" : "text-good"}>{"★".repeat(o.rating!)}</span>{" "}
                       <span className="font-medium text-fg">{(o.customerId && names.get(o.customerId)) ?? "Customer"}</span>{" "}
-                      <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="font-mono text-xs text-accent">
-                        {orderLabel(o)}
-                      </Link>
+                      <OrderLink order={o} />
                     </span>
                     {o.ratedAt && <span className="text-xs text-muted">{formatDateTime(o.ratedAt)}</span>}
                   </div>

@@ -4,10 +4,12 @@ import Link from "next/link";
 import { MicrosoftExcelLogo } from "@phosphor-icons/react/dist/ssr";
 import { OrderTable } from "@/components/order-table";
 import { Card, PageTitle } from "@/components/ui";
-import { listOrders } from "@/lib/data";
+import { listOrders, now } from "@/lib/data";
 import type { OrderStatus } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Orders" };
+
+const FREE_HISTORY_DAYS = 60;
 
 const FILTERS: { label: string; status?: OrderStatus }[] = [
   { label: "All" },
@@ -23,8 +25,12 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
   const params = await searchParams;
   const status = FILTERS.find((f) => f.status === params.status)?.status;
   const q = typeof params.q === "string" ? params.q : undefined;
-  const [orders, tier] = await Promise.all([listOrders({ status, q }), currentTier()]);
+  const [all, tier] = await Promise.all([listOrders({ status, q }), currentTier()]);
   const pro = tier?.tier === "PRO";
+  // Toss Free keeps the last 60 days on screen; Pro keeps the whole history
+  const cutoff = now().getTime() - FREE_HISTORY_DAYS * 86_400_000;
+  const orders = pro ? all : all.filter((o) => new Date(o.createdAt).getTime() >= cutoff);
+  const hidden = all.length - orders.length;
 
   // the export takes the same filter and search, so the file matches what's on screen
   const exportQs = new URLSearchParams();
@@ -80,6 +86,18 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
           {!pro && <span className="rounded-[4px] bg-accent/15 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.08em] text-accent">PRO</span>}
         </a>
       </div>
+
+      {hidden > 0 && (
+        <p className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-dashed border-border-strong px-4 py-3 text-sm text-secondary">
+          <span>
+            🔒 <span className="font-medium text-fg">{hidden} older orders</span> are hidden. Toss Free shows the last {FREE_HISTORY_DAYS} days; Pro keeps your whole
+            history.
+          </span>
+          <Link href="/admin/billing" className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">
+            Unlock history →
+          </Link>
+        </p>
+      )}
 
       <Card>
         <OrderTable orders={orders} showAddress linkToAdmin emptyText="No orders match this filter." />

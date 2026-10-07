@@ -1,4 +1,7 @@
+import { BackLink } from "@/components/back-link";
 import type { Metadata } from "next";
+import { planState, tierOf } from "@/lib/plan";
+import Link from "next/link";
 import { ChangePasswordCard } from "@/components/change-password";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { IdChip } from "@/components/id-chip";
@@ -19,10 +22,12 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
   if (!tenant) return <Card>This manager account isn&apos;t linked to a business.</Card>;
   const mine = customers.filter((c) => c.tenantId === tenant.id);
   const offers = await getOfferStats(tenant.id);
+  const pro = tierOf(planState(tenant).state) === "PRO";
 
   return (
     <div className="stagger max-w-3xl space-y-6">
       <PageTitle kicker="Your business">{tenant.name}</PageTitle>
+      <BackLink />
 
       {params.welcome && (
         <p role="status" className="rounded-[8px] border border-good/30 bg-good-bg px-4 py-3 text-sm text-good">
@@ -90,13 +95,16 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
           <label className="flex items-start gap-2.5 border-t border-dotted border-border-strong pt-3 text-sm">
             <input name="sortWhites" type="checkbox" defaultChecked={tenant.sortWhites} className="mt-0.5 size-4 accent-[var(--accent)]" />
             <span>
-              <span className="font-medium text-fg">Keep whites and coloured clothes apart</span>
+              <span className="font-medium text-fg">Keep whites and coloured clothes apart</span><span className="ml-1.5 rounded-[4px] bg-accent/15 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.08em] text-accent">PRO</span>
               <span className="mt-0.5 block text-secondary">
                 At pickup the driver packs <b>whites</b> and <b>coloured clothes</b> in two bags, tags them (like <code>#104-W</code> and{" "}
                 <code>#104-C</code>) and weighs each one. Your live board then shows how many kg of each are waiting to be washed, and supplies like
                 bleach can come off the whites only.
               </span>
-              <span className="mt-1 block text-xs text-muted">Needs weighing at pickup. The price per kg is the same for both bags.</span>
+              <span className="mt-1 block text-xs text-muted">
+                Needs weighing at pickup. The price per kg is the same for both bags.
+                {!pro && " On Toss Free drivers use one bag; upgrade to turn sorting on."}
+              </span>
             </span>
           </label>
         </ActionForm>
@@ -110,10 +118,18 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
               <span className="font-medium text-fg">Deliver clean clothes back with our drivers</span>
               <span className="mt-0.5 block text-secondary">
                 When you tap <b>Mark ready</b>, the order goes to the nearest online driver: they collect the bags from the store and take them back.
-                The customer gets a 4-digit code on Telegram and reads it to the driver at the door, so you know it reached the right person. Unpaid
-                orders can be paid to the driver in cash; you confirm it under Payments.
               </span>
-              <span className="mt-1 block text-xs text-muted">Off: customers are told to collect ready orders at your store, with the same code.</span>
+              <span className="mt-1 block text-secondary">
+                <span className="font-medium text-fg">With Pro</span>
+                {" "}the customer gets a 4-digit code and reads it to the driver at the door, so you know it reached the right person, and
+                drivers can record cash collected for unpaid orders.
+                {!pro && (
+                  <Link href="/admin/billing" className="ml-1 text-accent hover:text-accent-2">
+                    Upgrade →
+                  </Link>
+                )}
+              </span>
+              <span className="mt-1 block text-xs text-muted">Off: customers are told to collect ready orders at your store.</span>
             </span>
           </label>
         </ActionForm>
@@ -137,10 +153,11 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
         </p>
         <ServiceAreaEditor lat={tenant.storeLat} lng={tenant.storeLng} radiusKm={tenant.serviceRadiusKm} listed={tenant.listed} />
       </Card>
-      <Card title="Win back quiet customers">
+      <Card title="Win back quiet customers" action={!pro ? <Link href="/admin/billing" className="font-mono text-[10px] text-accent">PRO · UPGRADE →</Link> : undefined}>
         <p className="mb-4 text-sm text-secondary">
           When a customer hasn&apos;t had a pickup for a while, Toss sends them a discount in the Toss Control bot and on their dashboard. It&apos;s
           applied to their next pickup automatically, valid for 14 days.
+          {!pro && <span className="text-warn"> Paused on Toss Free: offers go out again when you upgrade.</span>}
           {offers.sent > 0 && (
             <span className="text-fg">
               {" "}

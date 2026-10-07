@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { dispatchOrder, notifyAssignment } from "../dispatch/service";
+import { getTenantById } from "../data";
 import { formatPhone, normalizePhone } from "../phone";
+import { planState, tierOf } from "../plan";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
@@ -33,6 +35,8 @@ export async function removeCustomer(formData: FormData) {
 
 // ---------- drivers ----------
 
+const FREE_DRIVERS = 2;
+
 // Drivers are added by name and mobile number. They start offline and unconnected; when they open
 // the driver bot and share their number, the bot matches it here and attaches their Telegram.
 export async function addDriver(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -43,6 +47,12 @@ export async function addDriver(_prev: FormState, formData: FormData): Promise<F
   if (!phone) return { error: "Enter the driver's mobile number, like 98765 43210." };
 
   const supabase = await createClient();
+  // Toss Free: up to FREE_DRIVERS drivers (the ones you have keep working); Pro: as many as you need
+  const tenant = await getTenantById(session.tenantId);
+  if (!tenant || tierOf(planState(tenant).state) !== "PRO") {
+    const { count } = await supabase.from("drivers").select("id", { count: "exact", head: true });
+    if ((count ?? 0) >= FREE_DRIVERS) return { error: `Toss Free includes ${FREE_DRIVERS} drivers. Upgrade to Pro under Billing to add more.` };
+  }
   const { error } = await supabase.from("drivers").insert({ tenant_id: session.tenantId, name, phone, status: "OFFLINE" });
   if (error) {
     return { error: error.code === "23505" ? `${formatPhone(phone)} is already registered as a driver.` : friendlyError(error) };

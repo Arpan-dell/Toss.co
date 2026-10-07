@@ -15,21 +15,23 @@ import { createClient } from "@/lib/supabase/server";
 // Private portal: keep it out of search results.
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
+// The dock keeps the everyday pages; growth tools and setup live under Settings.
 const nav: PortalNavItem[] = [
   { href: "/admin", label: "Live board", icon: "live" },
-  { href: "/admin/ai", label: "Toss AI", icon: "ai" },
+  { href: "/admin/orders", label: "Orders", icon: "orders" },
   { href: "/admin/payments", label: "Payments", icon: "payments" },
   { href: "/admin/customers", label: "Customers", icon: "customers" },
   { href: "/admin/fleet", label: "Fleet", icon: "fleet" },
   { href: "/admin/driver-pay", label: "Driver pay", icon: "driverpay" },
-  { href: "/admin/accounts", label: "Accounts", icon: "accounts" },
-  { href: "/admin/orders", label: "Orders", icon: "orders" },
-  { href: "/admin/analytics", label: "Analytics", icon: "analytics" },
-  { href: "/admin/profit", label: "Profit", icon: "profit" },
   { href: "/admin/stock", label: "Supplies", icon: "stock" },
-  { href: "/admin/ratings", label: "Ratings", icon: "ratings" },
-  { href: "/admin/branches", label: "Branches", icon: "branches" },
-  { href: "/admin/business", label: "Business", icon: "business" },
+  { href: "/admin/profit", label: "Profit", icon: "profit" },
+  { href: "/admin/ai", label: "Toss AI", icon: "ai" },
+  {
+    href: "/admin/settings",
+    label: "Settings",
+    icon: "settings",
+    match: ["/admin/business", "/admin/accounts", "/admin/analytics", "/admin/ratings", "/admin/branches"],
+  },
   { href: "/admin/billing", label: "Billing", icon: "billing" },
 ];
 

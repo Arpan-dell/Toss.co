@@ -101,3 +101,22 @@ export async function updateCosts(_prev: FormState, fd: FormData): Promise<FormS
   revalidatePath("/admin", "layout");
   return { message: "Saved. Profit and driver pay use these costs." };
 }
+
+// How one driver is paid: per trip (the rates above) or a monthly salary. Pro, like the Driver pay page.
+export async function setDriverPay(_prev: FormState, fd: FormData): Promise<FormState> {
+  const session = await requireProManager();
+  if (!session) return { error: "Driver pay is a Toss Pro feature. Upgrade under Billing." };
+  const payType = text(fd, "payType") === "SALARY" ? "SALARY" : "TRIP";
+  const salary = num(fd, "monthlySalary");
+  if (payType === "SALARY" && !(salary > 0 && salary <= 1_000_000)) return { error: "Enter the monthly salary in rupees." };
+  const supabase = await createClient();
+  // RLS: only this business's drivers can be changed
+  const { data, error } = await supabase
+    .from("drivers")
+    .update({ pay_type: payType, monthly_salary: payType === "SALARY" ? salary : 0 })
+    .eq("id", text(fd, "driverId"))
+    .select("name");
+  if (error || !data?.length) return { error: error ? friendlyError(error) : "Driver not found." };
+  revalidatePath("/admin", "layout");
+  return { message: payType === "SALARY" ? `${data[0].name}: ₹${salary.toLocaleString("en-IN")} a month.` : `${data[0].name}: paid per trip.` };
+}

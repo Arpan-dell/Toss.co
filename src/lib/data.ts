@@ -421,7 +421,7 @@ export async function getDeviceForCustomer(customerId: string): Promise<Device |
 export async function listDrivers(): Promise<Driver[]> {
   const supabase = await db();
   const rows = orThrow(
-    await supabase.from("drivers").select("id, tenant_id, name, phone, telegram_chat_id, status, last_lat, last_lng, location_at, max_jobs").order("name"),
+    await supabase.from("drivers").select("id, tenant_id, name, phone, telegram_chat_id, status, last_lat, last_lng, location_at, max_jobs, pay_type, monthly_salary").order("name"),
   );
   return (rows as Row[]).map((r) => ({
     id: r.id as string,
@@ -433,6 +433,8 @@ export async function listDrivers(): Promise<Driver[]> {
     location: r.last_lat != null ? { lat: r.last_lat as number, lng: r.last_lng as number } : undefined,
     locationAt: u(r.location_at),
     maxJobs: (r.max_jobs as number) ?? 3,
+    payType: r.pay_type === "SALARY" ? "SALARY" : "TRIP",
+    monthlySalary: Number(r.monthly_salary) || 0,
   }));
 }
 

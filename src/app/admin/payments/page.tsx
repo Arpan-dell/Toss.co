@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { OrderLink } from "@/components/order-link";
 import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { confirmPayment, markPaidCash, rejectPayment } from "@/lib/actions/manager";
 import { listCustomers, listOrders, now } from "@/lib/data";
-import { formatDateTime, formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
+import { formatDateTime, formatINR, formatKg, timeAgo } from "@/lib/format";
 import type { Customer, Order } from "@/lib/types";
 import { AmountForm } from "./amount-form";
 import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
@@ -50,7 +51,7 @@ export default async function Payments() {
               <OptimisticRow key={o.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-[220px] flex-1 text-sm">
                   <p className="font-medium">
-                    {formatINR(o.amountDue)} <span className="font-mono text-xs text-muted">{orderLabel(o)}</span>
+                    {formatINR(o.amountDue)} <OrderLink order={o} />
                   </p>
                   <p className="text-secondary">{who(o, customers)}</p>
                   <p className="text-xs text-muted">
@@ -93,7 +94,7 @@ export default async function Payments() {
               <OptimisticRow key={o.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-[220px] flex-1 text-sm">
                   <p className="font-medium">
-                    {formatINR(o.amountDue)} <span className="font-mono text-xs text-muted">{orderLabel(o)}</span>
+                    {formatINR(o.amountDue)} <OrderLink order={o} />
                   </p>
                   <p className="text-secondary">{who(o, customers)}</p>
                   <p className="text-xs text-muted">
@@ -119,7 +120,7 @@ export default async function Payments() {
             {paid.map((o) => (
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
                 <span>
-                  {formatINR(o.amountDue)} <span className="font-mono text-xs text-muted">{orderLabel(o)}</span>
+                  {formatINR(o.amountDue)} <OrderLink order={o} />
                   <span className="ml-2 text-secondary">{who(o, customers)}</span>
                 </span>
                 <span className="flex items-center gap-2 text-xs text-muted">

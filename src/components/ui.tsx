@@ -6,14 +6,15 @@ import { CountUp } from "./count-up";
 // with a dotted leader like a laundry ticket, figures in mono on a heavy top rule, and square-cornered status
 // tags. Shape rule: panels 10px, inputs 8px, tags 4px; only buttons are pills. No glass, glow or gradients.
 
-export function Card({ title, action, children, className = "" }: {
+export function Card({ title, action, children, className = "", id }: {
   title?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  id?: string; // anchor, e.g. /admin#late
 }) {
   return (
-    <section className={`rounded-[10px] border border-border bg-surface-solid p-5 ${className}`}>
+    <section id={id} className={`scroll-mt-6 rounded-[10px] border border-border bg-surface-solid p-5 ${className}`}>
       {(title || action) && (
         <header className="mb-4 flex items-center gap-3">
           {title && <h2 className="shrink-0 font-mono text-[11px] font-medium tracking-[0.12em] text-secondary uppercase">{title}</h2>}

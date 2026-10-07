@@ -142,6 +142,8 @@ export interface Driver {
   location?: { lat: number; lng: number };
   locationAt?: string; // when the driver bot last received their (live) location
   maxJobs: number;
+  payType: "TRIP" | "SALARY"; // paid per pickup/delivery at the laundry's rates, or a fixed monthly salary
+  monthlySalary: number;
 }
 
 export interface Order {

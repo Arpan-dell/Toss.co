@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { OrderLink } from "@/components/order-link";
 import type { Order } from "@/lib/types";
 import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
 import { now } from "@/lib/data";
@@ -34,9 +34,7 @@ export function OrderTable({ orders, showAddress = false, emptyText = "No orders
             <tr key={o.id} data-reveal="row" className="border-b border-border transition-colors last:border-0 hover:bg-ink/[0.03]">
               <td className="px-5 py-2.5 font-mono text-xs">
                 {linkToAdmin ? (
-                  <Link href={`/admin/orders/${encodeURIComponent(o.id)}`} className="text-accent hover:text-accent-2">
-                    {orderLabel(o)}
-                  </Link>
+                  <OrderLink order={o} />
                 ) : (
                   orderLabel(o)
                 )}

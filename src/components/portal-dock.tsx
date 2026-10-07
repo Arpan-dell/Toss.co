@@ -57,7 +57,8 @@ const ICONS = {
   ratings: Star,
 } satisfies Record<string, Icon>;
 
-export type PortalNavItem = { href: string; label: string; icon: keyof typeof ICONS };
+// match: other pages that belong under this item (e.g. Settings is lit on every settings page)
+export type PortalNavItem = { href: string; label: string; icon: keyof typeof ICONS; match?: string[] };
 
 // The dashboards' main navigation, as a magnifying dock pinned to the bottom of the screen.
 export function PortalDock({ items }: { items: PortalNavItem[] }) {
@@ -69,7 +70,8 @@ export function PortalDock({ items }: { items: PortalNavItem[] }) {
     <nav aria-label="Dashboard" className="fixed bottom-3 left-1/2 z-40 max-w-full -translate-x-1/2">
       <Dock className="items-end rounded-2xl border border-ink/15 bg-surface-solid/95 pb-2.5 shadow-[0_20px_50px_-15px_rgb(0_0_0/0.8),inset_0_1px_0_rgb(255_255_255/0.08)] light:shadow-[0_2px_4px_rgb(11_20_48/0.06),0_20px_44px_-14px_rgb(11_20_48/0.4)]">
         {items.map((item) => {
-          const on = item.href === rootHref ? pathname === item.href : pathname.startsWith(item.href);
+          const on =
+            item.href === rootHref ? pathname === item.href : pathname.startsWith(item.href) || !!item.match?.some((m) => pathname.startsWith(m));
           const Glyph = ICONS[item.icon];
           return (
             <DockItem

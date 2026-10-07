@@ -36,6 +36,8 @@ export function orderProfit(
   rates: SupplyRates,
   c: CostSettings,
   km?: number,
+  // a salaried driver: their salary spread over their trips, instead of the per-trip rate
+  driverCost?: number,
 ): OrderProfit {
   const r2 = (x: number) => Math.round(x * 100) / 100;
   const kg = Math.max(0, o.weightKg || 0);
@@ -47,7 +49,7 @@ export function orderProfit(
   const typed = (r: Rate | undefined, k: number) => (r && k > 0 ? r.perKg * k + r.perOrder : 0);
   const supplies = rates.perKg * kg + rates.perOrder + typed(rates.whites, whites) + typed(rates.coloured, coloured);
   const other = c.otherCostPerKg * kg;
-  const driver = driverPay(c, km);
+  const driver = driverCost ?? driverPay(c, km);
   const profit = paid + tossPayback - supplies - other - driver;
   return {
     paid: r2(paid),

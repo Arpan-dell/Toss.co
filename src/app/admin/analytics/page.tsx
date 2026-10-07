@@ -1,3 +1,4 @@
+import { BackLink } from "@/components/back-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { proGate } from "@/components/plan-gate";
@@ -25,6 +26,7 @@ export default async function Analytics() {
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker="Insights">Analytics</PageTitle>
+      <BackLink />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Pickups" value={agg.totalOrders.toLocaleString("en-IN")} hint={`Last ${agg.byWeek.length} weeks`} />

@@ -1,3 +1,4 @@
+import { BackLink } from "@/components/back-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
@@ -25,6 +26,7 @@ export default async function Branches() {
     return (
       <div className="stagger space-y-6">
         <PageTitle kicker="Pro">Branches</PageTitle>
+        <BackLink />
         <Card title="Branches are a Pro feature">
           <div className="space-y-4 text-sm text-secondary">
             <p>
@@ -76,6 +78,7 @@ export default async function Branches() {
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker={`Pro · ${branches.length} branch${branches.length === 1 ? "" : "es"} · last 30 days`}>Branches</PageTitle>
+      <BackLink />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Pickups" value={String(total.pickups)} hint={formatKg(Math.round(total.kg * 10) / 10)} />

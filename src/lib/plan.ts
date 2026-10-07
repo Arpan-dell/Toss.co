@@ -41,3 +41,15 @@ export function reminderFor(b: PlanFields, now = new Date()) {
   if (bucket === undefined) return null;
   return { kind, daysLeft, until: p.until, key: `${kind}:${p.until.slice(0, 10)}:${bucket}` };
 }
+
+/** The tier from a raw tenants row (plan_status, trial_ends_at, paid_until), for server code reading the table directly. */
+export const tierOfRow = (r: { plan_status?: unknown; trial_ends_at?: unknown; paid_until?: unknown } | null | undefined): Tier =>
+  r
+    ? tierOf(
+        planState({
+          planStatus: (r.plan_status as PlanFields["planStatus"]) ?? "TRIAL",
+          trialEndsAt: (r.trial_ends_at as string | null) ?? undefined,
+          paidUntil: (r.paid_until as string | null) ?? undefined,
+        }).state,
+      )
+    : "FREE";

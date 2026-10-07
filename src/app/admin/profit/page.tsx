@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
+import { OrderLink } from "@/components/order-link";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { proGate } from "@/components/plan-gate";
 import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { updateCosts } from "@/lib/actions/supplies";
-import { getPlatformSettings, getTenantById, listCustomers, listOrders, listSupplies, now } from "@/lib/data";
+import { getPlatformSettings, getTenantById, listCustomers, listDrivers, listOrders, listSupplies, now } from "@/lib/data";
 import { distanceKm } from "@/lib/dispatch/core";
-import { formatINR, formatKg, orderLabel } from "@/lib/format";
-import { orderProfit, supplyRates, type OrderProfit } from "@/lib/profit";
+import { formatINR, formatKg } from "@/lib/format";
+import { driverPay, orderProfit, supplyRates, type OrderProfit } from "@/lib/profit";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,13 +21,14 @@ export default async function Profit() {
 
   const session = await getSession();
   const supabase = await createClient();
-  const [tenant, platform, supplies, orders, customers, devices] = await Promise.all([
+  const [tenant, platform, supplies, orders, customers, devices, drivers] = await Promise.all([
     getTenantById(session?.tenantId),
     getPlatformSettings(),
     listSupplies(),
     listOrders({ status: "COMPLETED" }),
     listCustomers(),
     supabase.from("devices").select("device_id, lat, lng"),
+    listDrivers(),
   ]);
   if (!tenant) return null;
 
@@ -42,13 +44,24 @@ export default async function Profit() {
   const names = new Map(customers.map((c) => [c.id, c.name ?? c.customerCode]));
 
   const since = now().getTime() - 30 * 86_400_000;
-  const rows = orders
-    .filter((o) => new Date(o.completedAt ?? o.createdAt).getTime() >= since)
-    .map((o) => {
-      const at = where.get(o.deviceId);
-      const km = store && at ? distanceKm(store, at) : undefined;
-      return { o, p: orderProfit(o, rates, costs, km) };
-    });
+  const recent = orders.filter((o) => new Date(o.completedAt ?? o.createdAt).getTime() >= since);
+  // a salaried driver costs their salary spread over their trips (pickups + deliveries) in these 30 days
+  const tripCount = new Map<string, number>();
+  for (const o of recent) {
+    if (o.driverId) tripCount.set(o.driverId, (tripCount.get(o.driverId) ?? 0) + 1);
+    if (o.deliveryStatus === "DELIVERED" && o.deliveryDriverId) tripCount.set(o.deliveryDriverId, (tripCount.get(o.deliveryDriverId) ?? 0) + 1);
+  }
+  const salaryPerTrip = new Map(
+    drivers.filter((d) => d.payType === "SALARY" && d.telegramChatId).map((d) => [d.telegramChatId!, d.monthlySalary / Math.max(1, tripCount.get(d.telegramChatId!) ?? 0)]),
+  );
+  const tripCost = (chatId: string | undefined, km?: number) => (chatId && salaryPerTrip.has(chatId) ? salaryPerTrip.get(chatId)! : driverPay(costs, km));
+  const rows = recent.map((o) => {
+    const at = where.get(o.deviceId);
+    const km = store && at ? distanceKm(store, at) : undefined;
+    // the pickup trip, plus the delivery trip back when there was one
+    const driverCost = tripCost(o.driverId, km) + (o.deliveryStatus === "DELIVERED" ? tripCost(o.deliveryDriverId, km) : 0);
+    return { o, p: orderProfit(o, rates, costs, km, driverCost) };
+  });
 
   const sum = (f: (p: OrderProfit) => number) => rows.reduce((a, r) => a + f(r.p), 0);
   const kg = rows.reduce((a, r) => a + (r.o.weightKg || 0), 0);
@@ -147,7 +160,7 @@ export default async function Profit() {
               <tbody className="divide-y divide-border">
                 {rows.slice(0, 30).map(({ o, p }) => (
                   <tr key={o.id}>
-                    <td className="px-2 py-2 font-mono text-xs">{orderLabel(o)}</td>
+                    <td className="px-2 py-2"><OrderLink order={o} /></td>
                     <td className="px-2 py-2">{(o.customerId && names.get(o.customerId)) ?? "-"}</td>
                     <td className="px-2 py-2 text-right tabular-nums">{formatKg(o.weightKg)}</td>
                     <td className="px-2 py-2 text-right tabular-nums">{formatINR(p.paid + p.tossPayback)}</td>

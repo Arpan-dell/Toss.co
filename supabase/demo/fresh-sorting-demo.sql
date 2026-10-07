@@ -11,16 +11,7 @@ begin
   -- 1. Fresh sorts at pickup (sorting needs weighing on)
   update public.tenants set weigh_at_pickup = true, sort_whites = true where id = t;
 
-  -- 2. Demo supplies, including whites-only and coloured-only ones. Added before the bags are split, so stock
-  --    starts full and only the "To wash" orders below count against it.
-  delete from public.supplies where tenant_id = t and name like '% (demo)';
-  insert into public.supplies (tenant_id, name, unit, per_kg, per_order, stock, low_at, cost_per_unit, applies_to) values
-    (t, 'Detergent (demo)',    'ml',  15, 0, 9000, 2000, 0.20, 'ALL'),
-    (t, 'Laundry bags (demo)', 'pcs',  0, 2,  160,   40, 3.00, 'ALL'),
-    (t, 'Bleach (demo)',       'ml',   8, 0,  900,  500, 0.15, 'WHITES'),
-    (t, 'Colour care (demo)',  'ml',   5, 0, 2600,  600, 0.30, 'COLOURED');
-
-  -- 3. The latest six demo pickups are still being washed (they fill the live board's "To wash" card)
+  -- 2. The latest six demo pickups are still being washed (they fill the live board's "To wash" card)
   update public.orders
      set ready_at = null, ready_by = completed_at + interval '48 hours'
    where id in (
@@ -29,7 +20,7 @@ begin
       order by completed_at desc limit 6
    );
 
-  -- 4. Demo pickups of the last 45 days were bagged apart: 20-49% whites, varying per order; every 7th is all coloured
+  -- 3. Demo pickups of the last 45 days were bagged apart: 20-49% whites, varying per order; every 7th is all coloured
   update public.orders o
      set whites_kg = s.w, coloured_kg = round((o.weight_kg - s.w)::numeric, 2)
     from (
@@ -41,6 +32,15 @@ begin
          and completed_at > now() - interval '45 days'
     ) s
    where o.id = s.id;
+
+  -- 4. Demo supplies, including whites-only and coloured-only ones. Added after the bags are split, so the split
+  --    doesn't count past pickups against them. Bleach starts just under its alert level to show "Low" + reorder.
+  delete from public.supplies where tenant_id = t and name like '% (demo)';
+  insert into public.supplies (tenant_id, name, unit, per_kg, per_order, stock, low_at, cost_per_unit, applies_to) values
+    (t, 'Detergent (demo)',    'ml',  15, 0, 9000, 2000, 0.20, 'ALL'),
+    (t, 'Laundry bags (demo)', 'pcs',  0, 2,  160,   40, 3.00, 'ALL'),
+    (t, 'Bleach (demo)',       'ml',   8, 0,  450,  500, 0.15, 'WHITES'),
+    (t, 'Colour care (demo)',  'ml',   5, 0, 2600,  600, 0.30, 'COLOURED');
 end $$;
 
 -- Check: what Fresh now has to wash

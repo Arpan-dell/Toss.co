@@ -22,7 +22,8 @@ export default async function CustomerOverview() {
   ]);
 
   const active = orders.find((o) => o.status === "PENDING" || o.status === "ACCEPTED");
-  const unpaid = orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID");
+  // pickups on a business account (PG, hostel) are paid monthly by the account, not here
+  const unpaid = orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID" && !o.accountId);
   const verifying = orders.filter((o) => o.paymentStatus === "PENDING");
   const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? "there";
   const [business, offer] = await Promise.all([getTenantById(customer?.tenantId), getOpenOffer(session.userId, customer?.tenantId)]);

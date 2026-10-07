@@ -28,6 +28,7 @@ export interface Tenant {
   driverPayPerKm: number; // plus ₹ per km from the store to the basket
   turnaroundHours: number; // promised time from pickup to ready
   googleReviewUrl?: string; // happy customers are pointed here
+  parentTenantId?: string; // set on an extra branch: the manager's main business (migration 0024)
   planStatus: "TRIAL" | "ACTIVE" | "SUSPENDED";
   trialEndsAt?: string;
   paidUntil?: string;
@@ -89,6 +90,7 @@ export interface PlatformSettings {
   creditTossSharePct: number; // Toss's share of each credit used, given back as subscription discount
   creditSubMaxPct: number; // at most this % of a subscription payment can be covered by it
   creditValidDays: number;
+  branchPrice: number; // monthly Pro price of each extra branch (the main business pays monthlyPrice)
 }
 
 export interface SubscriptionPayment {
@@ -125,6 +127,7 @@ export interface Device {
   lastSeenAt?: string; // ISO timestamp of the last payload from this basket
   firmwareVersion?: string;
   wifiRssi?: number;
+  accountId?: string; // the business account (PG, hostel) whose bill this basket's pickups go on
 }
 
 export interface Driver {
@@ -166,6 +169,7 @@ export interface Order {
   rating?: number; // 1-5 from the customer
   ratingComment?: string;
   ratedAt?: string;
+  accountId?: string; // on a business account's monthly bill instead of paid per pickup
   pickupPhotoAt?: string; // the driver sent a photo of the bag at pickup (shown via /admin/orders/[id]/photo)
   reportedWeightKg?: number; // what the basket said, kept once the weight is confirmed at pickup
   weighedKg?: number; // the driver's (or manager's) scale reading
@@ -173,4 +177,15 @@ export interface Order {
   createdAt: string; // when the order was placed (orders.placed_at)
   acceptedAt?: string;
   completedAt?: string;
+}
+
+// A PG, hostel or office billed monthly for all its baskets (migration 0024).
+export interface BusinessAccount {
+  id: string;
+  name: string;
+  contactName?: string;
+  phone?: string; // E.164
+  email?: string;
+  pricePerKg?: number; // its own rate; the laundry's price when unset
+  createdAt: string;
 }

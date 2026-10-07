@@ -30,7 +30,9 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
   const [history, creditBalance] = await Promise.all([listSubscriptionPayments({ tenantId: tenant.id }), getTenantCreditBalance(tenant.id)]);
   const plan = planState(tenant);
   const months = MONTH_OPTIONS.includes(Number(params.months)) ? Number(params.months) : 1;
-  const quote = (m: number) => subscriptionQuote(platform.monthlyPrice, platform, m);
+  // an extra branch pays the branch price (same rule as submit_subscription_payment)
+  const monthly = tenant.parentTenantId ? platform.branchPrice : platform.monthlyPrice;
+  const quote = (m: number) => subscriptionQuote(monthly, platform, m);
   const { amount: beforeCredit, pct, full, saved } = quote(months);
   // Toss's share of the basket credit this laundry has honoured comes off the payment (same rule as the database)
   const { credit, toPay: amount } = withBasketCredit(beforeCredit, creditBalance, platform.creditSubMaxPct);
@@ -59,7 +61,8 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
           {plan.state === "ACTIVE" && `Paid up until ${formatDate(plan.until!)} (${plan.daysLeft} days left).`}
           {plan.state === "EXPIRED" && "You're on Toss Free. Upgrade below to turn the Pro tools back on."}
           {plan.state === "SUSPENDED" && "Toss has suspended this business. Contact support."}{" "}
-          The plan is <span className="text-fg">{formatINR(platform.monthlyPrice)}/month</span>. Paying early adds time on top of
+          The plan is <span className="text-fg">{formatINR(monthly)}/month</span>
+          {tenant.parentTenantId ? " (branch price)" : ""}. Paying early adds time on top of
           what you have left
           {platform.discount12m > 0 || platform.discount6m > 0 || platform.discount3m > 0
             ? `, and paying for several months at once is cheaper (up to ${Math.max(platform.discount3m, platform.discount6m, platform.discount12m)}% off).`

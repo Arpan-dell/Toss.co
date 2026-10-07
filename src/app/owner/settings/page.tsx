@@ -19,6 +19,9 @@ export default async function OwnerSettings() {
           <Field label="Monthly price (₹)">
             <input name="monthlyPrice" type="number" min={0} step="1" required defaultValue={s.monthlyPrice} className={fieldClass} />
           </Field>
+          <Field label="Extra branch price (₹/month)" hint="What each additional branch of a business pays for Pro.">
+            <input name="branchPrice" type="number" min={0} step="1" required defaultValue={s.branchPrice} className={fieldClass} />
+          </Field>
           <Field label="Free trial (days)" hint="Applies to businesses registered from now on.">
             <input name="trialDays" type="number" min={0} max={365} step="1" required defaultValue={s.trialDays} className={fieldClass} />
           </Field>

@@ -13,6 +13,7 @@ type TenantRow = {
   name: string;
   join_code: string;
   manager_id: string | null;
+  parent_tenant_id: string | null; // an extra branch: renews at the branch price
   price_per_kg: number;
   plan_status: "TRIAL" | "ACTIVE" | "SUSPENDED";
   trial_ends_at: string | null;
@@ -20,7 +21,7 @@ type TenantRow = {
   reminder_key: string | null;
 };
 
-const COLS = "id, name, join_code, manager_id, price_per_kg, plan_status, trial_ends_at, paid_until, reminder_key";
+const COLS = "id, name, join_code, manager_id, price_per_kg, plan_status, trial_ends_at, paid_until, reminder_key, parent_tenant_id";
 
 async function tenant(id: string): Promise<TenantRow | null> {
   const { data } = await supabaseAdmin().from("tenants").select(COLS).eq("id", id).maybeSingle();
@@ -108,7 +109,7 @@ export async function runPlanReminders(): Promise<{ sent: number }> {
   const db = supabaseAdmin();
   const [{ data: tenants }, { data: ps }] = await Promise.all([
     db.from("tenants").select(COLS),
-    db.from("platform_settings").select("monthly_price, discount_3m, discount_6m, discount_12m").eq("id", 1).maybeSingle(),
+    db.from("platform_settings").select("monthly_price, branch_price, discount_3m, discount_6m, discount_12m").eq("id", 1).maybeSingle(),
   ]);
   let sent = 0;
   for (const b of (tenants ?? []) as TenantRow[]) {
@@ -122,7 +123,7 @@ export async function runPlanReminders(): Promise<{ sent: number }> {
         kind: r.kind,
         daysLeft: r.daysLeft,
         until: r.until,
-        monthlyPrice: (ps?.monthly_price as number) ?? 0,
+        monthlyPrice: ((b.parent_tenant_id ? ps?.branch_price : ps?.monthly_price) as number) ?? 0,
         bestDiscount: Math.max((ps?.discount_3m as number) ?? 0, (ps?.discount_6m as number) ?? 0, (ps?.discount_12m as number) ?? 0),
       }),
       { replyTo: ownerEmail() },

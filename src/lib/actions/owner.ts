@@ -19,10 +19,12 @@ async function requireOwner() {
 export async function updatePlatformSettings(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireOwner();
   const monthlyPrice = Number(text(formData, "monthlyPrice"));
+  const branchPrice = Number(text(formData, "branchPrice"));
   const trialDays = Number(text(formData, "trialDays"));
   const upiId = text(formData, "ownerUpiId");
   const upiName = text(formData, "ownerUpiName") || "Toss";
   if (!(monthlyPrice >= 0 && monthlyPrice <= 1_000_000)) return { error: "Enter a monthly price in rupees." };
+  if (!(Number.isInteger(branchPrice) && branchPrice >= 0 && branchPrice <= 100_000)) return { error: "Enter a branch price in whole rupees." };
   if (!(Number.isInteger(trialDays) && trialDays >= 0 && trialDays <= 365)) return { error: "Trial must be 0–365 days." };
   if (!isValidUpiId(upiId)) return { error: "Enter your UPI ID, like you@okaxis, so businesses can pay you." };
   const [d3, d6, d12] = ["discount3m", "discount6m", "discount12m"].map((k) => Number(text(formData, k)));
@@ -30,7 +32,7 @@ export async function updatePlatformSettings(_prev: FormState, formData: FormDat
 
   const { error } = await supabaseAdmin()
     .from("platform_settings")
-    .update({ monthly_price: monthlyPrice, trial_days: trialDays, owner_upi_id: normalizeUpiId(upiId), owner_upi_name: upiName.slice(0, 50), discount_3m: d3, discount_6m: d6, discount_12m: d12 })
+    .update({ monthly_price: monthlyPrice, branch_price: branchPrice, trial_days: trialDays, owner_upi_id: normalizeUpiId(upiId), owner_upi_name: upiName.slice(0, 50), discount_3m: d3, discount_6m: d6, discount_12m: d12 })
     .eq("id", 1);
   if (error) return { error: friendlyError(error) };
   revalidatePath("/", "layout");

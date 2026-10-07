@@ -24,7 +24,9 @@ export default async function Payments() {
   const current = now();
 
   const toVerify = orders.filter((o) => o.paymentStatus === "PENDING");
-  const unpaid = orders.filter((o) => o.paymentStatus === "UNPAID" && o.status === "COMPLETED");
+  // business accounts pay monthly from their own page, not pickup by pickup
+  const unpaid = orders.filter((o) => o.paymentStatus === "UNPAID" && o.status === "COMPLETED" && !o.accountId);
+  const onAccounts = orders.filter((o) => o.paymentStatus === "UNPAID" && o.status === "COMPLETED" && o.accountId).reduce((s, o) => s + o.amountDue, 0);
   const paid = orders.filter((o) => o.paymentStatus === "PAID").slice(0, 20);
   const outstanding = unpaid.reduce((s, o) => s + o.amountDue, 0);
   const collected = orders.filter((o) => o.paymentStatus === "PAID").reduce((s, o) => s + o.amountDue, 0);
@@ -35,7 +37,7 @@ export default async function Payments() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatTile label="To verify" value={String(toVerify.length)} hint="Customer says they paid" />
-        <StatTile label="Outstanding" value={formatINR(outstanding)} hint={`${unpaid.length} unpaid pickups`} />
+        <StatTile label="Outstanding" value={formatINR(outstanding)} hint={`${unpaid.length} unpaid pickups${onAccounts ? ` + ${formatINR(onAccounts)} on monthly accounts` : ""}`} />
         <StatTile label="Collected" value={formatINR(collected)} hint="All confirmed payments" />
       </div>
 

@@ -49,7 +49,7 @@ async function loadContext(tenantId: string): Promise<Context | null> {
   const [{ data: orders }, { data: customers }, { data: offers }, { data: devices }, { data: drivers }, { data: recent }] = await Promise.all([
     db()
       .from("orders")
-      .select("id, device_id, device_order_id, placed_at, completed_at, weight_kg, amount_due, status, payment_status, customer_id")
+      .select("id, device_id, device_order_id, placed_at, completed_at, weight_kg, amount_due, status, payment_status, customer_id, account_id")
       .eq("tenant_id", tenantId)
       .gte("placed_at", since)
       .limit(5000),
@@ -85,7 +85,7 @@ async function loadContext(tenantId: string): Promise<Context | null> {
     })),
     customers: [...people.entries()].map(([id, p]) => ({ id, code: p.code, reachable: reachable(id), openOffer: open.has(id) })),
     unpaid: (orders ?? [])
-      .filter((o: Row) => o.status === "COMPLETED" && o.payment_status === "UNPAID" && Number(o.amount_due) > 0 && o.completed_at)
+      .filter((o: Row) => o.status === "COMPLETED" && o.payment_status === "UNPAID" && !o.account_id && Number(o.amount_due) > 0 && o.completed_at)
       .map((o: Row) => ({
         orderId: o.id as string,
         label: label(o),

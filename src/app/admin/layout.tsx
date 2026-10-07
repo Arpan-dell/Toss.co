@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BranchSwitcher } from "@/components/branch-switcher";
 import { LiveRefresh } from "@/components/live-refresh";
 import type { PortalNavItem } from "@/components/portal-dock";
 import { PortalShell } from "@/components/portal-shell";
+import { switchBranch } from "@/lib/actions/branches";
+import { listMyBranches } from "@/lib/branches";
 import { getTenantById } from "@/lib/data";
 import { formatDate } from "@/lib/format";
 import { planState } from "@/lib/plan";
@@ -19,18 +22,20 @@ const nav: PortalNavItem[] = [
   { href: "/admin/customers", label: "Customers", icon: "customers" },
   { href: "/admin/fleet", label: "Fleet", icon: "fleet" },
   { href: "/admin/driver-pay", label: "Driver pay", icon: "driverpay" },
+  { href: "/admin/accounts", label: "Accounts", icon: "accounts" },
   { href: "/admin/orders", label: "Orders", icon: "orders" },
   { href: "/admin/analytics", label: "Analytics", icon: "analytics" },
   { href: "/admin/profit", label: "Profit", icon: "profit" },
   { href: "/admin/stock", label: "Supplies", icon: "stock" },
   { href: "/admin/ratings", label: "Ratings", icon: "ratings" },
+  { href: "/admin/branches", label: "Branches", icon: "branches" },
   { href: "/admin/business", label: "Business", icon: "business" },
   { href: "/admin/billing", label: "Billing", icon: "billing" },
 ];
 
 export default async function ManagerLayout({ children }: LayoutProps<"/admin">) {
   const session = await requireRole("MANAGER");
-  const tenant = await getTenantById(session.tenantId);
+  const [tenant, branches] = await Promise.all([getTenantById(session.tenantId), listMyBranches(session.userId)]);
   const plan = tenant ? planState(tenant) : undefined;
   // short-lived access token for the live board's realtime subscription (session cookies are HttpOnly)
   const token = (await (await createClient()).auth.getSession()).data.session?.access_token;
@@ -38,7 +43,8 @@ export default async function ManagerLayout({ children }: LayoutProps<"/admin">)
   return (
     <PortalShell badge="Manager" subtitle={tenant?.name ?? ""} nav={nav}>
       {tenant && (
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+          {branches.length > 1 && <BranchSwitcher action={switchBranch} current={tenant.id} branches={branches.map((b) => ({ id: b.id, name: b.name }))} />}
           {token && <LiveRefresh tenantId={tenant.id} token={token} />}
         </div>
       )}

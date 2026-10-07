@@ -19,6 +19,9 @@ const MESSAGES: Record<string, string> = {
   already_manages_a_business: "This account already runs a business.",
   customer_not_in_business: "That customer isn't part of your business.",
   payment_not_pending: "That payment was already reviewed.",
+  invalid_name: "Enter a name between 2 and 80 characters.",
+  no_business: "Set up your main business first.",
+  too_many_branches: "You've reached the limit of 20 branches. Contact Toss for more.",
   pickup_in_progress: "You have a pickup in progress. Switch laundries once it's picked up.",
 };
 

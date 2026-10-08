@@ -605,6 +605,7 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
             <div>
               {plan && plan.monthlyPrice > 0 ? (
                 <>
+                  <p className="mb-1 font-mono text-[11px] tracking-[0.14em] text-accent uppercase">Toss Pro</p>
                   <p className="text-4xl font-black tracking-tight text-fg tabular-nums">
                     ₹{plan.monthlyPrice.toLocaleString("en-IN")}
                     <span className="ml-1.5 text-base font-medium text-muted">/month</span>
@@ -626,7 +627,7 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
                 glow
                 className="btn-primary rounded-full px-7 py-3.5 text-base font-semibold"
               >
-                {plan && plan.trialDays > 0 ? "Start free trial" : "Get started"} <ArrowRight size={18} weight="bold" />
+                Get Pro plan <ArrowRight size={18} weight="bold" />
               </MainCta>
             </div>
           </div>

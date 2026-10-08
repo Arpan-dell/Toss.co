@@ -11,7 +11,7 @@ import { useBasketColor } from "./basket-color-store";
 
 // Scroll story of the Toss basket box. A tall runway pins a full-screen stage; as you scroll the 3D box
 // rotates and slides between the halves of the screen while each feature's text fades in on the other side.
-// The 3D scene loads only near this section (three.js is heavy) and shows the real photo until it's ready.
+// The 3D scene loads only once this section is reached (three.js is heavy); phones see renders of it instead.
 
 const BasketScene = dynamic(() => import("./basket-scene"), {
   ssr: false,
@@ -28,8 +28,9 @@ function ModelPlaceholder() {
   );
 }
 
-// Phones and budget devices: the real product photo instead of the 3D model (no three.js at all, and no swap from
-// photo to model). It drifts and turns a little with the scroll using transforms only, done off the main thread.
+// Phones and budget devices: a picture rendered from the same 3D model (public/brand/basket/render-*), so it looks
+// exactly like the desktop model without loading three.js. It drifts and turns a little with the scroll using
+// transforms only, done off the main thread.
 function BasketPoster({ color, progress }: { color: BasketColor; progress: MotionValue<number> }) {
   const rotate = useTransform(progress, [0, 1], [-6, 8]);
   const scale = useTransform(progress, [0, 0.5, 1], [0.92, 1.04, 0.96]);
@@ -41,10 +42,11 @@ function BasketPoster({ color, progress }: { color: BasketColor; progress: Motio
       className="grid h-full place-items-center"
     >
       <Image
-        src={`/brand/basket/hero-${color}.webp`}
+        src={`/brand/basket/render-angle-${color}.webp`}
         alt=""
-        width={946}
-        height={656}
+        width={820}
+        height={482}
+        priority
         sizes="(min-width: 1024px) 560px, 80vw"
         className="h-auto w-[min(80vw,560px)] drop-shadow-[0_30px_40px_rgb(0_0_0/0.25)]"
       />
@@ -208,7 +210,7 @@ export function BasketShowcase() {
     return (
       <section id="basket" aria-label="The Toss basket" className="mx-auto max-w-5xl scroll-mt-24 px-4 py-24">
         <div className="mx-auto max-w-xl">
-          <Image src={`/brand/basket/hero-${color}.webp`} alt={`The Toss basket box in ${colorOf(color).name}`} width={946} height={656} className="h-auto w-full" />
+          <Image src={`/brand/basket/render-angle-${color}.webp`} alt={`The Toss basket box in ${colorOf(color).name}`} width={820} height={482} className="h-auto w-full" />
         </div>
         <div className="mt-10 grid gap-2 lg:grid-cols-2">
           {STEPS.map((s) => (

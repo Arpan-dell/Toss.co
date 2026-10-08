@@ -11,12 +11,13 @@ import type { Pose } from "./basket-scene";
 // It turns slowly on its own, can be dragged round, and has quick views (angle, front, USB-C side, top).
 const BasketScene = dynamic(() => import("./basket-scene"), { ssr: false, loading: () => <div className="size-full" /> });
 
-// photo: the real product photo for that view, used on phones and budget devices instead of the 3D model
+// Phones and budget devices see public/brand/basket/render-<id>-<colour>.webp for each view: pictures rendered from
+// this same model in these poses, so they match the 3D exactly.
 const VIEWS = [
-  { id: "angle", label: "Angle", pose: { ry: -0.62, t: 0.32 }, photo: "hero" },
-  { id: "front", label: "Front", pose: { ry: 0, t: 0.1 }, photo: "front" },
-  { id: "port", label: "USB-C side", pose: { ry: -Math.PI / 2, t: 0.1 }, photo: "side" },
-  { id: "top", label: "Top", pose: { ry: 0, t: 1.2 }, photo: "top" },
+  { id: "angle", label: "Angle", pose: { ry: -0.62, t: 0.32 } },
+  { id: "front", label: "Front", pose: { ry: 0, t: 0.1 } },
+  { id: "port", label: "USB-C side", pose: { ry: -Math.PI / 2, t: 0.1 } },
+  { id: "top", label: "Top", pose: { ry: 0, t: 1.2 } },
 ] as const;
 
 export function BasketViewer({ color }: { color: string }) {
@@ -31,7 +32,7 @@ export function BasketViewer({ color }: { color: string }) {
   const capable = useCapable3D();
 
   // three.js starts when the viewer is actually on screen (loading it ahead froze the page just before);
-  // frames are drawn only while it's visible. Phones and budget devices get photos instead.
+  // frames are drawn only while it's visible. Phones and budget devices get pictures rendered from the model.
   useEffect(() => {
     const el = box.current;
     if (!el || !capable) return;
@@ -91,7 +92,7 @@ export function BasketViewer({ color }: { color: string }) {
       >
         {!capable ? (
           <Image
-            src={`/brand/basket/${VIEWS.find((v) => v.id === view)?.photo ?? "hero"}-${color}.webp`}
+            src={`/brand/basket/render-${view ?? "angle"}-${color}.webp`}
             alt=""
             fill
             sizes="(min-width: 1024px) 480px, 90vw"

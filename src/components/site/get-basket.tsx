@@ -21,7 +21,7 @@ export function GetBasket() {
   return (
     <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
       {/* the 3D model from the scroll story, in the chosen colour */}
-      <BasketViewer color={colorOf(color).hex} />
+      <BasketViewer color={color} />
 
       {/* request form */}
       <div>

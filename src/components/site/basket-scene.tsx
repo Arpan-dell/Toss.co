@@ -227,6 +227,7 @@ export default function BasketScene({
   pose,
   active,
   near = false,
+  shadow = true,
 }: {
   color: string;
   progress?: MotionValue<number>;
@@ -234,6 +235,8 @@ export default function BasketScene({
   active: boolean;
   /** closer camera for the smaller viewer in the order form */
   near?: boolean;
+  /** the soft floor shadow (off when capturing frames for phones, which draw their own) */
+  shadow?: boolean;
 }) {
   const [ready, setReady] = useState(false);
   const onReady = useCallback(() => setReady(true), []);
@@ -263,7 +266,7 @@ export default function BasketScene({
         <Lightformer form="rect" intensity={1} position={[4, 1, 0]} rotation-y={-Math.PI / 2} scale={[4, 2, 1]} />
       </Environment>
       <Box color={color} progress={progress} pose={pose} />
-      <ContactShadows position={[0, -0.2, 0]} opacity={0.42} scale={5} blur={2.6} far={1.6} resolution={512} />
+      {shadow && <ContactShadows position={[0, -0.2, 0]} opacity={0.42} scale={5} blur={2.6} far={1.6} resolution={512} />}
       <Warmup onReady={onReady} />
     </Canvas>
   );

@@ -8,6 +8,7 @@ import { useCapable3D } from "@/lib/use-capable-3d";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { BASKET_COLORS, colorOf, type BasketColor } from "./basket-colors";
 import { useBasketColor } from "./basket-color-store";
+import { BasketSequence } from "./basket-sequence";
 
 // Scroll story of the Toss basket box. A tall runway pins a full-screen stage; as you scroll the 3D box
 // rotates and slides between the halves of the screen while each feature's text fades in on the other side.
@@ -25,32 +26,6 @@ function ModelPlaceholder() {
     <div aria-hidden className="grid h-full place-items-center">
       <div className="size-[min(46vw,360px)] animate-pulse rounded-full bg-accent/[0.07] blur-3xl" />
     </div>
-  );
-}
-
-// Phones and budget devices: a picture rendered from the same 3D model (public/brand/basket/render-*), so it looks
-// exactly like the desktop model without loading three.js. It drifts and turns a little with the scroll using
-// transforms only, done off the main thread.
-function BasketPoster({ color, progress }: { color: BasketColor; progress: MotionValue<number> }) {
-  const rotate = useTransform(progress, [0, 1], [-6, 8]);
-  const scale = useTransform(progress, [0, 0.5, 1], [0.92, 1.04, 0.96]);
-  const y = useTransform(progress, [0, 1], ["2%", "-3%"]);
-  return (
-    <motion.div
-      aria-hidden
-      style={{ rotate, scale, y }}
-      className="grid h-full place-items-center"
-    >
-      <Image
-        src={`/brand/basket/render-angle-${color}.webp`}
-        alt=""
-        width={820}
-        height={482}
-        priority
-        sizes="(min-width: 1024px) 560px, 80vw"
-        className="h-auto w-[min(80vw,560px)] drop-shadow-[0_30px_40px_rgb(0_0_0/0.25)]"
-      />
-    </motion.div>
   );
 }
 
@@ -187,14 +162,17 @@ export function BasketShowcase() {
 
   // three.js (~1 MB) starts only once the visitor is actually in this section, never while they read the hero:
   // loading it there froze the first screen. A soft glow holds the place until the model fades in; frames are
-  // drawn only while the section is on screen. Phones and budget devices get the photo instead.
+  // drawn only while the section is on screen. Phones and budget devices get the pre-rendered frame sequence
+  // instead, which can start downloading a screen ahead (plain images don't block the page).
   useEffect(() => {
     const el = runway.current;
-    if (!el || !capable) return;
+    if (!el) return;
     let idle = 0;
     const whenIdle = (fn: () => void) =>
       typeof window.requestIdleCallback === "function" ? (idle = window.requestIdleCallback(fn, { timeout: 600 })) : (idle = window.setTimeout(fn, 200));
-    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && whenIdle(() => setNear(true)), { rootMargin: "0px 0px -40% 0px" });
+    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && whenIdle(() => setNear(true)), {
+      rootMargin: capable ? "0px 0px -40% 0px" : "100% 0px",
+    });
     const onScreen = new IntersectionObserver(([e]) => setActive(e.isIntersecting));
     ahead.observe(el);
     onScreen.observe(el);
@@ -227,7 +205,7 @@ export function BasketShowcase() {
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_55%,rgb(var(--accent-rgb)/0.08),transparent_60%)]" />
         <div className="absolute inset-x-0 top-0 h-[58%] lg:inset-0 lg:h-full">
           {!capable ? (
-            <BasketPoster color={color} progress={scrollYProgress} />
+            <BasketSequence color={color} progress={scrollYProgress} load={near} />
           ) : near ? (
             <div className="h-full">
               <BasketScene color={colorOf(color).hex} progress={scrollYProgress} active={active} />

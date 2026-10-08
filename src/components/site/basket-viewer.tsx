@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useCapable3D } from "@/lib/use-capable-3d";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { colorOf, type BasketColor } from "./basket-colors";
 import type { Pose } from "./basket-scene";
 
 // The 3D Toss box for the order form: the same model as the scroll story, in the chosen filament colour.
@@ -20,7 +21,7 @@ const VIEWS = [
   { id: "top", label: "Top", pose: { ry: 0, t: 1.2 } },
 ] as const;
 
-export function BasketViewer({ color }: { color: string }) {
+export function BasketViewer({ color }: { color: BasketColor }) {
   const box = useRef<HTMLDivElement>(null);
   const pose = useRef<Pose>({ ...VIEWS[0].pose });
   const spinning = useRef(true);
@@ -101,7 +102,7 @@ export function BasketViewer({ color }: { color: string }) {
         ) : (
           near && (
             <div className="size-full">
-              <BasketScene color={color} pose={pose} active={onScreen} near />
+              <BasketScene color={colorOf(color).hex} pose={pose} active={onScreen} near />
             </div>
           )
         )}

@@ -91,6 +91,23 @@ export function attentionItems(i: AttentionInput): Attention[] {
     });
   }
 
+  // sent to a driver who hasn't confirmed it (no "Got it", no action) after 10 minutes
+  const unconfirmed = i.orders.filter(
+    (o) =>
+      (o.status === "ACCEPTED" && o.driverId && !o.driverAckAt && age(o.assignedAt) > 10 * MIN) ||
+      (o.deliveryStatus === "ASSIGNED" && o.deliveryDriverId && !o.deliveryAckAt && age(o.deliveryAssignedAt) > 10 * MIN),
+  );
+  if (unconfirmed.length) {
+    items.push({
+      key: "unconfirmed",
+      level: "warn",
+      title: `${s(unconfirmed.length, "job")} not confirmed by the driver after 10 minutes`,
+      fix: "Call the driver, or tap Remind driver on the order: the old message is replaced, not repeated. Or give it to someone else.",
+      href: hrefFor(unconfirmed, "/admin"),
+      action: unconfirmed.length === 1 ? "Open order" : "See live board",
+    });
+  }
+
   // late against the promise
   const late = i.orders.filter((o) => isLate(o, i.now));
   if (late.length) {

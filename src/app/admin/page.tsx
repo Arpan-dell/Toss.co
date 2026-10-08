@@ -131,6 +131,7 @@ export default async function LiveBoard() {
                   <OrderLink order={o} />{" "}
                   <span className="text-muted">{deviceArea(o.deviceId)}</span>
                   {o.deliveryDriverId && <span className="ml-2 text-secondary">{driverName(o.deliveryDriverId)}</span>}
+                  {o.deliveryDriverId && !o.deliveryAckAt && <span className="ml-2 text-xs text-warn">⏳ not confirmed</span>}
                   {(o.deliveryAttempts ?? 0) > 0 && <span className="ml-2 text-xs text-warn">not home ×{o.deliveryAttempts}</span>}
                 </span>
                 <span className="flex items-center gap-2">
@@ -166,7 +167,10 @@ export default async function LiveBoard() {
                     <p className="text-sm text-secondary">{o.address}</p>
                   </div>
                   <p className="text-sm tabular-nums">{formatKg(o.weightKg)}</p>
-                  <p className="w-24 text-sm text-secondary">{driverName(o.driverId)}</p>
+                  <p className="w-28 text-sm text-secondary">
+                    {driverName(o.driverId)}
+                    {o.driverId && !o.driverAckAt && <span className="block text-[11px] text-warn">⏳ not confirmed</span>}
+                  </p>
                   <div className="flex w-56 items-center gap-2">
                     <OrderStatusBadge status={o.status} />
                     {stale ? (

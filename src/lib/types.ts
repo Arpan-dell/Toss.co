@@ -177,6 +177,10 @@ export interface Order {
   // the trip back to the customer (migration 0027)
   deliveryStatus?: "WAITING" | "ASSIGNED" | "OUT" | "DELIVERED" | "COLLECTED";
   deliveryDriverId?: string; // Telegram chat ID, like driverId
+  assignedAt?: string; // the pickup was given to its driver
+  driverAckAt?: string; // the pickup driver confirmed ("Got it" or Picked up)
+  deliveryAssignedAt?: string;
+  deliveryAckAt?: string; // the delivery driver confirmed ("Got it" or Collected)
   outForDeliveryAt?: string;
   deliveredAt?: string;
   deliveryCode?: string; // 4 digits the customer reads to the driver at the door

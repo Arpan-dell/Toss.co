@@ -1,6 +1,7 @@
 import { ConfirmButton } from "@/components/confirm-button";
 import { Badge } from "@/components/ui";
 import { ActionForm } from "@/components/action-form";
+import { DriverConfirm } from "./driver-confirm";
 import { assignDeliveryDriverForm, closeDelivery, sendForDelivery } from "@/lib/actions/delivery";
 import { DELIVERY_LABEL } from "@/lib/dispatch/delivery";
 import { formatDateTime } from "@/lib/format";
@@ -31,7 +32,19 @@ export function DeliveryPanel({ order, drivers }: { order: Order; drivers: Drive
         {order.deliveryDriverId && (
           <>
             <dt className="text-muted">Driver</dt>
-            <dd>{name(order.deliveryDriverId)}</dd>
+            <dd>
+              {name(order.deliveryDriverId)}
+              {(d === "ASSIGNED" || d === "OUT") && (
+                <DriverConfirm
+                  orderId={order.id}
+                  kind="delivery"
+                  name={name(order.deliveryDriverId) ?? "the driver"}
+                  ackAt={order.deliveryAckAt}
+                  sentAt={order.deliveryAssignedAt}
+                  now={new Date()}
+                />
+              )}
+            </dd>
           </>
         )}
         {order.deliveryCode && !closed && (

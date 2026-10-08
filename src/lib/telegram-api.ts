@@ -79,7 +79,12 @@ export async function sendDocument(token: string, chatId: string, bytes: Uint8Ar
 }
 
 export function sendLocation(token: string, chatId: string, lat: number, lng: number) {
-  return tg(token, "sendLocation", { chat_id: chatId, latitude: lat, longitude: lng });
+  return tg<{ message_id: number }>(token, "sendLocation", { chat_id: chatId, latitude: lat, longitude: lng });
+}
+
+// A bot can delete its own messages in a private chat for 48 hours after sending them.
+export function deleteMessage(token: string, chatId: string, messageId: number) {
+  return tg<boolean>(token, "deleteMessage", { chat_id: chatId, message_id: messageId });
 }
 
 export function editMessage(token: string, chatId: string, messageId: number, text: string, inline?: InlineButton[][]) {
@@ -99,3 +104,8 @@ export function answerCallback(token: string, callbackId: string, text?: string)
 
 // Telegram HTML mode: escape user-provided text.
 export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+// Replaces just the buttons under a message (e.g. drop "Got it" once the driver has tapped it).
+export function editButtons(token: string, chatId: string, messageId: number, inline: InlineButton[][]) {
+  return tg(token, "editMessageReplyMarkup", { chat_id: chatId, message_id: messageId, reply_markup: { inline_keyboard: inline } });
+}

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { dispatchOrder, notifyAssignment } from "../dispatch/service";
+import { dispatchOrder, notifyAssignment, withdrawJob } from "../dispatch/service";
 import { getTenantById } from "../data";
 import { formatPhone, normalizePhone } from "../phone";
 import { planState, tierOf } from "../plan";
@@ -117,36 +117,57 @@ export async function updateBasket(_prev: FormState, formData: FormData): Promis
 
 // ---------- order overrides ----------
 
-export async function assignDriver(formData: FormData) {
+// Gives a pickup to a driver (or takes it off them). Choosing the driver who already has it sends nothing again
+// (use Remind driver for that), so a driver isn't sent the same pickup two or three times. The previous driver's
+// messages about it are deleted from their chat, with a one-line note, so they don't go anyway.
+async function setPickupDriver(formData: FormData): Promise<"same" | "assigned" | "removed"> {
   await requireManager();
   const chatId = text(formData, "driverChatId");
   const supabase = await createClient();
   const orderId = text(formData, "orderId");
-  const { data: order } = await supabase.from("orders").select("status, accepted_at").eq("id", orderId).maybeSingle();
+  const { data: order } = await supabase.from("orders").select("status, accepted_at, driver_id, device_order_id").eq("id", orderId).maybeSingle();
+  if (!order) throw new Error("Order not found in your business");
+  const previous = (order.driver_id as string | null) ?? null;
+  if ((chatId || null) === previous) return chatId ? "same" : "removed";
   const patch: Record<string, unknown> = { driver_id: chatId || null };
   // Assigning a driver to a waiting pickup also marks it accepted, like tapping Accept in the bot.
-  if (chatId && order?.status === "PENDING") Object.assign(patch, { status: "ACCEPTED", accepted_at: new Date().toISOString() });
+  if (chatId && order.status === "PENDING") Object.assign(patch, { status: "ACCEPTED", accepted_at: new Date().toISOString() });
   const { data: updated, error } = await supabase.from("orders").update(patch).eq("id", orderId).select("id");
   if (error || !updated?.length) throw new Error(friendlyError(error));
-  // Tell the driver on Telegram, with the pickup pin and map buttons (no-op without the driver bot).
+  // the new driver hasn't confirmed yet (server-only columns)
+  await supabaseAdmin().from("orders").update({ driver_ack_at: null, assigned_at: chatId ? new Date().toISOString() : null }).eq("id", orderId);
+  if (previous) {
+    const n = order.device_order_id as number;
+    const note = chatId ? `↪️ Pickup #${n} was moved to another driver. Nothing to do.` : `↪️ Pickup #${n} was taken off your list.`;
+    await withdrawJob(orderId, "pickup", previous, note).catch((e) => logError("withdraw failed", e));
+  }
+  // Tell the driver on Telegram, with the map buttons (no-op without the driver bot).
   if (chatId) {
     const { data: full } = await supabaseAdmin().from("orders").select("*").eq("id", orderId).maybeSingle();
     if (full) await notifyAssignment(full, chatId).catch((e) => logError("notify failed", e));
   }
   refresh();
+  return chatId ? "assigned" : "removed";
+}
+
+export async function assignDriver(formData: FormData) {
+  await setPickupDriver(formData);
 }
 
 // The order page's pickup driver dropdown: same as assignDriver, with a message the form can show.
 export async function assignDriverForm(_prev: FormState, formData: FormData): Promise<FormState> {
+  let outcome: Awaited<ReturnType<typeof setPickupDriver>>;
   try {
-    await assignDriver(formData);
+    outcome = await setPickupDriver(formData);
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Couldn't change the driver." };
   }
   const chatId = text(formData, "driverChatId");
-  if (!chatId) return { message: "Driver removed from this pickup." };
+  if (outcome === "removed") return { message: "Driver removed from this pickup. Their messages about it were deleted." };
   const { data } = await supabaseAdmin().from("drivers").select("name").eq("telegram_chat_id", chatId).maybeSingle();
-  return { message: `Assigned to ${(data?.name as string) ?? "the driver"}. They've been sent the pickup in Toss Handy.` };
+  const name = (data?.name as string) ?? "The driver";
+  if (outcome === "same") return { message: `${name} already has this pickup, so nothing was sent again. Use Remind driver to send it once more.` };
+  return { message: `Assigned to ${name}. They've been sent the pickup in Toss Handy; you'll see here when they confirm.` };
 }
 
 // Finds the nearest available driver for a waiting pickup, like a new order from a basket does.
@@ -168,12 +189,18 @@ export async function setOrderStatus(formData: FormData) {
   if (!["ACCEPTED", "COMPLETED", "CANCELLED"].includes(status)) throw new Error("Invalid status");
   const supabase = await createClient();
   const orderId = text(formData, "orderId");
-  const { data: order } = await supabase.from("orders").select("accepted_at, completed_at").eq("id", orderId).maybeSingle();
+  const { data: order } = await supabase.from("orders").select("accepted_at, completed_at, driver_id, device_order_id").eq("id", orderId).maybeSingle();
   const now = new Date().toISOString();
   const patch: Record<string, unknown> = { status };
   if (status !== "CANCELLED" && !order?.accepted_at) patch.accepted_at = now;
   if (status === "COMPLETED" && !order?.completed_at) patch.completed_at = now;
   const { error } = await supabase.from("orders").update(patch).eq("id", orderId);
   if (error) throw new Error(friendlyError(error));
+  // the driver's pickup messages are out of date now: take them back
+  if (order?.driver_id && (status === "CANCELLED" || status === "COMPLETED")) {
+    const n = order.device_order_id as number;
+    const note = status === "CANCELLED" ? `❌ Pickup #${n} was cancelled. Nothing to do.` : `✅ Pickup #${n} was marked picked up by the laundry.`;
+    await withdrawJob(orderId, "pickup", order.driver_id as string, note).catch((e) => logError("withdraw failed", e));
+  }
   refresh();
 }

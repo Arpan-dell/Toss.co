@@ -19,6 +19,7 @@ import { weightGapPct } from "@/lib/dispatch/weighing";
 import type { Order } from "@/lib/types";
 import { dueLabel, isLate } from "@/lib/turnaround";
 import { DeliveryPanel } from "./delivery-panel";
+import { DriverConfirm } from "./driver-confirm";
 import { WeightForm } from "./weight-form";
 
 // Where the billed weight came from, as a tag (never color-only).
@@ -106,7 +107,12 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
               </>
             )}
             <dt className="text-muted">Driver</dt>
-            <dd>{driver?.name ?? (order.driverId ? `Telegram ${order.driverId}` : "—")}</dd>
+            <dd>
+              {driver?.name ?? (order.driverId ? `Telegram ${order.driverId}` : "—")}
+              {order.driverId && order.status === "ACCEPTED" && (
+                <DriverConfirm orderId={order.id} kind="pickup" name={driver?.name ?? "the driver"} ackAt={order.driverAckAt} sentAt={order.assignedAt} now={now()} />
+              )}
+            </dd>
             {order.status === "COMPLETED" && (
               <>
                 <dt className="text-muted">Ready</dt>

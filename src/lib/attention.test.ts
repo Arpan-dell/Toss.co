@@ -42,6 +42,23 @@ describe("needs attention", () => {
     expect(keys(base({ drivers: [driver({ status: "OFFLINE" })], orders: [order({ status: "PENDING", createdAt: ago(1) })] }))).toEqual(["offline"]);
   });
 
+  it("flags a job the driver hasn't confirmed after 10 minutes", () => {
+    const k = keys(
+      base({
+        orders: [
+          order({ status: "ACCEPTED", driverId: "1", assignedAt: ago(15) }),
+          order({ status: "ACCEPTED", driverId: "1", assignedAt: ago(15), driverAckAt: ago(14) }),
+          order({ status: "ACCEPTED", driverId: "1", assignedAt: ago(3) }),
+          order({ readyAt: ago(30), deliveryStatus: "ASSIGNED", deliveryDriverId: "1", deliveryAssignedAt: ago(12) }),
+        ],
+      }),
+    );
+    expect(k).toEqual(["unconfirmed"]);
+    expect(attentionItems(base({ orders: [order({ status: "ACCEPTED", driverId: "1", assignedAt: ago(15) })] }))[0].title).toBe(
+      "1 job not confirmed by the driver after 10 minutes",
+    );
+  });
+
   it("puts critical items first: late orders before money", () => {
     const k = keys(
       base({

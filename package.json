@@ -9,9 +9,12 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.9",
     "@phosphor-icons/react": "^2.1.10",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
@@ -21,7 +24,7 @@
     "framer-motion": "^13.5.0",
     "jose": "^6.2.12",
     "leaflet": "^1.9.4",
-    "next": "16.3.7",
+    "next": "^16.3.8",
     "nodemailer": "^10.0.13",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
@@ -40,10 +43,11 @@
     "@types/react-dom": "^19",
     "@types/three": "^0.186.0",
     "eslint": "^9",
-    "eslint-config-next": "16.3.7",
+    "eslint-config-next": "^16.3.8",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "wrangler": "^4.148.0"
   }
 }

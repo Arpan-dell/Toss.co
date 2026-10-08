@@ -44,7 +44,7 @@ function SupplyFields({ s }: { s?: Supply }) {
           <input name="costPerUnit" type="number" min={0} step="any" defaultValue={s?.costPerUnit ?? 0} className={fieldClass} />
         </Field>
       </div>
-      <Field label="Used for" hint="Whites only or coloured only needs drivers to bag them apart (Business page).">
+      <Field label="Used for" hint="Whites only or coloured only needs drivers to bag them apart (Settings → How you work).">
         <select name="appliesTo" defaultValue={s?.appliesTo ?? "ALL"} className={fieldClass}>
           <option value="ALL">Every wash</option>
           <option value="WHITES">Whites only (like bleach)</option>

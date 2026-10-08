@@ -136,6 +136,19 @@ export async function assignDriver(formData: FormData) {
   refresh();
 }
 
+// The order page's pickup driver dropdown: same as assignDriver, with a message the form can show.
+export async function assignDriverForm(_prev: FormState, formData: FormData): Promise<FormState> {
+  try {
+    await assignDriver(formData);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Couldn't change the driver." };
+  }
+  const chatId = text(formData, "driverChatId");
+  if (!chatId) return { message: "Driver removed from this pickup." };
+  const { data } = await supabaseAdmin().from("drivers").select("name").eq("telegram_chat_id", chatId).maybeSingle();
+  return { message: `Assigned to ${(data?.name as string) ?? "the driver"}. They've been sent the pickup in Toss Handy.` };
+}
+
 // Finds the nearest available driver for a waiting pickup, like a new order from a basket does.
 export async function autoAssign(formData: FormData) {
   await requireManager();

@@ -5,7 +5,6 @@ import { useEffect } from "react";
 // Global interaction layer, mounted once in the root layout:
 // - scroll reveal for any element with [data-reveal]
 // - click ripple on .btn-primary, .btn-ghost and [data-ripple]
-// - html[data-scrolled] once the page has scrolled (sticky header styling)
 export function Effects() {
   useEffect(() => {
     const root = document.documentElement;
@@ -54,23 +53,12 @@ export function Effects() {
       ripple.addEventListener("animationend", () => ripple.remove());
     };
 
-    // ---- Scrolled flag ----
-    // only touch <html> when the flag flips: any attribute write on the root invalidates page-wide styles
-    let scrolled: boolean | undefined;
-    const onScroll = () => {
-      const now = window.scrollY > 8;
-      if (now !== scrolled) root.toggleAttribute("data-scrolled", (scrolled = now));
-    };
-    onScroll();
-
     document.addEventListener("pointerdown", onDown);
-    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       io.disconnect();
       mo.disconnect();
       cancelAnimationFrame(queued);
       document.removeEventListener("pointerdown", onDown);
-      window.removeEventListener("scroll", onScroll);
     };
   }, []);
 

@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { isCapableDevice } from "@/lib/use-capable-3d";
 
 // A grid of dots with a ripple travelling out from a point (the orbit's centre), the way a dropped load sends a
 // wave through the basket. Dots on the crest grow and take the accent colour. Canvas 2D: positions are laid out
 // once per resize, dots are drawn in a few batched paths per frame (one per shade), at most 30 fps, capped at
-// 2x pixel ratio. It stops when off-screen or when the tab is hidden, and holds still for reduced motion.
+// 2x pixel ratio. It stops when off-screen or when the tab is hidden, holds still while the page is scrolling (so
+// scrolling stays smooth), and is a still frame for reduced motion and on phones / budget devices.
 // Colours come from the theme tokens and follow theme switches.
 const GAP = 24;
 const SHADES = 6; // ink alpha steps; crest dots go to the accent path
@@ -18,7 +20,7 @@ export function DotField({ originX = 0.72, originY = 0.5, className = "" }: { or
     const el = canvas.current;
     const ctx = el?.getContext("2d");
     if (!el || !ctx) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches || !isCapableDevice();
 
     let w = 0;
     let h = 0;
@@ -99,8 +101,10 @@ export function DotField({ originX = 0.72, originY = 0.5, className = "" }: { or
     let raf = 0;
     let last = 0;
     let running = false;
+    let scrolledAt = 0;
+    const onScroll = () => (scrolledAt = performance.now());
     const loop = (t: number) => {
-      if (t - last >= FRAME_MS) {
+      if (t - last >= FRAME_MS && t - scrolledAt > 160) {
         last = t;
         draw(t);
       }
@@ -141,6 +145,7 @@ export function DotField({ originX = 0.72, originY = 0.5, className = "" }: { or
     });
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
     window.addEventListener("pointermove", onPointer, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
       stop();
@@ -149,6 +154,7 @@ export function DotField({ originX = 0.72, originY = 0.5, className = "" }: { or
       mo.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pointermove", onPointer);
+      window.removeEventListener("scroll", onScroll);
     };
   }, [originX, originY]);
 

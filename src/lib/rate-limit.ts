@@ -12,6 +12,7 @@ export const LIMITS = {
   signInAccount: { limit: 10, windowSec: 15 * 60 }, // and 10 per 15 minutes per email, from anywhere
   signUpIp: { limit: 5, windowSec: 60 * 60 },
   passwordChange: { limit: 3, windowSec: 60 * 60 }, // per account, like a password reset
+  sensitiveChange: { limit: 10, windowSec: 60 * 60 }, // password re-checks for important settings, per account
   oauthStartIp: { limit: 10, windowSec: 60 },
   geocodeIp: { limit: 10, windowSec: 60 }, // OpenStreetMap's geocoder allows ~1 request/second for the whole app
   directoryIp: { limit: 30, windowSec: 60 },

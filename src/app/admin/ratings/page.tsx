@@ -41,8 +41,8 @@ export default async function Ratings() {
       {!tenant?.googleReviewUrl && (
         <p className="rounded-[10px] border border-warn/30 bg-warn-bg px-4 py-3 text-sm text-warn">
           Add your Google review link under{" "}
-          <Link href="/admin/business" className="underline">
-            Business
+          <Link href="/admin/settings/operations" className="underline">
+            Settings → How you work
           </Link>{" "}
           so customers who rate you 4–5 stars are asked to post a review.
         </p>

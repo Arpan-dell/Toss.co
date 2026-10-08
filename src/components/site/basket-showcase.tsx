@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { useCapable3D } from "@/lib/use-capable-3d";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { BASKET_COLORS, colorOf, type BasketColor } from "./basket-colors";
 import { useBasketColor } from "./basket-color-store";
@@ -24,6 +25,30 @@ function ModelPlaceholder() {
     <div aria-hidden className="grid h-full place-items-center">
       <div className="size-[min(46vw,360px)] animate-pulse rounded-full bg-accent/[0.07] blur-3xl" />
     </div>
+  );
+}
+
+// Phones and budget devices: the real product photo instead of the 3D model (no three.js at all, and no swap from
+// photo to model). It drifts and turns a little with the scroll using transforms only, done off the main thread.
+function BasketPoster({ color, progress }: { color: BasketColor; progress: MotionValue<number> }) {
+  const rotate = useTransform(progress, [0, 1], [-6, 8]);
+  const scale = useTransform(progress, [0, 0.5, 1], [0.92, 1.04, 0.96]);
+  const y = useTransform(progress, [0, 1], ["2%", "-3%"]);
+  return (
+    <motion.div
+      aria-hidden
+      style={{ rotate, scale, y }}
+      className="grid h-full place-items-center"
+    >
+      <Image
+        src={`/brand/basket/hero-${color}.webp`}
+        alt=""
+        width={946}
+        height={656}
+        sizes="(min-width: 1024px) 560px, 80vw"
+        className="h-auto w-[min(80vw,560px)] drop-shadow-[0_30px_40px_rgb(0_0_0/0.25)]"
+      />
+    </motion.div>
   );
 }
 
@@ -133,20 +158,41 @@ export function BasketShowcase() {
   const [color, onColor] = useBasketColor();
   const runway = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll({ target: runway, offset: ["start start", "end end"] });
-  const [near, setNear] = useState(false);
-  const [active, setActive] = useState(false);
-
-  // load three.js a screen ahead, but only once the browser is idle (the section starts just under the hero,
-  // so "a screen ahead" is true at page load, when the hero is still animating in); render frames only while
-  // the section is actually on screen
+  // Progress through the 520vh runway (0 at its top, 1 at its end). Measured once and on resize, then worked out
+  // from the page's scroll position: useScroll({ target }) re-measured the runway on every scroll frame anywhere on
+  // the page, forcing a full layout each time other sections had written styles.
+  const { scrollY } = useScroll();
+  const box = useRef({ top: 0, span: 1 });
   useEffect(() => {
     const el = runway.current;
     if (!el) return;
+    const measure = () => {
+      box.current = { top: el.getBoundingClientRect().top + window.scrollY, span: Math.max(1, el.offsetHeight - window.innerHeight) };
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(document.body);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
+  const scrollYProgress = useTransform(scrollY, (y) => Math.min(1, Math.max(0, (y - box.current.top) / box.current.span)));
+  const capable = useCapable3D();
+  const [near, setNear] = useState(false);
+  const [active, setActive] = useState(false);
+
+  // three.js (~1 MB) starts only once the visitor is actually in this section, never while they read the hero:
+  // loading it there froze the first screen. A soft glow holds the place until the model fades in; frames are
+  // drawn only while the section is on screen. Phones and budget devices get the photo instead.
+  useEffect(() => {
+    const el = runway.current;
+    if (!el || !capable) return;
     let idle = 0;
     const whenIdle = (fn: () => void) =>
-      typeof window.requestIdleCallback === "function" ? (idle = window.requestIdleCallback(fn, { timeout: 2500 })) : (idle = window.setTimeout(fn, 1200));
-    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && whenIdle(() => setNear(true)), { rootMargin: "100% 0px" });
+      typeof window.requestIdleCallback === "function" ? (idle = window.requestIdleCallback(fn, { timeout: 600 })) : (idle = window.setTimeout(fn, 200));
+    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && whenIdle(() => setNear(true)), { rootMargin: "0px 0px -40% 0px" });
     const onScreen = new IntersectionObserver(([e]) => setActive(e.isIntersecting));
     ahead.observe(el);
     onScreen.observe(el);
@@ -156,7 +202,7 @@ export function BasketShowcase() {
       if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
       window.clearTimeout(idle);
     };
-  }, []);
+  }, [capable]);
 
   if (reduce) {
     return (
@@ -178,7 +224,9 @@ export function BasketShowcase() {
       <div className="sticky top-0 h-[100dvh] overflow-hidden">
         <div aria-hidden className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_55%,rgb(var(--accent-rgb)/0.08),transparent_60%)]" />
         <div className="absolute inset-x-0 top-0 h-[58%] lg:inset-0 lg:h-full">
-          {near ? (
+          {!capable ? (
+            <BasketPoster color={color} progress={scrollYProgress} />
+          ) : near ? (
             <div className="h-full">
               <BasketScene color={colorOf(color).hex} progress={scrollYProgress} active={active} />
             </div>

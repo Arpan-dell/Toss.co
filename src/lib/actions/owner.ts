@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { notifySubscriptionReviewed, notifySuspension } from "../email/notify";
+import { checkPassword } from "../password-check";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
@@ -17,7 +18,7 @@ async function requireOwner() {
 }
 
 export async function updatePlatformSettings(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireOwner();
+  const session = await requireOwner();
   const monthlyPrice = Number(text(formData, "monthlyPrice"));
   const branchPrice = Number(text(formData, "branchPrice"));
   const trialDays = Number(text(formData, "trialDays"));
@@ -29,6 +30,9 @@ export async function updatePlatformSettings(_prev: FormState, formData: FormDat
   if (!isValidUpiId(upiId)) return { error: "Enter your UPI ID, like you@okaxis, so businesses can pay you." };
   const [d3, d6, d12] = ["discount3m", "discount6m", "discount12m"].map((k) => Number(text(formData, k)));
   if (![d3, d6, d12].every((d) => Number.isInteger(d) && d >= 0 && d <= 90)) return { error: "Discounts must be 0–90%." };
+  // your UPI ID receives every subscription: changing these needs your password
+  const wrong = await checkPassword(session, String(formData.get("password") ?? ""));
+  if (wrong) return { error: wrong };
 
   const { error } = await supabaseAdmin()
     .from("platform_settings")

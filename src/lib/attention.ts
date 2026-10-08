@@ -47,7 +47,7 @@ export function attentionItems(i: AttentionInput): Attention[] {
       level: "critical",
       title: "Customers can't pay you yet",
       fix: "Add your UPI ID so every bill shows a pay button and QR code.",
-      href: "/admin/business",
+      href: "/admin/settings/payments",
       action: "Add UPI ID",
     });
   }

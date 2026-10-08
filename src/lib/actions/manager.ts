@@ -6,6 +6,7 @@ import { parseKg, repriceForWeight } from "../dispatch/weighing";
 import { sortedTotal } from "../sorting";
 import { notifyClosureRequested, notifySubscriptionSubmitted } from "../email/notify";
 import { sendInvoice } from "../invoice/service";
+import { checkPassword } from "../password-check";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
@@ -24,24 +25,17 @@ function done(path = "/admin") {
   revalidatePath(path, "layout");
 }
 
+// Business page: the name and the store address.
 export async function updateBusiness(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireManager();
   const name = text(formData, "name");
-  const upiId = text(formData, "upiId");
-  const upiName = text(formData, "upiName") || name;
-  const price = Number(text(formData, "price"));
   const storeAddress = text(formData, "storeAddress");
   if (name.length < 2 || name.length > 80) return { error: "Enter your business name." };
-  if (!isValidUpiId(upiId)) return { error: "Enter a valid UPI ID, like yourshop@okaxis." };
-  if (!(price > 0 && price <= 10_000)) return { error: "Enter your price per kg in rupees." };
   if (storeAddress.length > 300) return { error: "That store address is too long." };
 
   const supabase = await createClient();
   const { data: before } = await supabase.from("tenants").select("store_address").eq("id", session.tenantId).maybeSingle();
-  const { error } = await supabase
-    .from("tenants")
-    .update({ name, upi_id: normalizeUpiId(upiId), upi_name: upiName.slice(0, 50), price_per_kg: price, store_address: storeAddress || null })
-    .eq("id", session.tenantId);
+  const { error } = await supabase.from("tenants").update({ name, store_address: storeAddress || null }).eq("id", session.tenantId);
   if (error) return { error: friendlyError(error) };
 
   // Find the store on the map once per address change; drivers' routes end there.
@@ -49,8 +43,30 @@ export async function updateBusiness(_prev: FormState, formData: FormData): Prom
   if ((before?.store_address ?? "") !== storeAddress) located = !storeAddress || !!(await geocodeStore(session.tenantId!));
   done();
   return located
-    ? { message: "Saved. New orders use the new price; customers pay to the new UPI ID." }
+    ? { message: "Saved." }
     : { message: "Saved, but we couldn't find the store address on the map. Drivers' routes will search it by text. Try adding the area and city." };
+}
+
+// Price & UPI: where customers' money goes and what they pay. Needs the account password, like a bank would.
+export async function updatePayments(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireManager();
+  const upiId = text(formData, "upiId");
+  const price = Number(text(formData, "price"));
+  if (!isValidUpiId(upiId)) return { error: "Enter a valid UPI ID, like yourshop@okaxis." };
+  if (!(price > 0 && price <= 10_000)) return { error: "Enter your price per kg in rupees." };
+  const wrong = await checkPassword(session, String(formData.get("password") ?? ""));
+  if (wrong) return { error: wrong };
+
+  const supabase = await createClient();
+  const { data: t } = await supabase.from("tenants").select("name").eq("id", session.tenantId).maybeSingle();
+  const upiName = text(formData, "upiName") || ((t?.name as string) ?? "");
+  const { error } = await supabase
+    .from("tenants")
+    .update({ upi_id: normalizeUpiId(upiId), upi_name: upiName.slice(0, 50), price_per_kg: price })
+    .eq("id", session.tenantId);
+  if (error) return { error: friendlyError(error) };
+  done();
+  return { message: "Saved. New pickups use this price, and customers pay to this UPI ID." };
 }
 
 // Service area: where the store is (a pin the manager places or their current location) and how far it picks
@@ -243,6 +259,8 @@ export async function requestClosure(_prev: FormState, formData: FormData): Prom
   const session = await requireManager();
   const reason = text(formData, "reason").slice(0, 500);
   if (formData.get("confirm") !== "on") return { error: "Tick the box to confirm you want to close your business." };
+  const wrong = await checkPassword(session, String(formData.get("password") ?? ""));
+  if (wrong) return { error: wrong };
   const { error } = await supabaseAdmin()
     .from("tenants")
     .update({ closure_requested_at: new Date().toISOString(), closure_reason: reason || null })

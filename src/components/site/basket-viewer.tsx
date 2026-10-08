@@ -1,7 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { useCapable3D } from "@/lib/use-capable-3d";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import type { Pose } from "./basket-scene";
 
@@ -9,11 +11,12 @@ import type { Pose } from "./basket-scene";
 // It turns slowly on its own, can be dragged round, and has quick views (angle, front, USB-C side, top).
 const BasketScene = dynamic(() => import("./basket-scene"), { ssr: false, loading: () => <div className="size-full" /> });
 
+// photo: the real product photo for that view, used on phones and budget devices instead of the 3D model
 const VIEWS = [
-  { id: "angle", label: "Angle", pose: { ry: -0.62, t: 0.32 } },
-  { id: "front", label: "Front", pose: { ry: 0, t: 0.1 } },
-  { id: "port", label: "USB-C side", pose: { ry: -Math.PI / 2, t: 0.1 } },
-  { id: "top", label: "Top", pose: { ry: 0, t: 1.2 } },
+  { id: "angle", label: "Angle", pose: { ry: -0.62, t: 0.32 }, photo: "hero" },
+  { id: "front", label: "Front", pose: { ry: 0, t: 0.1 }, photo: "front" },
+  { id: "port", label: "USB-C side", pose: { ry: -Math.PI / 2, t: 0.1 }, photo: "side" },
+  { id: "top", label: "Top", pose: { ry: 0, t: 1.2 }, photo: "top" },
 ] as const;
 
 export function BasketViewer({ color }: { color: string }) {
@@ -25,12 +28,14 @@ export function BasketViewer({ color }: { color: string }) {
   const [near, setNear] = useState(false);
   const [onScreen, setOnScreen] = useState(false);
   const reduce = useReducedMotion();
+  const capable = useCapable3D();
 
-  // load three.js a screen ahead; draw only while visible
+  // three.js starts when the viewer is actually on screen (loading it ahead froze the page just before);
+  // frames are drawn only while it's visible. Phones and budget devices get photos instead.
   useEffect(() => {
     const el = box.current;
-    if (!el) return;
-    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "100% 0px" });
+    if (!el || !capable) return;
+    const ahead = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: "0px 0px -20% 0px" });
     const vis = new IntersectionObserver(([e]) => setOnScreen(e.isIntersecting));
     ahead.observe(el);
     vis.observe(el);
@@ -38,7 +43,7 @@ export function BasketViewer({ color }: { color: string }) {
       ahead.disconnect();
       vis.disconnect();
     };
-  }, []);
+  }, [capable]);
 
   // idle spin (a ref, not state: no re-renders)
   useEffect(() => {
@@ -84,12 +89,22 @@ export function BasketViewer({ color }: { color: string }) {
         role="img"
         aria-label="3D model of the Toss basket box. Drag to turn it."
       >
-        {near && (
-          <div className="size-full">
-            <BasketScene color={color} pose={pose} active={onScreen} near />
-          </div>
+        {!capable ? (
+          <Image
+            src={`/brand/basket/${VIEWS.find((v) => v.id === view)?.photo ?? "hero"}-${color}.webp`}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 480px, 90vw"
+            className="object-contain p-6"
+          />
+        ) : (
+          near && (
+            <div className="size-full">
+              <BasketScene color={color} pose={pose} active={onScreen} near />
+            </div>
+          )
         )}
-        <span className="pointer-events-none absolute bottom-3 left-3 font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Drag to turn</span>
+        {capable && <span className="pointer-events-none absolute bottom-3 left-3 font-mono text-[10px] tracking-[0.12em] text-muted uppercase">Drag to turn</span>}
       </div>
       <div className="mt-3 grid grid-cols-4 gap-2" role="group" aria-label="Views">
         {VIEWS.map((v) => (

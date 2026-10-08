@@ -1,6 +1,7 @@
 import { ConfirmButton } from "@/components/confirm-button";
 import { Badge } from "@/components/ui";
-import { assignDeliveryDriver, closeDelivery, sendForDelivery } from "@/lib/actions/delivery";
+import { ActionForm } from "@/components/action-form";
+import { assignDeliveryDriverForm, closeDelivery, sendForDelivery } from "@/lib/actions/delivery";
 import { DELIVERY_LABEL } from "@/lib/dispatch/delivery";
 import { formatDateTime } from "@/lib/format";
 import type { Driver, Order } from "@/lib/types";
@@ -42,9 +43,7 @@ export function DeliveryPanel({ order, drivers }: { order: Order; drivers: Drive
         {(order.deliveryAttempts ?? 0) > 0 && (
           <>
             <dt className="text-muted">Attempts</dt>
-            <dd className="text-warn">
-              {order.deliveryAttempts} failed: customer not home
-            </dd>
+            <dd className="text-warn">{order.deliveryAttempts} failed: customer not home</dd>
           </>
         )}
         {closed && order.deliveredAt && (
@@ -73,16 +72,23 @@ export function DeliveryPanel({ order, drivers }: { order: Order; drivers: Drive
             />
           )}
           {open && (
-            <form action={assignDeliveryDriver} className="flex gap-2">
+            // keyed on the saved driver, so after Save the dropdown shows what's really assigned
+            <ActionForm
+              key={order.deliveryDriverId ?? "none"}
+              action={assignDeliveryDriverForm}
+              submitLabel="Save driver"
+              className="space-y-2"
+              submitClassName="btn-primary rounded-full px-4 py-2 text-sm font-medium disabled:opacity-70"
+            >
               <input type="hidden" name="orderId" value={order.id} />
-              <label className="sr-only" htmlFor="deliveryDriver">
-                Delivery driver
+              <label className="block text-xs font-medium text-secondary" htmlFor="deliveryDriver">
+                {order.deliveryDriverId ? "Change the delivery driver" : "Choose a delivery driver"}
               </label>
               <select
                 id="deliveryDriver"
                 name="driverChatId"
                 defaultValue={order.deliveryDriverId ?? ""}
-                className="flex-1 rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm"
+                className="w-full rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm"
               >
                 <option value="">— No driver —</option>
                 {drivers
@@ -93,12 +99,17 @@ export function DeliveryPanel({ order, drivers }: { order: Order; drivers: Drive
                     </option>
                   ))}
               </select>
-              <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium">Save</button>
-            </form>
+            </ActionForm>
           )}
           <div className="flex flex-wrap gap-3">
             {(d === "ASSIGNED" || d === "OUT") && (
-              <ConfirmButton action={closeDelivery} fields={{ orderId: order.id, how: "delivered" }} label="Mark delivered" tone="neutral" confirm="Mark this order as delivered to the customer?" />
+              <ConfirmButton
+                action={closeDelivery}
+                fields={{ orderId: order.id, how: "delivered" }}
+                label="Mark delivered"
+                tone="neutral"
+                confirm="Mark this order as delivered to the customer?"
+              />
             )}
             {d !== "OUT" && (
               <ConfirmButton

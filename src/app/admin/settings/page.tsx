@@ -1,24 +1,45 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Icon } from "@phosphor-icons/react";
-import { Briefcase, ChartLineUp, LockSimple, Receipt, Star, Storefront, TreeStructure } from "@phosphor-icons/react/dist/ssr";
+import {
+  Briefcase,
+  ChartLineUp,
+  CurrencyInr,
+  Gift,
+  LockSimple,
+  Receipt,
+  ShieldCheck,
+  SlidersHorizontal,
+  Star,
+  Storefront,
+  TreeStructure,
+} from "@phosphor-icons/react/dist/ssr";
 import { currentTier } from "@/components/plan-gate";
 import { PageTitle } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Settings" };
 
-type Tile = { href: string; title: string; text: string; icon: Icon; pro?: boolean };
+// locked: needs the account password to change
+type Tile = { href: string; title: string; text: string; icon: Icon; pro?: boolean; locked?: boolean };
 
 const GROUPS: { title: string; tiles: Tile[] }[] = [
   {
     title: "Your laundry",
     tiles: [
+      { href: "/admin/business", title: "Business", text: "Name, Business ID, store address and the area you pick up from.", icon: Storefront },
+      { href: "/admin/settings/payments", title: "Price & UPI", text: "Your price per kg and the UPI ID customers pay to.", icon: CurrencyInr, locked: true },
       {
-        href: "/admin/business",
-        title: "Business",
-        text: "Name, price, UPI, store address, weighing, whites and coloured, delivery, turnaround.",
-        icon: Storefront,
+        href: "/admin/settings/operations",
+        title: "How you work",
+        text: "Weighing at pickup, whites and coloured, delivery back, and your turnaround.",
+        icon: SlidersHorizontal,
       },
+    ],
+  },
+  {
+    title: "Account",
+    tiles: [
+      { href: "/admin/settings/account", title: "Account & security", text: "Change your password, or close the business.", icon: ShieldCheck },
       { href: "/admin/billing", title: "Plan & billing", text: "Your Toss plan, what Pro adds, and paying for it.", icon: Receipt },
     ],
   },
@@ -29,6 +50,7 @@ const GROUPS: { title: string; tiles: Tile[] }[] = [
       { href: "/admin/branches", title: "Branches", text: "Run more than one laundry from one login.", icon: TreeStructure, pro: true },
       { href: "/admin/ratings", title: "Ratings", text: "What customers think of each pickup, and who to call back.", icon: Star, pro: true },
       { href: "/admin/analytics", title: "Analytics", text: "Busy days, best customers and what's coming next week.", icon: ChartLineUp, pro: true },
+      { href: "/admin/settings/winback", title: "Win-back offers", text: "An automatic discount that brings quiet customers back.", icon: Gift, pro: true },
     ],
   },
 ];
@@ -60,6 +82,12 @@ export default async function Settings() {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 font-medium text-fg">
                       {t.title}
+                      {t.locked && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-warn-bg px-1.5 py-0.5 font-mono text-[10px] text-warn" title="Changes need your password">
+                          <LockSimple size={10} weight="bold" aria-hidden />
+                          PASSWORD
+                        </span>
+                      )}
                       {t.pro && (
                         <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-mono text-[10px] ${locked ? "bg-warn-bg text-warn" : "bg-accent/10 text-accent"}`}>
                           {locked && <LockSimple size={10} weight="bold" aria-hidden />}PRO

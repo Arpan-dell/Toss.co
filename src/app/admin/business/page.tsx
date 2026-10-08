@@ -1,28 +1,22 @@
-import { BackLink } from "@/components/back-link";
 import type { Metadata } from "next";
-import { planState, tierOf } from "@/lib/plan";
 import Link from "next/link";
-import { ChangePasswordCard } from "@/components/change-password";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
+import { BackLink } from "@/components/back-link";
 import { IdChip } from "@/components/id-chip";
 import { Card, PageTitle, StatTile } from "@/components/ui";
-import { requestClosure, updateBusiness, updateWeighing, updateWinback } from "@/lib/actions/manager";
-import { updateDelivers } from "@/lib/actions/delivery";
-import { updateService } from "@/lib/actions/service";
-import { getOfferStats, getTenantById, listCustomers } from "@/lib/data";
-import { formatDate } from "@/lib/format";
+import { updateBusiness } from "@/lib/actions/manager";
+import { getTenantById, listCustomers } from "@/lib/data";
 import { requireRole } from "@/lib/session";
 import { ServiceAreaEditor } from "./area-editor";
 
 export const metadata: Metadata = { title: "Business" };
 
+// Settings → Business: who you are and where you are. Price & UPI, how you work, and the account have their own pages.
 export default async function Business({ searchParams }: PageProps<"/admin/business">) {
   const session = await requireRole("MANAGER");
   const [tenant, customers, params] = await Promise.all([getTenantById(session.tenantId), listCustomers(), searchParams]);
   if (!tenant) return <Card>This manager account isn&apos;t linked to a business.</Card>;
   const mine = customers.filter((c) => c.tenantId === tenant.id);
-  const offers = await getOfferStats(tenant.id);
-  const pro = tierOf(planState(tenant).state) === "PRO";
 
   return (
     <div className="stagger max-w-3xl space-y-6">
@@ -39,15 +33,14 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
         <div className="flex flex-wrap items-center gap-6">
           <IdChip label="Business ID" value={tenant.joinCode} />
           <p className="max-w-sm text-sm text-secondary">
-            Customers enter this after signing up on Toss. Their baskets, pickups and invoices then show up here, and their
-            payments go to your UPI ID.
+            Customers enter this after signing up on Toss. Their baskets, pickups and invoices then show up here, and their payments go to your UPI ID.
           </p>
         </div>
       </Card>
 
       <div className="grid grid-cols-2 gap-4">
         <StatTile label="Connected customers" value={String(mine.length)} />
-        <StatTile label="Price per kg" value={`₹${tenant.pricePerKg}`} />
+        <StatTile label="Price per kg" value={`₹${tenant.pricePerKg}`} hint="Change it under Price & UPI" />
       </div>
 
       <Card title="Business details">
@@ -55,14 +48,8 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
           <Field label="Business name">
             <input name="name" required minLength={2} maxLength={80} defaultValue={tenant.name} className={fieldClass} />
           </Field>
-          <Field label="Price per kg (₹)" hint="Applies to new pickups. Existing invoices keep their amount (edit them under Payments).">
-            <input name="price" type="number" required min={1} max={10000} step="1" defaultValue={tenant.pricePerKg} className={fieldClass} />
-          </Field>
-          <Field label="UPI ID for customer payments" hint="Where customers' money goes. Change it anytime; unpaid invoices use the new ID.">
-            <input name="upiId" required autoComplete="off" defaultValue={tenant.upiId ?? ""} placeholder="yourshop@okaxis" className={`${fieldClass} font-mono`} />
-          </Field>
           <Field
-            label="Store address (where drivers deliver)"
+            label="Store address (where drivers bring the laundry)"
             hint={
               tenant.storeAddress
                 ? tenant.storeLocated
@@ -73,138 +60,22 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
           >
             <input name="storeAddress" maxLength={300} defaultValue={tenant.storeAddress ?? ""} placeholder="Shop 4, Lajpat Nagar Market, New Delhi" className={fieldClass} />
           </Field>
-          <Field label="Name shown in UPI apps">
-            <input name="upiName" maxLength={50} defaultValue={tenant.upiName ?? ""} placeholder={tenant.name} className={fieldClass} />
-          </Field>
         </ActionForm>
-      </Card>
-      <Card title="Weight at pickup">
-        <ActionForm action={updateWeighing} submitLabel="Save">
-          <label className="flex items-start gap-2.5 text-sm">
-            <input name="weighAtPickup" type="checkbox" defaultChecked={tenant.weighAtPickup} className="mt-0.5 size-4 accent-[var(--accent)]" />
-            <span>
-              <span className="font-medium text-fg">Driver weighs every bag at pickup</span>
-              <span className="mt-0.5 block text-secondary">
-                After <b>Picked up</b>, the driver bot asks for the scale reading and bills that weight. The basket&apos;s reading is
-                kept beside it, so a basket that under-reports shows up on the order page. A driver without a scale can still use the
-                basket&apos;s reading; that order is marked <i>not weighed</i>.
-              </span>
-              <span className="mt-1 block text-xs text-muted">Off: pickups bill the basket&apos;s reading straight away. You can still confirm any unpaid order&apos;s weight on its page.</span>
-            </span>
-          </label>
-          <label className="flex items-start gap-2.5 border-t border-dotted border-border-strong pt-3 text-sm">
-            <input name="sortWhites" type="checkbox" defaultChecked={tenant.sortWhites} className="mt-0.5 size-4 accent-[var(--accent)]" />
-            <span>
-              <span className="font-medium text-fg">Keep whites and coloured clothes apart</span><span className="ml-1.5 rounded-[4px] bg-accent/15 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.08em] text-accent">PRO</span>
-              <span className="mt-0.5 block text-secondary">
-                At pickup the driver packs <b>whites</b> and <b>coloured clothes</b> in two bags, tags them (like <code>#104-W</code> and{" "}
-                <code>#104-C</code>) and weighs each one. Your live board then shows how many kg of each are waiting to be washed, and supplies like
-                bleach can come off the whites only.
-              </span>
-              <span className="mt-1 block text-xs text-muted">
-                Needs weighing at pickup. The price per kg is the same for both bags.
-                {!pro && " On Toss Free drivers use one bag; upgrade to turn sorting on."}
-              </span>
-            </span>
-          </label>
-        </ActionForm>
-      </Card>
-
-      <Card title="Delivery back to customers">
-        <ActionForm action={updateDelivers} submitLabel="Save">
-          <label className="flex items-start gap-2.5 text-sm">
-            <input name="delivers" type="checkbox" defaultChecked={tenant.delivers} className="mt-0.5 size-4 accent-[var(--accent)]" />
-            <span>
-              <span className="font-medium text-fg">Deliver clean clothes back with our drivers</span>
-              <span className="mt-0.5 block text-secondary">
-                When you tap <b>Mark ready</b>, the order goes to the nearest online driver: they collect the bags from the store and take them back.
-              </span>
-              <span className="mt-1 block text-secondary">
-                <span className="font-medium text-fg">With Pro</span>
-                {" "}the customer gets a 4-digit code and reads it to the driver at the door, so you know it reached the right person, and
-                drivers can record cash collected for unpaid orders.
-                {!pro && (
-                  <Link href="/admin/billing" className="ml-1 text-accent hover:text-accent-2">
-                    Upgrade →
-                  </Link>
-                )}
-              </span>
-              <span className="mt-1 block text-xs text-muted">Off: customers are told to collect ready orders at your store.</span>
-            </span>
-          </label>
-        </ActionForm>
-      </Card>
-
-      <Card title="Turnaround and reviews">
-        <ActionForm action={updateService} submitLabel="Save">
-          <Field label="Ready within (hours)" hint="From pickup. Late orders show on your live board; tap Mark ready to tell the customer.">
-            <input name="turnaroundHours" type="number" min={1} max={720} step={1} required defaultValue={tenant.turnaroundHours} className={fieldClass} />
-          </Field>
-          <Field label="Google review link (optional)" hint="Customers who rate you 4 or 5 stars are asked to post it on Google.">
-            <input name="googleReviewUrl" type="url" defaultValue={tenant.googleReviewUrl ?? ""} placeholder="https://g.page/r/…/review" className={fieldClass} />
-          </Field>
-        </ActionForm>
+        <p className="mt-3 text-xs text-muted">
+          Price and UPI ID are under{" "}
+          <Link href="/admin/settings/payments" className="text-accent hover:text-accent-2">
+            Settings → Price &amp; UPI
+          </Link>
+          , protected by your password.
+        </p>
       </Card>
 
       <Card title="Service area">
         <p className="mb-4 text-sm text-secondary">
-          Where you pick up from. Toss lists you for customers inside this circle in <span className="text-fg">Find a laundry</span>, on the
-          website and in Telegram.
+          Where you pick up from. Toss lists you for customers inside this circle in <span className="text-fg">Find a laundry</span>, on the website and
+          in Telegram.
         </p>
         <ServiceAreaEditor lat={tenant.storeLat} lng={tenant.storeLng} radiusKm={tenant.serviceRadiusKm} listed={tenant.listed} />
-      </Card>
-      <Card title="Win back quiet customers" action={!pro ? <Link href="/admin/billing" className="font-mono text-[10px] text-accent">PRO · UPGRADE →</Link> : undefined}>
-        <p className="mb-4 text-sm text-secondary">
-          When a customer hasn&apos;t had a pickup for a while, Toss sends them a discount in the Toss Control bot and on their dashboard. It&apos;s
-          applied to their next pickup automatically, valid for 14 days.
-          {!pro && <span className="text-warn"> Paused on Toss Free: offers go out again when you upgrade.</span>}
-          {offers.sent > 0 && (
-            <span className="text-fg">
-              {" "}
-              So far: {offers.sent} sent, {offers.redeemed} came back.
-            </span>
-          )}
-        </p>
-        <ActionForm action={updateWinback} submitLabel="Save offer" className="grid gap-3 sm:grid-cols-2 sm:items-end">
-          <label className="flex items-center gap-2 text-sm sm:col-span-2">
-            <input type="checkbox" name="enabled" defaultChecked={tenant.winbackEnabled} className="size-4 accent-[var(--color-accent)]" />
-            Send win-back offers
-          </label>
-          <Field label="After this many days without a pickup">
-            <input name="days" type="number" min={7} max={365} step={1} required defaultValue={tenant.winbackDays} className={fieldClass} />
-          </Field>
-          <Field label="Discount on their next pickup (%)">
-            <input name="pct" type="number" min={1} max={50} step={1} required defaultValue={tenant.winbackPct} className={fieldClass} />
-          </Field>
-        </ActionForm>
-      </Card>
-
-      <ChangePasswordCard email={session.email} />
-
-      <Card title="Close your business">
-        {tenant.closureRequestedAt ? (
-          <p className="rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
-            You asked Toss to close this business on {formatDate(tenant.closureRequestedAt)}. We&apos;ll contact you by email to complete it.
-          </p>
-        ) : (
-          <details className="text-sm">
-            <summary className="cursor-pointer text-muted">Request to remove {tenant.name} from Toss</summary>
-            <ActionForm
-              action={requestClosure}
-              submitLabel="Send removal request"
-              submitClassName="rounded-full border border-critical/40 px-5 py-2.5 text-sm font-medium text-critical transition hover:bg-critical-bg disabled:opacity-70"
-              className="mt-3 max-w-md space-y-3"
-            >
-              <Field label="Why are you leaving? (optional)">
-                <textarea name="reason" maxLength={500} rows={3} className={fieldClass} />
-              </Field>
-              <label className="flex items-start gap-2 text-sm text-secondary">
-                <input type="checkbox" name="confirm" className="mt-0.5 size-4 accent-[var(--color-critical)]" />
-                I want to close my business. Toss will contact me to complete it.
-              </label>
-            </ActionForm>
-          </details>
-        )}
       </Card>
     </div>
   );

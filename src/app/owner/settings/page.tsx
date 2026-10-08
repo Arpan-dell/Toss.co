@@ -1,3 +1,4 @@
+import { PasswordField } from "@/components/password-field";
 import type { Metadata } from "next";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { ChangePasswordCard } from "@/components/change-password";
@@ -46,6 +47,7 @@ export default async function OwnerSettings() {
             </div>
             <span className="block text-xs text-muted">Shown on every business&apos;s Billing page. 1 month is always full price.</span>
           </fieldset>
+          <PasswordField hint="Your UPI ID receives every subscription, so changes need your password." />
         </ActionForm>
       </Card>
       <ChangePasswordCard email={session.email} />

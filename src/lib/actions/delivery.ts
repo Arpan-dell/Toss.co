@@ -84,7 +84,7 @@ export async function closeDelivery(fd: FormData) {
   done();
 }
 
-// Business page: deliver ready orders back to customers, or have them collected at the store.
+// Settings → How you work: deliver ready orders back to customers, or have them collected at the store.
 export async function updateDelivers(_prev: FormState, fd: FormData): Promise<FormState> {
   const session = await requireManager();
   const on = fd.get("delivers") === "on";
@@ -93,4 +93,17 @@ export async function updateDelivers(_prev: FormState, fd: FormData): Promise<Fo
   if (error) return { error: friendlyError(error) };
   done();
   return { message: on ? "Saved. Ready orders go out for delivery with your drivers." : "Saved. Customers are told to collect ready orders at your store." };
+}
+
+// The order page's driver dropdown: same as assignDeliveryDriver, with a message the form can show.
+export async function assignDeliveryDriverForm(_prev: FormState, fd: FormData): Promise<FormState> {
+  try {
+    await assignDeliveryDriver(fd);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Couldn't change the driver." };
+  }
+  const chatId = text(fd, "driverChatId");
+  if (!chatId) return { message: "Driver removed. The order is waiting for a driver again." };
+  const { data } = await supabaseAdmin().from("drivers").select("name").eq("telegram_chat_id", chatId).maybeSingle();
+  return { message: `Assigned to ${(data?.name as string) ?? "the driver"}. They've been sent the delivery in Toss Handy.` };
 }

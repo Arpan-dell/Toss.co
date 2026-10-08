@@ -8,7 +8,8 @@ import { StatusTimeline } from "@/components/status-timeline";
 import { Badge, Card, OrderStatusBadge, PageTitle, PaymentBadge } from "@/components/ui";
 import { confirmPayment, markPaidCash, rejectPayment } from "@/lib/actions/manager";
 import { markReady } from "@/lib/actions/service";
-import { assignDriver, autoAssign, setOrderStatus } from "@/lib/actions/manager-ops";
+import { ActionForm } from "@/components/action-form";
+import { assignDriverForm, autoAssign, setOrderStatus } from "@/lib/actions/manager-ops";
 import { deviceLabel, getOrder, getTenantById, listCustomers, listDevices, listDrivers, listOrderEvents, now } from "@/lib/data";
 import { getSession } from "@/lib/session";
 import { bagTag, isSorted } from "@/lib/sorting";
@@ -47,7 +48,13 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
   if (!order) notFound(); // RLS: other businesses' orders simply don't exist for this manager
 
   const session = await getSession();
-  const [events, drivers, customers, devices, tenant] = await Promise.all([listOrderEvents(id), listDrivers(), listCustomers(), listDevices(), getTenantById(session?.tenantId)]);
+  const [events, drivers, customers, devices, tenant] = await Promise.all([
+    listOrderEvents(id),
+    listDrivers(),
+    listCustomers(),
+    listDevices(),
+    getTenantById(session?.tenantId),
+  ]);
   const sorted = isSorted(order);
   const customer = customers.find((c) => c.id === order.customerId);
   const device = devices.find((d) => d.deviceId === order.deviceId);
@@ -91,7 +98,8 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                   )}
                   {(order.colouredKg ?? 0) > 0 && (
                     <span className="block">
-                      Coloured {formatKg(order.colouredKg!)} <span className="font-mono text-xs text-muted">{bagTag(order.deviceOrderId, "COLOURED")}</span>
+                      Coloured {formatKg(order.colouredKg!)}{" "}
+                      <span className="font-mono text-xs text-muted">{bagTag(order.deviceOrderId, "COLOURED")}</span>
                     </span>
                   )}
                 </dd>
@@ -135,7 +143,9 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
               <>
                 <dt className="text-muted">Rating</dt>
                 <dd>
-                  <span className="text-warn" aria-label={`${order.rating} out of 5`}>{"★".repeat(order.rating)}</span>
+                  <span className="text-warn" aria-label={`${order.rating} out of 5`}>
+                    {"★".repeat(order.rating)}
+                  </span>
                   <span className="text-muted">{"★".repeat(5 - order.rating)}</span>
                   {order.ratingComment && <span className="mt-1 block text-xs text-secondary">“{order.ratingComment}”</span>}
                 </dd>
@@ -153,33 +163,42 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
         <Card title={order.status === "COMPLETED" ? "Delivery" : "Manage pickup"}>
           {open ? (
             <div className="space-y-5">
-              <form action={assignDriver} className="space-y-2">
+              <ActionForm
+                key={order.driverId ?? "none"}
+                action={assignDriverForm}
+                submitLabel="Save driver"
+                className="space-y-2"
+                submitClassName="btn-primary rounded-full px-4 py-2 text-sm font-medium disabled:opacity-70"
+              >
                 <input type="hidden" name="orderId" value={order.id} />
                 <label className="block text-xs font-medium text-secondary" htmlFor="driver">
                   {order.driverId ? "Reassign driver" : "Assign a driver"}
                 </label>
-                <div className="flex gap-2">
-                  <select
-                    id="driver"
-                    name="driverChatId"
-                    defaultValue={order.driverId ?? ""}
-                    className="flex-1 rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm"
-                  >
-                    <option value="">— No driver —</option>
-                    {drivers.filter((d) => d.telegramChatId).map((d) => (
+                <select
+                  id="driver"
+                  name="driverChatId"
+                  defaultValue={order.driverId ?? ""}
+                  className="w-full rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm"
+                >
+                  <option value="">— No driver —</option>
+                  {drivers
+                    .filter((d) => d.telegramChatId)
+                    .map((d) => (
                       <option key={d.id} value={d.telegramChatId}>
                         {d.name} ({d.status === "AVAILABLE" ? "available" : d.status === "ON_JOB" ? "on a job" : "offline"})
                       </option>
                     ))}
-                  </select>
-                  <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium">Save</button>
-                </div>
+                </select>
                 {drivers.length === 0 && (
                   <p className="text-xs text-muted">
-                    Add drivers on the <Link href="/admin/fleet" className="underline">Fleet</Link> page first.
+                    Add drivers on the{" "}
+                    <Link href="/admin/fleet" className="underline">
+                      Fleet
+                    </Link>{" "}
+                    page first.
                   </p>
                 )}
-              </form>
+              </ActionForm>
               {!order.driverId && (
                 <div className="flex flex-wrap items-center gap-3">
                   <ConfirmButton
@@ -213,12 +232,10 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
               </div>
               <p className="text-xs text-muted">Use these if a driver forgot to tap Accept or Complete in the bot.</p>
             </div>
+          ) : order.status === "COMPLETED" ? (
+            <DeliveryPanel order={order} drivers={drivers} />
           ) : (
-            order.status === "COMPLETED" ? (
-              <DeliveryPanel order={order} drivers={drivers} />
-            ) : (
-              <p className="text-sm text-secondary">This pickup was cancelled.</p>
-            )
+            <p className="text-sm text-secondary">This pickup was cancelled.</p>
           )}
         </Card>
       </div>
@@ -308,8 +325,8 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
         </dl>
         {gap !== null && Math.abs(gap) > 15 && (
           <p className="mt-4 text-sm text-warn">
-            The scale and the basket disagree by more than 15%. If this keeps happening for the same basket, its sensor may need
-            recalibrating, or it may be under-reporting.
+            The scale and the basket disagree by more than 15%. If this keeps happening for the same basket, its sensor may need recalibrating, or it
+            may be under-reporting.
           </p>
         )}
         {order.paymentStatus === "UNPAID" ? (

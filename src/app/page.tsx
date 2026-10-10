@@ -16,6 +16,7 @@ import { Logo } from "@/components/ui";
 import { getPublicPlan } from "@/lib/data";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { appHref } from "@/lib/hosts";
 
 export const metadata: Metadata = { alternates: { canonical: "/" }, openGraph: { url: "/" } };
@@ -44,8 +45,10 @@ const STRUCTURED_DATA = {
 };
 
 // Landing page. Midnight theme, Outfit, one aqua accent. Interactive pieces are client islands under
-// components/site; this page stays a Server Component that only lays them out. Async so the manager
-// pricing section can read the live price/trial/discounts from platform_settings.
+// components/site; this page stays a Server Component that only lays them out. Each heavy island sits in its own
+// <Suspense> so React hydrates them one at a time and lets the browser breathe in between: hydrated all at once
+// they were one multi-second task on mid-range phones, during which taps and scrolling did nothing.
+// Async so the manager pricing section can read the live price/trial/discounts from platform_settings.
 export default async function Home() {
   const plan = await getPublicPlan();
   return (
@@ -57,9 +60,9 @@ export default async function Home() {
       <main className="flex-1">
         <HeroOrbit />
 
-        <WorksWith />
+        <Suspense><WorksWith /></Suspense>
 
-        <BasketShowcase />
+        <Suspense><BasketShowcase /></Suspense>
 
         <section id="control" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
           <Reveal as="p" className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">
@@ -72,11 +75,11 @@ export default async function Home() {
             No app to install. The basket talks to you through a Telegram bot: check how full it is, zero the scale, change when it calls a
             pickup, or ask for one now. Tap the buttons on the phone to try it.
           </Reveal>
-          <BotDemo />
+          <Suspense><BotDemo /></Suspense>
         </section>
 
         <section id="manager" className="mx-auto flex max-w-7xl scroll-mt-6 flex-col justify-center px-4 py-16 sm:px-6 lg:min-h-[100dvh] lg:px-8 lg:pt-10 lg:pb-28">
-          <ManagerPricing plan={plan} />
+          <Suspense><ManagerPricing plan={plan} /></Suspense>
         </section>
 
         <section id="how" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
@@ -87,7 +90,7 @@ export default async function Home() {
             Pick who you are and scroll. Every step is what actually happens on Toss, from the first weigh-in to the paid invoice.
           </Reveal>
           <div className="mt-8">
-            <HowScrolly />
+            <Suspense><HowScrolly /></Suspense>
           </div>
         </section>
 
@@ -104,7 +107,7 @@ export default async function Home() {
             </Reveal>
           </div>
           <Reveal delay={0.1}>
-            <InsideGallery />
+            <Suspense><InsideGallery /></Suspense>
           </Reveal>
         </section>
 
@@ -112,11 +115,11 @@ export default async function Home() {
           <Reveal as="h2" className="mb-14 max-w-3xl text-[clamp(2.4rem,5vw,4.2rem)] leading-[1.05] font-black tracking-tight">
             Built for everyone who touches the laundry.
           </Reveal>
-          <RolesBento />
+          <Suspense><RolesBento /></Suspense>
         </section>
 
         <section id="why" className="mx-auto max-w-6xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
-          <Manifesto />
+          <Suspense><Manifesto /></Suspense>
         </section>
 
         <section id="buy" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
@@ -142,12 +145,12 @@ export default async function Home() {
               <>Each box is printed to order. Leave your details and we&apos;ll get back to you about availability, price and delivery.</>
             )}
           </Reveal>
-          <GetBasket />
+          <Suspense><GetBasket /></Suspense>
         </section>
       </main>
 
       <SiteFooter logo={<Logo variant="full" className="h-14" />} />
-      <SiteDock />
+      <Suspense><SiteDock /></Suspense>
     </div>
   );
 }

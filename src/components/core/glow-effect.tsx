@@ -77,7 +77,7 @@ export function GlowEffect({ colors = ["var(--glow-1)", "var(--glow-2)", "var(--
         <div
           aria-hidden
           style={{ background: grad(turn), scale, filter, animation: `glow-swap ${duration}s ease-in-out infinite alternate` }}
-          className={base}
+          className={`glow-loop ${base}`}
         />
       </>
     );

@@ -7,11 +7,6 @@ import { useSyncExternalStore } from "react";
 // stays smooth for them. false on the server and during hydration; the real answer arrives right after.
 type Nav = Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
 
-/** Same test, for code outside React (e.g. canvas effects). */
-export function isCapableDevice(): boolean {
-  return typeof window !== "undefined" && check();
-}
-
 function check(): boolean {
   const n = navigator as Nav;
   if (n.connection?.saveData) return false;

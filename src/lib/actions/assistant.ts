@@ -13,7 +13,12 @@ import { getSession } from "../session";
 // AI sees the user's own words and nothing else: replies are built from the database by our code (assistant/tools),
 // so names, phones, addresses and locations never leave our servers, and every number is exact.
 
-const ABOUT = `Toss is a smart laundry service in India. A small box under any laundry basket weighs the clothes and books a pickup by itself when the basket reaches its target weight. Customers use the Toss Control Telegram bot (live weight, tare, target weight, address, Wi-Fi, request pickup, my orders) and the customer web app (pickups, bills, UPI payment, basket credit). Laundries run the manager dashboard: live board with what needs attention, orders, payments (UPI and cash), customers, fleet (drivers and baskets), driver pay (per trip or monthly salary), supplies, profit, Toss AI briefings, analytics, ratings, business accounts for PGs on a monthly bill, branches, and billing (Free and Pro plans, 14-day trial). Drivers use the Toss Handy Telegram bot: they get jobs, confirm with Got it, weigh bags at the door (whites and coloured apart), take a photo, and hand clothes back with a 4-digit delivery code. Tare means zeroing the scale when the basket is empty. Basket credit comes off pickups automatically.`;
+const ABOUT = `Toss is a smart laundry service in India.
+How the basket works: a small 3D-printed box goes under any laundry basket. Inside is an ESP32 microcontroller with Wi-Fi and an HX711 load cell (a scale). It weighs the clothes as they pile up and books a pickup by itself when the basket reaches its target weight (set by the customer). It stores its settings in flash memory. On a Wi-Fi it doesn't know, it starts its own hotspot called Smart_Laundry_Setup: connect a phone to it, a setup page (captive portal) opens, pick the network and type the password. More networks can be added from the Telegram bot. Tare means zeroing the scale when the basket is empty so readings stay accurate.
+The bots: customers use the Toss Control Telegram bot (live weight, tare, target weight, address, Wi-Fi status and add Wi-Fi, request a pickup, my orders, open the app). Drivers use the Toss Handy Telegram bot: new jobs arrive with Got it and Navigate buttons, the nearest available driver gets the job, they weigh the bags at the door (whites and coloured can be bagged and weighed separately), send a photo of the bag, and hand clothes back with the customer's 4-digit delivery code. Drivers can share live location with the bot.
+Money: price = the laundry's rate per kg x the weight confirmed at pickup (the driver's scale beats the basket's estimate). Customers pay the laundry by UPI (they enter the UPI reference and the manager confirms it) or cash; a PDF invoice is sent. Basket credit (₹500 with a ₹800 basket) comes off pickups automatically, ₹8 per kg, at most 30% of a bill, and expires 50 days after it is added.
+For laundries (the manager dashboard): live board with what needs attention, orders, payments, customers, fleet (drivers and baskets), driver pay (per trip or monthly salary), supplies that go down with every pickup, profit, Toss AI morning briefing, analytics, ratings, business accounts for PGs and hostels on one monthly bill, branches, and billing (Free and Pro plans, 14-day free trial). A promised turnaround time flags late orders.
+Tech: the website and dashboards are Next.js on Vercel, the database is Supabase (Postgres) with row-level security so each account only sees its own data, and Toss AI uses Google Gemini.`;
 
 type Turn = { role: "user" | "assistant"; text: string };
 
@@ -45,6 +50,7 @@ export async function askAssistant(message: string, history: Turn[] = []): Promi
       if (intent && ai?.rephrased && differs(text, ai.rephrased)) understood = ai.rephrased;
     }
     if (!intent) return { text: "Sorry, I didn't get that. Did you mean:", chips: suggestions(text, role) };
+    if (intent.tool === "analyze" && !intent.question) intent = { tool: "analyze", question: text };
     const reply = await runIntent(intent, session);
     return understood ? { ...reply, understood: tidy(understood) } : reply;
   } catch (err) {
@@ -54,9 +60,9 @@ export async function askAssistant(message: string, history: Turn[] = []): Promi
 }
 
 const TOOLS: Record<AssistantRole, string> = {
-  CUSTOMER: `overview (everything about my account), basket (how full the basket is), credit (basket credit), orders (filter: active | unpaid | recent), order (number), go (page), theme (mode), password, help`,
-  MANAGER: `overview (today's summary of the business), attention (problems that need the manager), orders (filter: active | waiting | unpaid | recent | delivery), order (number), driver (name: where a driver is), drivers (all drivers), go (page), theme (mode), password, help`,
-  OWNER: `overview (platform summary), orders (filter: unpaid = subscription payments to check), go (page), theme (mode), password, help`,
+  CUSTOMER: `overview (everything about my account), basket (how full the basket is), credit (basket credit), orders (filter: active | unpaid | recent), order (number), go (page), theme (mode), password, analyze (a question that needs judgement or an explanation from their numbers: why a bill is higher, should I, is it worth, compare, trends), help (how the app works, how to do something, what a feature means)`,
+  MANAGER: `overview (today's summary of the business), attention (the live list of problems: only when they ask what is wrong or what needs attention), orders (filter: active | waiting | unpaid | recent | delivery), order (number), driver (name: where a driver is), drivers (list of drivers and their status), go (page), theme (mode), password, analyze (any question that needs judgement, advice, a comparison or an explanation from the business numbers: should I hire or add a driver, are drivers overworked or idle, is business growing, busiest days or hours, why are pickups late, how to earn more, pricing), help (how the app works, how to do something, what a feature or term means)`,
+  OWNER: `overview (platform summary), orders (filter: unpaid = subscription payments to check), go (page), theme (mode), password, analyze (questions that need judgement from the numbers: which business is growing or shrinking, who might stop paying), help (how the app works)`,
 };
 
 // "where is ravi" → "Where is Ravi?" for the "Did you mean" line
@@ -71,12 +77,12 @@ async function aiRoute(text: string, history: Turn[], role: AssistantRole): Prom
   const pages = PAGES[role].map((p) => p.label).join(", ");
   const recent = history.slice(-4).filter((t) => t.role === "user").map((t) => `User earlier: ${t.text.slice(0, 200)}`).join("\n");
   const { data } = await geminiJson<{ tool: string; rephrased?: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string }>({
-    system: `You route requests in the Toss app's assistant for a ${role.toLowerCase()} account in India. People often write in Hindi, Hinglish or quick, misspelt English: understand them, and put their request in "rephrased" as one short, correct, simple English sentence (keep names and numbers exactly). Answer "help" questions in simple English. Pick exactly one tool: ${TOOLS[role]}. For "go", set page to one of: ${pages}. For "help", write a short, friendly answer (at most 3 sentences) in "answer", using only these facts, and say you don't know when the facts don't cover it: ${ABOUT} Never invent numbers or account details; the tools fetch those.`,
+    system: `You route requests in the Toss app's assistant for a ${role.toLowerCase()} account in India. People often write in Hindi, Hinglish or quick, misspelt English: understand them, and put their request in "rephrased" as one short, correct, simple English sentence (keep names and numbers exactly). Answer "help" questions in simple English. Pick exactly one tool: ${TOOLS[role]}. For "go", set page to one of: ${pages}. For "help", write a short, friendly answer (at most 5 sentences, no markdown) in "answer". Use these facts about Toss: ${ABOUT} For general questions (laundry care, running a business, technology) you may use general knowledge. Never invent numbers or details about this account: the tools fetch those, so pick "analyze" or a data tool instead.`,
     prompt: `${recent ? `${recent}\n` : ""}User: ${text}`,
     schema: {
       type: "object",
       properties: {
-        tool: { type: "string", enum: ["overview", "basket", "credit", "orders", "order", "driver", "drivers", "attention", "go", "theme", "password", "help"] },
+        tool: { type: "string", enum: ["overview", "basket", "credit", "orders", "order", "driver", "drivers", "attention", "go", "theme", "password", "analyze", "help"] },
         rephrased: { type: "string" },
         name: { type: "string" },
         number: { type: "integer" },
@@ -95,10 +101,12 @@ async function aiRoute(text: string, history: Turn[], role: AssistantRole): Prom
   return { intent: allowed.has(data.tool) ? toIntent(data, role) : null, rephrased };
 }
 
-function toIntent(data: { tool: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string }, role: AssistantRole): Intent | null {
+function toIntent(data: { tool: string; rephrased?: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string }, role: AssistantRole): Intent | null {
   switch (data.tool) {
     case "help":
       return { tool: "help", question: data.answer?.trim() || "I'm not sure about that one." };
+    case "analyze":
+      return { tool: "analyze", question: data.rephrased?.trim() || "" };
     case "go": {
       const want = (data.page ?? "").toLowerCase();
       const hit = PAGES[role].find((p) => p.label.toLowerCase() === want) ?? PAGES[role].find((p) => p.words.some((w) => want.includes(w)));

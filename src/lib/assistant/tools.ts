@@ -18,6 +18,8 @@ import { formatDateTime, formatINR, formatKg, timeAgo } from "../format";
 import { planState, tierOf } from "../plan";
 import type { Session } from "../session";
 import type { Driver, Order } from "../types";
+import { geminiEnabled, geminiText } from "../ai/gemini";
+import { customerSnapshot, factSheet, managerSnapshot, ownerSnapshot, type Snapshot } from "./analyze";
 import { nowText, type Intent } from "./intents";
 
 // What the assistant does for each request. Every read goes through the signed-in user's own database client, so
@@ -79,6 +81,8 @@ export async function runIntent(intent: Intent, session: Session): Promise<Assis
       return { text: `Opening ${intent.label}.`, action: { type: "navigate", href: intent.href } };
     case "help":
       return { text: intent.question };
+    case "analyze":
+      return analyze(intent.question, session);
   }
   if (session.role === "CUSTOMER") return customerTool(intent, session);
   if (session.role === "MANAGER") return managerTool(intent, session);
@@ -319,4 +323,41 @@ function orderReply(o: Order, href: string): AssistantReply {
     ],
     links: [{ label: `Open ${label(o)}`, href }],
   };
+}
+
+// ---------- advice from the numbers ----------
+async function analyze(question: string, session: Session): Promise<AssistantReply> {
+  let snap: Snapshot;
+  let who: string;
+  if (session.role === "MANAGER") {
+    const [orders, drivers, tenant] = await Promise.all([listOrders(), listDrivers(), getTenantById(session.tenantId)]);
+    if (!tenant) return { text: "This account isn't linked to a business yet." };
+    snap = managerSnapshot(orders, drivers, tenant, now());
+    who = "the manager of a laundry business";
+  } else if (session.role === "CUSTOMER") {
+    const [orders, customer, credit] = await Promise.all([listOrdersForCustomer(session.userId), getCustomer(session.userId), getCustomerCredit(session.userId)]);
+    const tenant = customer?.tenantId ? await getTenantById(customer.tenantId) : undefined;
+    snap = customerSnapshot(orders, tenant?.pricePerKg, credit);
+    who = "a customer of a laundry";
+  } else {
+    const [tenants, orders, pending] = await Promise.all([listTenants(), listOrders(), listSubscriptionPayments({ status: "PENDING" })]);
+    const t0 = now().getTime();
+    const count = (id: string, from: number, to: number) => orders.filter((o) => o.tenantId === id && t0 - new Date(o.createdAt).getTime() >= from && t0 - new Date(o.createdAt).getTime() < to).length;
+    snap = ownerSnapshot(
+      tenants.map((t) => ({ name: t.name, state: planState(t).state, orders30: count(t.id, 0, 30 * 86_400_000), ordersPrev30: count(t.id, 30 * 86_400_000, 60 * 86_400_000) })),
+      pending.length,
+    );
+    who = "the owner of the Toss platform";
+  }
+  if (!geminiEnabled()) return { text: "I can't give advice right now, but here are the numbers that matter:", rows: snap.rows };
+  const { text } = await geminiText({
+    system: `You are the assistant inside Toss, a smart laundry service in India, talking to ${who}. Answer their question using ONLY the numbers below. Be direct and practical: start with a clear answer (yes / no / it depends), give the 1-2 numbers that decide it, then one concrete next step. Use simple English that someone with basic English understands. At most 4 short sentences, no headings, no lists, no markdown. Refer to drivers and businesses exactly as they are labelled ("Driver 1", "Business 2"). If the numbers can't answer it, say what is missing. Never invent numbers.
+
+Numbers:
+${factSheet(snap.facts)}`,
+    prompt: question,
+    temperature: 0.3,
+    timeoutMs: 20_000,
+  });
+  return { text: text.trim(), rows: snap.rows };
 }

@@ -17,7 +17,8 @@ export type Intent =
   | { tool: "attention" }
   | { tool: "basket" }
   | { tool: "credit" }
-  | { tool: "help"; question: string };
+  | { tool: "help"; question: string }
+  | { tool: "analyze"; question: string };
 
 /** The pages each role may be sent to, with the words people use for them. */
 export const PAGES: Record<AssistantRole, { href: string; label: string; words: string[] }[]> = {
@@ -68,6 +69,8 @@ export const isPasswordRequest = (text: string) => /\b(pass ?word|passcode)\b/i.
 
 // General questions ("how do I…", "why…", "what does … mean") go to the AI even when they mention a data word:
 // "how do I add drivers" is not a request for the driver list.
+// Asking for a judgement ("should I add a driver", "are they overworked", "is it worth it"): the analysis answers.
+const ADVICE = /\b(should|worth|overwork\w*|over ?loaded|idle|enough|too (many|few|much|little)|hire|recommend\w*|advice|advise|better|compare|growing|grow|improve|increase|reduce|why)\b/;
 const GENERAL = /^(how (do|does|can|to|should|would)|why|explain|what (does|is a|is an|happens|do i do|should i)|can i|could i|should i|is it possible|what if)\b/;
 
 /** "Today is Saturday, 11 October 2026. It's 2:35 pm in India." */
@@ -105,11 +108,12 @@ export function matchIntent(raw: string, role: AssistantRole): Intent | null {
     const name = (where?.[1] ?? locate?.[1] ?? poss?.[1])?.trim();
     // "my drivers", "all drivers", "everyone" are the whole list, not a driver called that
     if (name && !/\b(drivers?|everyone|everybody|them|my pickup|my order)\b/.test(name) && !/^(my|the|all|our|every|it|you|i)\b/.test(name)) return { tool: "driver", name };
-    if (has(t, /\b(all|my|list|show)( the| my)? drivers\b/, /\bwhere are (my|the|all) drivers\b/, /\bwho is (on duty|available|online|working)\b/)) return { tool: "drivers" };
   }
 
-  // everything below answers from data; a general question goes to the AI instead
-  if (GENERAL.test(t)) return null;
+  // everything below answers from data; a general question, or one asking for judgement, goes to the AI instead
+  if (GENERAL.test(t) || ADVICE.test(t)) return null;
+
+  if (role === "MANAGER" && has(t, /^(show |list |see )?(me )?(all |my |the )?drivers( list| status)?$/, /\b(list|show)( me)?( all| my| the)? drivers\b/, /\bwhere are (my|the|all) drivers\b/, /\bwho is (on duty|available|online|working)\b/)) return { tool: "drivers" };
 
   if (role === "MANAGER") {
     if (has(t, /\b(what|anything|something)\b.*\bneeds? (my )?attention\b/, /^needs? attention$/, /\bany (problems?|issues?|alerts?)\b/, /\bwhat('s| is) (wrong|going wrong)\b/)) return { tool: "attention" };

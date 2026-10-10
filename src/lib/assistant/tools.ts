@@ -18,7 +18,7 @@ import { formatDateTime, formatINR, formatKg, timeAgo } from "../format";
 import { planState, tierOf } from "../plan";
 import type { Session } from "../session";
 import type { Driver, Order } from "../types";
-import type { Intent } from "./intents";
+import { nowText, type Intent } from "./intents";
 
 // What the assistant does for each request. Every read goes through the signed-in user's own database client, so
 // row-level security decides what they see: a customer only their own pickups, a manager only their business.
@@ -29,8 +29,10 @@ export type AssistantReply = {
   text: string;
   rows?: [string, string][];
   links?: { label: string; href: string; external?: boolean }[];
-  action?: { type: "theme"; mode: "dark" | "light" | "toggle" } | { type: "password"; newPassword?: string } | { type: "navigate"; href: string };
+  action?: { type: "theme"; mode: "dark" | "light" | "toggle" | "status" } | { type: "password"; newPassword?: string } | { type: "navigate"; href: string };
   chips?: string[];
+  /** the corrected or rephrased question that was answered ("Did you mean: …") */
+  understood?: string;
 };
 
 const STATUS: Record<Order["status"], string> = {
@@ -67,10 +69,10 @@ export const CHIPS = {
 export async function runIntent(intent: Intent, session: Session): Promise<AssistantReply> {
   switch (intent.tool) {
     case "theme":
-      return {
-        text: intent.mode === "toggle" ? "Done, I switched the theme." : `Done, you're in ${intent.mode} mode.`,
-        action: { type: "theme", mode: intent.mode },
-      };
+      // the browser knows the current theme, so it writes the final words (and says "already in dark mode")
+      return { text: "", action: { type: "theme", mode: intent.mode } };
+    case "now":
+      return { text: nowText(now()) };
     case "password":
       return { text: "Let's change it here. Your passwords stay on this page; I never see them.", action: { type: "password", newPassword: intent.newPassword } };
     case "go":

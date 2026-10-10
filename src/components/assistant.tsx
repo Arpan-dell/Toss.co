@@ -9,7 +9,7 @@ import { NewPasswordInput } from "@/components/password-checklist";
 import { setTheme } from "@/components/theme-toggle";
 import { changePassword } from "@/lib/actions/account";
 import { askAssistant } from "@/lib/actions/assistant";
-import { isPasswordRequest, matchIntent, newPasswordFrom, type AssistantRole } from "@/lib/assistant/intents";
+import { differs, isPasswordRequest, matchIntent, newPasswordFrom, nowText, understand, type AssistantRole } from "@/lib/assistant/intents";
 import type { AssistantReply } from "@/lib/assistant/tools";
 
 // The in-app assistant: a robot button in the corner of every portal that opens a chat at the side (a sheet from
@@ -17,7 +17,7 @@ import type { AssistantReply } from "@/lib/assistant/tools";
 // change the password. Theme and password requests are handled right here in the browser, so a password typed
 // into the chat ("change my password to …") is never sent anywhere; it only prefills the secure form below.
 
-type Msg = { id: number; from: "user" | "bot"; text: string; reply?: AssistantReply };
+type Msg = { id: number; from: "user" | "bot"; text: string; reply?: AssistantReply; understood?: string };
 
 const GREETING: Record<AssistantRole, string> = {
   CUSTOMER: "Hi! Ask me about your basket, pickups, bills or credit. I can also switch the theme or change your password.",
@@ -60,43 +60,56 @@ export function Assistant({ role }: { role: AssistantRole }) {
   }, [msgs, role]);
   useEffect(() => {
     if (!open) return;
+    // reopened: start at the latest message, not the top
+    const id = requestAnimationFrame(() => list.current?.scrollTo({ top: list.current.scrollHeight }));
     input.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      cancelAnimationFrame(id);
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const push = (m: Omit<Msg, "id">) => setMsgs((all) => [...all, { ...m, id: nextId.current++ }]);
 
+  // the theme, worded from what's on screen now: "already in dark mode" instead of switching to it again
+  const theme = (mode: "dark" | "light" | "toggle" | "status"): string => {
+    const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+    const other = current === "dark" ? "light" : "dark";
+    if (mode === "status") return `You're in ${current} mode right now. Say "switch to ${other} mode" to change it.`;
+    if (mode === current) return `You're already in ${current} mode.`;
+    return `Done, you're in ${setTheme(mode)} mode now.`;
+  };
+
   const act = (reply: AssistantReply) => {
-    const a = reply.action;
-    if (a?.type === "theme") setTheme(a.mode);
-    if (a?.type === "navigate") router.push(a.href);
+    if (reply.action?.type === "navigate") router.push(reply.action.href);
   };
 
   const send = (raw: string) => {
     const text = raw.trim();
     if (!text || pending) return;
     setDraft("");
+    const fixed = understand(text); // Hinglish and typos, for the requests handled right here
     // password: handled here, the typed password only prefills the form and is masked in the chat
-    if (isPasswordRequest(text)) {
+    if (isPasswordRequest(text) || isPasswordRequest(fixed)) {
       const pw = newPasswordFrom(text);
       push({ from: "user", text: pw ? text.replace(pw, "•".repeat(Math.min(pw.length, 12))) : text });
       push({ from: "bot", text: "Let's change it here. Your passwords stay on this page; I never see them.", reply: { text: "", action: { type: "password", newPassword: pw } } });
       return;
     }
     push({ from: "user", text });
-    // theme: instant, no server round trip
-    const local = matchIntent(text, role);
-    if (local?.tool === "theme") {
-      const now = setTheme(local.mode);
-      push({ from: "bot", text: `Done, you're in ${now} mode.` });
-      return;
-    }
+    // theme, date and time: instant, no server round trip
+    const asTyped = matchIntent(text, role);
+    const local = asTyped ?? (differs(text, fixed) ? matchIntent(fixed, role) : null);
+    const said = !asTyped && local ? tidyQuestion(fixed) : undefined;
+    if (local?.tool === "theme") return push({ from: "bot", text: theme(local.mode), understood: said });
+    if (local?.tool === "now") return push({ from: "bot", text: nowText(), understood: said });
     const history = msgs.filter((m) => m.from === "user").slice(-4).map((m) => ({ role: "user" as const, text: m.text }));
     start(async () => {
       const reply = await askAssistant(text, history).catch(() => ({ text: "I couldn't reach the server. Check your connection and try again." }) as AssistantReply);
-      push({ from: "bot", text: reply.text, reply });
+      const a = reply.action;
+      push({ from: "bot", text: a?.type === "theme" ? theme(a.mode) : reply.text, reply, understood: reply.understood });
       act(reply);
     });
   };
@@ -141,6 +154,11 @@ export function Assistant({ role }: { role: AssistantRole }) {
             {!msgs.length && <Chips items={START_CHIPS[role]} onPick={send} />}
             {msgs.map((m) => (
               <div key={m.id} className="space-y-2">
+                {m.understood && (
+                  <p className="text-xs text-muted">
+                    Did you mean: <button type="button" onClick={() => send(m.understood!)} className="font-medium text-accent italic hover:underline">{m.understood}</button>
+                  </p>
+                )}
                 <Bubble from={m.from}>{m.text}</Bubble>
                 {m.reply && <ReplyExtras reply={m.reply} onPick={send} />}
               </div>
@@ -181,6 +199,12 @@ export function Assistant({ role }: { role: AssistantRole }) {
       )}
     </>
   );
+}
+
+// "where is ravi" → "Where is ravi?"
+function tidyQuestion(q: string): string {
+  const s = q.charAt(0).toUpperCase() + q.slice(1);
+  return /[?.!]$/.test(s) ? s : /^(where|what|how|who|when|which|is|are|do|does|can)/i.test(s) ? `${s}?` : s;
 }
 
 function Bubble({ from, children }: { from: "user" | "bot"; children: React.ReactNode }) {

@@ -1,8 +1,9 @@
 "use server";
 
 import { geminiEnabled, geminiJson } from "../ai/gemini";
-import { matchIntent, PAGES, type AssistantRole, type Intent } from "../assistant/intents";
+import { differs, matchIntent, PAGES, suggestions, understand, type AssistantRole, type Intent } from "../assistant/intents";
 import { CHIPS, runIntent, type AssistantReply } from "../assistant/tools";
+import { listDrivers } from "../data";
 import { logError } from "../log";
 import { allow } from "../rate-limit";
 import { getSession } from "../session";
@@ -25,11 +26,27 @@ export async function askAssistant(message: string, history: Turn[] = []): Promi
   if (!(await allow("assistant", session.userId))) return { text: "That's a lot of questions at once. Give me a minute and try again." };
 
   try {
-    const intent = matchIntent(text, role) ?? (await aiRoute(text, history, role));
+    // 1. as typed; 2. Hinglish and typos fixed (managers' driver names count as known words); 3. the AI, which
+    // also rewrites the question in plain English. When we answered a corrected question, say which one,
+    // like a search engine's "Did you mean".
+    let intent = matchIntent(text, role);
+    let understood: string | undefined;
     if (!intent) {
-      return { text: "I'm not sure how to help with that. Here are some things I can do:", chips: [...CHIPS[role]] };
+      const names = role === "MANAGER" ? (await listDrivers().catch(() => [])).flatMap((d) => d.name.split(/\s+/)) : [];
+      const fixed = understand(text, names);
+      if (differs(text, fixed)) {
+        intent = matchIntent(fixed, role);
+        if (intent) understood = fixed;
+      }
     }
-    return await runIntent(intent, session);
+    if (!intent) {
+      const ai = await aiRoute(text, history, role);
+      intent = ai?.intent ?? null;
+      if (intent && ai?.rephrased && differs(text, ai.rephrased)) understood = ai.rephrased;
+    }
+    if (!intent) return { text: "Sorry, I didn't get that. Did you mean:", chips: suggestions(text, role) };
+    const reply = await runIntent(intent, session);
+    return understood ? { ...reply, understood: tidy(understood) } : reply;
   } catch (err) {
     logError("assistant failed", err instanceof Error ? err.message : err);
     return { text: "Something went wrong on my side. Try again in a moment." };
@@ -42,17 +59,25 @@ const TOOLS: Record<AssistantRole, string> = {
   OWNER: `overview (platform summary), orders (filter: unpaid = subscription payments to check), go (page), theme (mode), password, help`,
 };
 
-async function aiRoute(text: string, history: Turn[], role: AssistantRole): Promise<Intent | null> {
-  if (!geminiEnabled()) return { tool: "help", question: "I can answer questions about your account. Try one of these:" };
+// "where is ravi" → "Where is Ravi?" for the "Did you mean" line
+function tidy(q: string): string {
+  const t = q.trim().replace(/\s+/g, " ");
+  const s = t.charAt(0).toUpperCase() + t.slice(1);
+  return /[?.!]$/.test(s) ? s : /^(where|what|how|who|when|which|is|are|do|does|can|show|tell)/i.test(s) ? `${s}?` : s;
+}
+
+async function aiRoute(text: string, history: Turn[], role: AssistantRole): Promise<{ intent: Intent | null; rephrased?: string } | null> {
+  if (!geminiEnabled()) return null;
   const pages = PAGES[role].map((p) => p.label).join(", ");
   const recent = history.slice(-4).filter((t) => t.role === "user").map((t) => `User earlier: ${t.text.slice(0, 200)}`).join("\n");
-  const { data } = await geminiJson<{ tool: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string }>({
-    system: `You route requests in the Toss app's assistant for a ${role.toLowerCase()} account. Pick exactly one tool: ${TOOLS[role]}. For "go", set page to one of: ${pages}. For "help", write a short, friendly answer (at most 3 sentences) in "answer", using only these facts, and say you don't know when the facts don't cover it: ${ABOUT} Never invent numbers or account details; the tools fetch those.`,
+  const { data } = await geminiJson<{ tool: string; rephrased?: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string }>({
+    system: `You route requests in the Toss app's assistant for a ${role.toLowerCase()} account in India. People often write in Hindi, Hinglish or quick, misspelt English: understand them, and put their request in "rephrased" as one short, correct, simple English sentence (keep names and numbers exactly). Answer "help" questions in simple English. Pick exactly one tool: ${TOOLS[role]}. For "go", set page to one of: ${pages}. For "help", write a short, friendly answer (at most 3 sentences) in "answer", using only these facts, and say you don't know when the facts don't cover it: ${ABOUT} Never invent numbers or account details; the tools fetch those.`,
     prompt: `${recent ? `${recent}\n` : ""}User: ${text}`,
     schema: {
       type: "object",
       properties: {
         tool: { type: "string", enum: ["overview", "basket", "credit", "orders", "order", "driver", "drivers", "attention", "go", "theme", "password", "help"] },
+        rephrased: { type: "string" },
         name: { type: "string" },
         number: { type: "integer" },
         filter: { type: "string", enum: ["active", "unpaid", "recent", "waiting", "delivery"] },
@@ -60,13 +85,17 @@ async function aiRoute(text: string, history: Turn[], role: AssistantRole): Prom
         mode: { type: "string", enum: ["dark", "light", "toggle"] },
         answer: { type: "string" },
       },
-      required: ["tool"],
+      required: ["tool", "rephrased"],
     },
     temperature: 0.1,
     timeoutMs: 12_000,
   });
   const allowed = new Set(TOOLS[role].split(/,\s*/).map((t) => t.split(" ")[0]));
-  if (!allowed.has(data.tool)) return null;
+  const rephrased = data.rephrased?.trim().slice(0, 200) || undefined;
+  return { intent: allowed.has(data.tool) ? toIntent(data, role) : null, rephrased };
+}
+
+function toIntent(data: { tool: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string }, role: AssistantRole): Intent | null {
   switch (data.tool) {
     case "help":
       return { tool: "help", question: data.answer?.trim() || "I'm not sure about that one." };

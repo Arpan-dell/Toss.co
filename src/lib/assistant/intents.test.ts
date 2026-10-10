@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPasswordRequest, matchIntent, newPasswordFrom } from "./intents";
+import { differs, isPasswordRequest, matchIntent, newPasswordFrom, nowText, suggestions, understand } from "./intents";
 
 describe("assistant quick router", () => {
   it("switches the theme", () => {
@@ -42,5 +42,64 @@ describe("assistant quick router", () => {
 
   it("leaves everything else to the AI router", () => {
     expect(matchIntent("how does tare work?", "CUSTOMER")).toBeNull();
+  });
+});
+
+describe("did you mean", () => {
+  it("fixes typos in the assistant's words", () => {
+    expect(understand("wher is ravi now")).toBe("where is ravi now");
+    expect(understand("swich to drak mod")).toBe("switch to dark mode");
+    expect(understand("show unpayd bils")).toBe("show unpaid bills");
+  });
+
+  it("fixes driver names it's given", () => {
+    expect(understand("where is rvai", ["Ravi", "Amit"])).toBe("where is ravi");
+  });
+
+  it("reads common Hinglish", () => {
+    expect(understand("ravi kahan hai")).toBe("where is ravi");
+    expect(understand("aaj ka hisaab")).toBe("today's summary");
+    expect(understand("dark mode kar do")).toBe("switch to dark mode");
+    expect(understand("password badlo")).toBe("change password");
+  });
+
+  it("routes corrected text to the right tool", () => {
+    expect(matchIntent(understand("ravi kahan hai"), "MANAGER")).toEqual({ tool: "driver", name: "ravi" });
+    expect(matchIntent(understand("swich to drak mod"), "CUSTOMER")).toEqual({ tool: "theme", mode: "dark" });
+    expect(matchIntent(understand("kitna paisa baaki hai"), "MANAGER")).toEqual({ tool: "orders", filter: "unpaid" });
+    expect(matchIntent(understand("aaj ka hisaab"), "MANAGER")).toEqual({ tool: "overview" });
+  });
+
+  it("keeps a misspelt password request's password exact", () => {
+    expect(newPasswordFrom("chnage pasword to Basket@2026")).toBe("Basket@2026");
+  });
+
+  it("only flags a real change and suggests close questions", () => {
+    expect(differs("Where is Ravi?", "where is ravi")).toBe(false);
+    expect(differs("wher is ravi", "where is ravi")).toBe(true);
+    expect(suggestions("unpaid stuff", "MANAGER")[0]).toBe("Show unpaid bills");
+    expect(suggestions("blah", "OWNER")).toHaveLength(3);
+  });
+});
+
+describe("no more keyword guessing", () => {
+  it("answers the date instead of the business summary", () => {
+    expect(matchIntent("what is the date today", "MANAGER")).toEqual({ tool: "now" });
+    expect(matchIntent("what time is it", "CUSTOMER")).toEqual({ tool: "now" });
+    expect(nowText(new Date("2026-10-11T09:05:00Z"))).toBe("Today is Sunday, 11 October 2026. It's 2:35 pm in India.");
+  });
+
+  it("sends general questions to the AI even when they mention a data word", () => {
+    expect(matchIntent("how do I add drivers", "MANAGER")).toBeNull();
+    expect(matchIntent("how do I tare my basket", "CUSTOMER")).toBeNull();
+    expect(matchIntent("why is my credit lower", "CUSTOMER")).toBeNull();
+    expect(matchIntent("today is busy", "MANAGER")).toBeNull();
+  });
+
+  it("knows which theme you're asking about", () => {
+    expect(matchIntent("which mode am I in?", "CUSTOMER")).toEqual({ tool: "theme", mode: "status" });
+    expect(matchIntent("am i in dark mode", "MANAGER")).toEqual({ tool: "theme", mode: "status" });
+    expect(matchIntent("dark mode", "OWNER")).toEqual({ tool: "theme", mode: "dark" });
+    expect(matchIntent("what is dark mode", "OWNER")).toBeNull();
   });
 });

@@ -29,7 +29,7 @@ function ModelPlaceholder() {
   );
 }
 
-type Step = { at: [number, number]; side: "left" | "right" | "center"; kicker: string; title: string; body: React.ReactNode; swatches?: boolean; offer?: boolean };
+type Step = { at: [number, number]; side: "left" | "right" | "center"; kicker: string; title: string; body: React.ReactNode; swatches?: boolean };
 
 const STEPS: Step[] = [
   {
@@ -39,7 +39,6 @@ const STEPS: Step[] = [
     title: "A small box that makes any laundry basket smart.",
     body: "It weighs your clothes as they pile up and calls the pickup by itself when the basket is full.",
     swatches: true,
-    offer: true,
   },
   {
     at: [0.19, 0.34],
@@ -103,21 +102,7 @@ function Swatches({ color, onColor }: { color: BasketColor; onColor: (c: BasketC
   );
 }
 
-function StepText({
-  step,
-  progress,
-  color,
-  onColor,
-  reduce,
-  offer,
-}: {
-  step: Step;
-  progress: MotionValue<number>;
-  color: BasketColor;
-  onColor: (c: BasketColor) => void;
-  reduce: boolean;
-  offer?: React.ReactNode;
-}) {
+function StepText({ step, progress, color, onColor, reduce }: { step: Step; progress: MotionValue<number>; color: BasketColor; onColor: (c: BasketColor) => void; reduce: boolean }) {
   const [a, b] = step.at;
   const fade = 0.04;
   // Every input range must stay inside 0..1 and increase: framer hands scroll-linked opacity to the browser's
@@ -142,13 +127,11 @@ function StepText({
       <h3 className="mt-3 text-[clamp(1.8rem,3.6vw,3rem)] leading-[1.05] font-black tracking-tight text-fg">{step.title}</h3>
       <p className="mt-4 text-base leading-relaxed text-secondary lg:text-lg">{step.body}</p>
       {step.swatches && <Swatches color={color} onColor={onColor} />}
-      {step.offer && offer && <div className="mt-6">{offer}</div>}
     </motion.div>
   );
 }
 
-/** `offer`: the basket credit badge (server-rendered), shown with the first step. */
-export function BasketShowcase({ offer }: { offer?: React.ReactNode }) {
+export function BasketShowcase() {
   const [color, onColor] = useBasketColor();
   const runway = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
@@ -225,7 +208,7 @@ export function BasketShowcase({ offer }: { offer?: React.ReactNode }) {
         </div>
         <div className="mt-10 grid gap-2 lg:grid-cols-2">
           {STEPS.map((s) => (
-            <StepText key={s.kicker} step={s} progress={scrollYProgress} color={color} onColor={onColor} reduce offer={offer} />
+            <StepText key={s.kicker} step={s} progress={scrollYProgress} color={color} onColor={onColor} reduce />
           ))}
         </div>
       </section>
@@ -248,7 +231,7 @@ export function BasketShowcase({ offer }: { offer?: React.ReactNode }) {
           )}
         </div>
         {STEPS.map((s) => (
-          <StepText key={s.kicker} step={s} progress={scrollYProgress} color={color} onColor={onColor} reduce={false} offer={offer} />
+          <StepText key={s.kicker} step={s} progress={scrollYProgress} color={color} onColor={onColor} reduce={false} />
         ))}
         <ProgressRail progress={scrollYProgress} />
       </div>

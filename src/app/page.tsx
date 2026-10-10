@@ -5,7 +5,7 @@ import { GetBasket } from "@/components/site/get-basket";
 import { HeroOrbit } from "@/components/site/hero-orbit";
 import { InsideGallery } from "@/components/site/inside-gallery";
 import { ManagerPricing } from "@/components/site/manager-pricing";
-import { CreditOffer, CreditSmallPrint } from "@/components/site/credit-offer";
+import { CreditOffer } from "@/components/site/credit-offer";
 import { Manifesto } from "@/components/site/manifesto";
 import { Reveal } from "@/components/site/reveal";
 import { RolesBento } from "@/components/site/roles-bento";
@@ -59,11 +59,11 @@ export default async function Home() {
       <SiteNav logo={<Logo className="h-9" />} />
 
       <main className="flex-1">
-        <HeroOrbit plan={plan} />
+        <HeroOrbit />
 
         <Suspense><WorksWith /></Suspense>
 
-        <Suspense><BasketShowcase offer={<CreditOffer plan={plan} />} /></Suspense>
+        <Suspense><BasketShowcase /></Suspense>
 
         <section id="control" className="mx-auto max-w-7xl scroll-mt-24 px-4 py-32 sm:px-6 lg:px-8">
           <Reveal as="p" className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">
@@ -146,7 +146,7 @@ export default async function Home() {
               <>Each box is printed to order. Leave your details and we&apos;ll get back to you about availability, price and delivery.</>
             )}
           </Reveal>
-          <CreditSmallPrint plan={plan} className="-mt-8 mb-12" />
+          <CreditOffer plan={plan} className="-mt-6 mb-12" />
           <Suspense><GetBasket /></Suspense>
         </section>
       </main>

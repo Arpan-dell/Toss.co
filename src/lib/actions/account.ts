@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient as createPlainClient } from "@supabase/supabase-js";
+import { passwordError } from "../password-rules";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
@@ -19,8 +20,8 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
   const next = String(formData.get("next") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
   if (!current) return { error: "Enter your current password." };
-  if (next.length < 8) return { error: "Use a new password of at least 8 characters." };
-  if (next.length > 72) return { error: "Use a new password of at most 72 characters." };
+  const weak = passwordError(next);
+  if (weak) return { error: weak.replace("Your password", "Your new password") };
   if (next !== confirm) return { error: "The new passwords don't match." };
   if (next === current) return { error: "Choose a password different from your current one." };
 

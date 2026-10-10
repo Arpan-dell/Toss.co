@@ -5,6 +5,8 @@ import { useActionState, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { ArrowRight, EnvelopeSimple, Eye, EyeSlash, LockSimple, Phone, User, type Icon } from "@phosphor-icons/react";
 import { signIn, signUp, type AuthState } from "./actions";
+import { PasswordChecklist } from "@/components/password-checklist";
+import { PASSWORD_MAX } from "@/lib/password-rules";
 import { GoogleButton } from "./google-button";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 
@@ -42,6 +44,7 @@ const WELCOME: Record<Mode, { title: string; body: string; cta: string }> = {
 export function AuthForm({ notice, next, logo }: { notice?: string; next?: string; logo: React.ReactNode }) {
   const [mode, setMode] = useState<Mode>("signin");
   const [showPw, setShowPw] = useState(false);
+  const [pw, setPw] = useState("");
   const [inState, inAction, inPending] = useActionState<AuthState, FormData>(signIn, {});
   const [upState, upAction, upPending] = useActionState<AuthState, FormData>(signUp, {});
   const state = mode === "signin" ? inState : upState;
@@ -114,9 +117,12 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
             name="password"
             type={showPw ? "text" : "password"}
             autoComplete={signin ? "current-password" : "new-password"}
-            placeholder={signin ? "Password" : "Password (8+ characters)"}
+            placeholder="Password"
             aria-label="Password"
-            minLength={signin ? undefined : 8}
+            aria-describedby={signin ? undefined : "signup-pw-rules"}
+            maxLength={signin ? undefined : PASSWORD_MAX}
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
             required
             className={inputClass}
           />
@@ -130,6 +136,7 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
             {showPw ? <EyeSlash size={18} /> : <Eye size={18} />}
           </button>
         </Field>
+        {!signin && <PasswordChecklist value={pw} id="signup-pw-rules" />}
 
         {signin && (
           <p className="pt-1 text-right text-xs">

@@ -1,6 +1,7 @@
 "use server";
 
 import { createHash, randomBytes } from "node:crypto";
+import { passwordError } from "../password-rules";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { sendEmail } from "../email/mailer";
@@ -57,8 +58,8 @@ export async function resetPassword(_prev: FormState, formData: FormData): Promi
   const next = String(formData.get("password") ?? "");
   const confirm = String(formData.get("confirm") ?? "");
   if (!/^[A-Za-z0-9_-]{43}$/.test(token)) return { error: "This reset link isn't valid. Ask for a new one." };
-  if (next.length < 8) return { error: "Use a password of at least 8 characters." };
-  if (next.length > 72) return { error: "Use a password of at most 72 characters." };
+  const weak = passwordError(next);
+  if (weak) return { error: weak };
   if (next !== confirm) return { error: "The passwords don't match." };
   if (!(await allow("resetSubmitIp", await clientIp()))) return { error: "Too many attempts. Try again later." };
 

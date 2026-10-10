@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { passwordError } from "@/lib/password-rules";
 import { redirect } from "next/navigation";
 import { normalizePhone } from "@/lib/phone";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
@@ -62,8 +63,8 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const password = String(formData.get("password") ?? "");
   if (!name || !email) return { error: "Enter your name and email." };
   if (!phone) return { error: "Enter a valid mobile number, like 98765 43210." };
-  if (password.length < 8) return { error: "Use a password of at least 8 characters." };
-  if (password.length > 72) return { error: "Use a password of at most 72 characters." };
+  const weak = passwordError(password);
+  if (weak) return { error: weak };
   if (!(await allow("signUpIp", await clientIp()))) return { error: "Too many sign-ups from this network. Try again later." };
   if (await phoneTaken(phone)) return { error: "That mobile number already has a Toss account. Sign in instead." };
 

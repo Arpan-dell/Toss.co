@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { cached, KEYS } from "./cache";
 import { createClient } from "./supabase/server";
 import { isSupabaseConfigured, supabaseAdmin } from "./supabase/admin";
 import type { Report } from "./ai/brain";
@@ -280,8 +281,14 @@ export async function listOrderEvents(orderId: string): Promise<OrderEventRow[]>
 
 // ---------- owner / billing ----------
 
+// Same for every signed-in user (RLS lets all of them read it), so it is cached for 5 minutes across requests;
+// the owner's settings actions clear it on save.
 export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => {
   const supabase = await db();
+  return cached(KEYS.platformSettings, 300, () => loadPlatformSettings(supabase));
+});
+
+async function loadPlatformSettings(supabase: Awaited<ReturnType<typeof db>>): Promise<PlatformSettings> {
   const r = orThrow(
     await supabase.from("platform_settings").select("monthly_price, trial_days, owner_upi_id, owner_upi_name, discount_3m, discount_6m, discount_12m, basket_price, basket_credit, credit_per_kg, credit_max_pct, credit_toss_share_pct, credit_sub_max_pct, credit_valid_days, branch_price").eq("id", 1).maybeSingle(),
   ) as Row | null;
@@ -302,7 +309,7 @@ export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => 
     creditValidDays: (r?.credit_valid_days as number) ?? 50,
     branchPrice: (r?.branch_price as number) ?? 299,
   };
-});
+}
 
 // Public (signed-out) view of the plan for the landing page. platform_settings is readable only by signed-in
 // users, so this uses the service-role client and selects just the non-sensitive pricing columns (never the
@@ -323,27 +330,31 @@ export type PublicPlan = {
 export async function getPublicPlan(): Promise<PublicPlan | null> {
   if (!isSupabaseConfigured()) return null;
   try {
-    const { data, error } = await supabaseAdmin()
-      .from("platform_settings")
-      .select("monthly_price, trial_days, discount_3m, discount_6m, discount_12m, basket_price, basket_credit, credit_per_kg, credit_max_pct, credit_valid_days")
-      .eq("id", 1)
-      .maybeSingle();
-    if (error || !data) return null;
-    return {
-      monthlyPrice: Number(data.monthly_price) || 0,
-      trialDays: Number(data.trial_days) || 0,
-      discount3m: Number(data.discount_3m) || 0,
-      discount6m: Number(data.discount_6m) || 0,
-      discount12m: Number(data.discount_12m) || 0,
-      basketPrice: Number(data.basket_price) || 0,
-      basketCredit: Number(data.basket_credit) || 0,
-      creditPerKg: Number(data.credit_per_kg) || 0,
-      creditMaxPct: Number(data.credit_max_pct) || 0,
-      creditValidDays: Number(data.credit_valid_days) || 0,
-    };
+    return await cached(KEYS.publicPlan, 300, loadPublicPlan);
   } catch {
     return null;
   }
+}
+
+async function loadPublicPlan(): Promise<PublicPlan> {
+  const { data, error } = await supabaseAdmin()
+    .from("platform_settings")
+    .select("monthly_price, trial_days, discount_3m, discount_6m, discount_12m, basket_price, basket_credit, credit_per_kg, credit_max_pct, credit_valid_days")
+    .eq("id", 1)
+    .maybeSingle();
+  if (error || !data) throw new Error("plan unavailable"); // thrown, so a failure is never cached
+  return {
+    monthlyPrice: Number(data.monthly_price) || 0,
+    trialDays: Number(data.trial_days) || 0,
+    discount3m: Number(data.discount_3m) || 0,
+    discount6m: Number(data.discount_6m) || 0,
+    discount12m: Number(data.discount_12m) || 0,
+    basketPrice: Number(data.basket_price) || 0,
+    basketCredit: Number(data.basket_credit) || 0,
+    creditPerKg: Number(data.credit_per_kg) || 0,
+    creditMaxPct: Number(data.credit_max_pct) || 0,
+    creditValidDays: Number(data.credit_valid_days) || 0,
+  };
 }
 
 export async function listTenants(): Promise<Tenant[]> {

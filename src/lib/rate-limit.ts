@@ -2,6 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import { logError } from "./log";
+import { countHit } from "./cache";
 import { isSupabaseConfigured, supabaseAdmin } from "./supabase/admin";
 
 // Per-visitor limits for sensitive or costly actions. Supabase Auth also rate-limits, but it sees every
@@ -33,6 +34,9 @@ export async function allow(bucket: keyof typeof LIMITS, identifier: string): Pr
   if (!isSupabaseConfigured()) return true;
   const { limit, windowSec } = LIMITS[bucket];
   const key = `${bucket}:${createHash("sha256").update(identifier.toLowerCase()).digest("hex").slice(0, 32)}`;
+  // Redis counter when one is connected (no database round trip); the Postgres limiter otherwise
+  const count = await countHit(`rl:${key}`, windowSec);
+  if (count !== null) return count <= limit;
   const { data, error } = await supabaseAdmin().rpc("rate_limit_hit", { p_key: key, p_limit: limit, p_window_seconds: windowSec });
   if (error) {
     logError("rate limiter unavailable", error);

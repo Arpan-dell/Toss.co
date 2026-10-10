@@ -1,5 +1,6 @@
 import "server-only";
 import type { LatLng } from "./core";
+import { cached } from "../cache";
 
 // Address → coordinates with OpenStreetMap's free Nominatim service (no key, no cost).
 // Usage policy: identify the app, at most ~1 request/second, cache results. We geocode once per
@@ -23,6 +24,20 @@ async function query(q: string): Promise<LatLng | null> {
  * still good enough to choose the nearest driver and to open turn-by-turn navigation.
  */
 export async function geocode(address: string): Promise<LatLng | null> {
+  // Places don't move: a found address is cached for a week (also keeps us well inside Nominatim's limit).
+  const key = `geo:${address.toLowerCase().replace(/\s+/g, " ").trim().slice(0, 200)}`;
+  try {
+    return await cached(key, 7 * 24 * 3600, async () => {
+      const hit = await lookup(address);
+      if (!hit) throw new Error("not found"); // thrown, so a miss is retried next time instead of cached
+      return hit;
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function lookup(address: string): Promise<LatLng | null> {
   const parts = address.split(",").map((p) => p.trim()).filter(Boolean);
   for (let i = 0; i < parts.length; i++) {
     try {

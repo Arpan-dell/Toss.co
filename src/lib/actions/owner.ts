@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invalidate, KEYS } from "../cache";
 import { notifySubscriptionReviewed, notifySuspension } from "../email/notify";
 import { checkPassword } from "../password-check";
 import { getSession } from "../session";
@@ -39,6 +40,7 @@ export async function updatePlatformSettings(_prev: FormState, formData: FormDat
     .update({ monthly_price: monthlyPrice, branch_price: branchPrice, trial_days: trialDays, owner_upi_id: normalizeUpiId(upiId), owner_upi_name: upiName.slice(0, 50), discount_3m: d3, discount_6m: d6, discount_12m: d12 })
     .eq("id", 1);
   if (error) return { error: friendlyError(error) };
+  await invalidate(KEYS.platformSettings, KEYS.publicPlan);
   revalidatePath("/", "layout");
   return { message: "Saved. New trials and subscription payments use these settings." };
 }
@@ -86,6 +88,7 @@ export async function updateCreditSettings(_prev: FormState, formData: FormData)
   if (!whole(v.credit_valid_days, 1, 3650)) return { error: "Validity must be 1–3650 days." };
   const { error } = await supabaseAdmin().from("platform_settings").update(v).eq("id", 1);
   if (error) return { error: friendlyError(error) };
+  await invalidate(KEYS.platformSettings, KEYS.publicPlan);
   revalidatePath("/", "layout");
   return { message: "Saved. New bills and grants use these settings." };
 }

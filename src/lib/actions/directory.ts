@@ -6,6 +6,7 @@ import { getSession } from "../session";
 import { createClient } from "../supabase/server";
 import { friendlyError, text, type FormState } from "./shared";
 import { allow, clientIp } from "../rate-limit";
+import { cached } from "../cache";
 
 // The public "Find a laundry" directory: anyone can search, signed-in customers can connect.
 
@@ -31,11 +32,21 @@ const validPoint = (lat: number, lng: number) => Number.isFinite(lat) && Number.
 export async function findLaundries(lat: number, lng: number): Promise<{ laundries?: Laundry[]; error?: string }> {
   if (!validPoint(lat, lng)) return { error: "That location doesn't look right. Try again." };
   if (!(await allow("directoryIp", await clientIp()))) return { error: "Too many attempts. Wait a minute and try again." };
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("nearby_businesses", { p_lat: lat, p_lng: lng });
-  if (error) return { error: friendlyError(error) };
+  // the same spot gives everyone the same list: cache it per ~100 m for 2 minutes (errors aren't cached)
+  const key = `laundries:${lat.toFixed(3)},${lng.toFixed(3)}`;
+  let rows: Record<string, unknown>[];
+  try {
+    rows = await cached(key, 120, async () => {
+      const supabase = await createClient();
+      const { data, error } = await supabase.rpc("nearby_businesses", { p_lat: Number(lat.toFixed(3)), p_lng: Number(lng.toFixed(3)) });
+      if (error) throw error;
+      return data as Record<string, unknown>[];
+    });
+  } catch (error) {
+    return { error: friendlyError(error as { message: string }) };
+  }
   return {
-    laundries: (data as Record<string, unknown>[]).map((r) => ({
+    laundries: rows.map((r) => ({
       code: r.join_code as string,
       name: r.name as string,
       pricePerKg: r.price_per_kg as number,

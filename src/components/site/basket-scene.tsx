@@ -244,7 +244,7 @@ export default function BasketScene({
     <Canvas
       // nothing draws until the shaders are compiled; then the canvas fades in
       frameloop={ready && active ? "always" : "never"}
-      style={{ opacity: ready ? 1 : 0, transition: "opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1)" }}
+      style={{ opacity: ready ? 1 : 0, transition: "opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1)" }}
       dpr={[1, 1.75]}
       camera={{ position: near ? [0, 0.75, 2.5] : [0, 0.9, 3.1], fov: 34 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}

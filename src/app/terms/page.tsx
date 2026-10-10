@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { InfoPage } from "@/components/site/info-page";
+import { getPublicPlan } from "@/lib/data";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/terms" },
@@ -10,9 +11,19 @@ export const metadata: Metadata = {
 
 const EMAIL = "toss.smartlaundry@gmail.com";
 
-export default function TermsPage() {
+// The basket credit's numbers come from the owner's settings, so the terms always match the offer on the site.
+// Refreshed every 5 minutes, like the home page.
+export const revalidate = 300;
+
+export default async function TermsPage() {
+  const plan = await getPublicPlan();
+  const credit = plan?.basketCredit ?? 500;
+  const perKg = plan?.creditPerKg ?? 8;
+  const maxPct = plan?.creditMaxPct ?? 30;
+  const days = plan?.creditValidDays ?? 50;
+  const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
   return (
-    <InfoPage kicker="Terms of Service" title="The rules, kept short." updated="3 October 2026">
+    <InfoPage kicker="Terms of Service" title="The rules, kept short." updated="10 October 2026">
       <p>
         These terms cover the Toss website, the Toss baskets, our Telegram bots and the platform laundries use (together, &ldquo;Toss&rdquo;).
         By using Toss you agree to them. Our <Link href="/privacy">Privacy Policy</Link> explains how we handle your data.
@@ -60,6 +71,26 @@ export default function TermsPage() {
         Baskets are printed to order. Price, colour and delivery are confirmed with you before you pay. Power it from a normal USB-C charger,
         keep it dry and don&apos;t stand on it. If it arrives faulty, tell us within 7 days and we&apos;ll fix or replace it.
       </p>
+
+      <h2 id="basket-credit" className="scroll-mt-28">Basket credit</h2>
+      <p>
+        Each Toss basket{plan && plan.basketPrice > 0 ? <> ({inr(plan.basketPrice)})</> : null} comes with <b>{inr(credit)} of laundry credit</b>. These
+        terms apply to it:
+      </p>
+      <ul>
+        <li>We add the credit to the customer account the basket is set up with, once the basket has been paid for.</li>
+        <li>
+          It comes off your bills automatically when a pickup is completed: {inr(perKg)} for every kg weighed, and never more than {maxPct}% of
+          that pickup&apos;s bill, until the credit runs out. Your invoice shows how much was used.
+        </li>
+        <li>
+          <b>It is valid for {days} days</b> from the day we add it. Credit not used by then expires and can&apos;t be brought back. Credit from a
+          second basket adds to what you have left, and the later expiry date applies.
+        </li>
+        <li>It works on pickups with any laundry on Toss. Once you&apos;ve reported a payment for a bill, the credit on that bill is final.</li>
+        <li>It isn&apos;t cash: it can&apos;t be withdrawn, refunded, transferred to someone else or exchanged for anything other than pickups.</li>
+        <li>We may cancel credit that was obtained by misuse, and we may change the offer for baskets sold later. Credit already added keeps the terms it was given with.</li>
+      </ul>
 
       <h2>Fair use</h2>
       <p>

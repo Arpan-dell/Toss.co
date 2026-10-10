@@ -299,7 +299,7 @@ export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => 
     creditMaxPct: (r?.credit_max_pct as number) ?? 30,
     creditTossSharePct: (r?.credit_toss_share_pct as number) ?? 50,
     creditSubMaxPct: (r?.credit_sub_max_pct as number) ?? 50,
-    creditValidDays: (r?.credit_valid_days as number) ?? 180,
+    creditValidDays: (r?.credit_valid_days as number) ?? 50,
     branchPrice: (r?.branch_price as number) ?? 299,
   };
 });
@@ -307,13 +307,25 @@ export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => 
 // Public (signed-out) view of the plan for the landing page. platform_settings is readable only by signed-in
 // users, so this uses the service-role client and selects just the non-sensitive pricing columns (never the
 // owner's UPI ID). Returns null when unavailable so the page still renders.
-export type PublicPlan = { monthlyPrice: number; trialDays: number; discount3m: number; discount6m: number; discount12m: number; basketPrice: number; basketCredit: number };
+export type PublicPlan = {
+  monthlyPrice: number;
+  trialDays: number;
+  discount3m: number;
+  discount6m: number;
+  discount12m: number;
+  basketPrice: number;
+  basketCredit: number;
+  /** basket credit rules, for the offer's small print and the terms */
+  creditPerKg: number;
+  creditMaxPct: number;
+  creditValidDays: number;
+};
 export async function getPublicPlan(): Promise<PublicPlan | null> {
   if (!isSupabaseConfigured()) return null;
   try {
     const { data, error } = await supabaseAdmin()
       .from("platform_settings")
-      .select("monthly_price, trial_days, discount_3m, discount_6m, discount_12m, basket_price, basket_credit")
+      .select("monthly_price, trial_days, discount_3m, discount_6m, discount_12m, basket_price, basket_credit, credit_per_kg, credit_max_pct, credit_valid_days")
       .eq("id", 1)
       .maybeSingle();
     if (error || !data) return null;
@@ -325,6 +337,9 @@ export async function getPublicPlan(): Promise<PublicPlan | null> {
       discount12m: Number(data.discount_12m) || 0,
       basketPrice: Number(data.basket_price) || 0,
       basketCredit: Number(data.basket_credit) || 0,
+      creditPerKg: Number(data.credit_per_kg) || 0,
+      creditMaxPct: Number(data.credit_max_pct) || 0,
+      creditValidDays: Number(data.credit_valid_days) || 0,
     };
   } catch {
     return null;

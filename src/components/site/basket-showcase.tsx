@@ -29,7 +29,7 @@ function ModelPlaceholder() {
   );
 }
 
-type Step = { at: [number, number]; side: "left" | "right" | "center"; kicker: string; title: string; body: React.ReactNode; swatches?: boolean };
+type Step = { at: [number, number]; side: "left" | "right" | "center"; kicker: string; title: string; body: React.ReactNode; swatches?: boolean; offer?: boolean };
 
 const STEPS: Step[] = [
   {
@@ -39,6 +39,7 @@ const STEPS: Step[] = [
     title: "A small box that makes any laundry basket smart.",
     body: "It weighs your clothes as they pile up and calls the pickup by itself when the basket is full.",
     swatches: true,
+    offer: true,
   },
   {
     at: [0.19, 0.34],
@@ -102,7 +103,21 @@ function Swatches({ color, onColor }: { color: BasketColor; onColor: (c: BasketC
   );
 }
 
-function StepText({ step, progress, color, onColor, reduce }: { step: Step; progress: MotionValue<number>; color: BasketColor; onColor: (c: BasketColor) => void; reduce: boolean }) {
+function StepText({
+  step,
+  progress,
+  color,
+  onColor,
+  reduce,
+  offer,
+}: {
+  step: Step;
+  progress: MotionValue<number>;
+  color: BasketColor;
+  onColor: (c: BasketColor) => void;
+  reduce: boolean;
+  offer?: React.ReactNode;
+}) {
   const [a, b] = step.at;
   const fade = 0.04;
   // Every input range must stay inside 0..1 and increase: framer hands scroll-linked opacity to the browser's
@@ -127,11 +142,13 @@ function StepText({ step, progress, color, onColor, reduce }: { step: Step; prog
       <h3 className="mt-3 text-[clamp(1.8rem,3.6vw,3rem)] leading-[1.05] font-black tracking-tight text-fg">{step.title}</h3>
       <p className="mt-4 text-base leading-relaxed text-secondary lg:text-lg">{step.body}</p>
       {step.swatches && <Swatches color={color} onColor={onColor} />}
+      {step.offer && offer && <div className="mt-6">{offer}</div>}
     </motion.div>
   );
 }
 
-export function BasketShowcase() {
+/** `offer`: the basket credit badge (server-rendered), shown with the first step. */
+export function BasketShowcase({ offer }: { offer?: React.ReactNode }) {
   const [color, onColor] = useBasketColor();
   const runway = useRef<HTMLElement>(null);
   const reduce = useReducedMotion();
@@ -160,10 +177,26 @@ export function BasketShowcase() {
   const [near, setNear] = useState(false);
   const [active, setActive] = useState(false);
 
-  // three.js (~1 MB) starts only once the visitor is actually in this section, never while they read the hero:
-  // loading it there froze the first screen. A soft glow holds the place until the model fades in; frames are
-  // drawn only while the section is on screen. Phones and budget devices get the pre-rendered frame sequence
-  // instead, which can start downloading a screen ahead (plain images don't block the page).
+  // three.js (~1 MB) is fetched quietly once the page has loaded and the browser is idle, so it's ready by the time
+  // the visitor gets here; the scene itself (WebGL context, shader compile) mounts just before the section scrolls
+  // into view, never while they read the hero (doing that there froze the first screen). A soft glow holds the place
+  // until the model fades in; frames are drawn only while the section is on screen. Phones and budget devices get
+  // the pre-rendered frame sequence instead, which can start downloading a screen ahead.
+  useEffect(() => {
+    if (!capable) return;
+    let idle = 0;
+    const prefetch = () => {
+      const go = () => void import("./basket-scene");
+      idle = typeof window.requestIdleCallback === "function" ? window.requestIdleCallback(go, { timeout: 4000 }) : window.setTimeout(go, 1500);
+    };
+    if (document.readyState === "complete") prefetch();
+    else window.addEventListener("load", prefetch, { once: true });
+    return () => {
+      window.removeEventListener("load", prefetch);
+      if (typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idle);
+      window.clearTimeout(idle);
+    };
+  }, [capable]);
   useEffect(() => {
     const el = runway.current;
     if (!el) return;
@@ -171,7 +204,7 @@ export function BasketShowcase() {
     const whenIdle = (fn: () => void) =>
       typeof window.requestIdleCallback === "function" ? (idle = window.requestIdleCallback(fn, { timeout: 600 })) : (idle = window.setTimeout(fn, 200));
     const ahead = new IntersectionObserver(([e]) => e.isIntersecting && whenIdle(() => setNear(true)), {
-      rootMargin: capable ? "0px 0px -40% 0px" : "100% 0px",
+      rootMargin: capable ? "0px 0px 15% 0px" : "100% 0px",
     });
     const onScreen = new IntersectionObserver(([e]) => setActive(e.isIntersecting));
     ahead.observe(el);
@@ -192,7 +225,7 @@ export function BasketShowcase() {
         </div>
         <div className="mt-10 grid gap-2 lg:grid-cols-2">
           {STEPS.map((s) => (
-            <StepText key={s.kicker} step={s} progress={scrollYProgress} color={color} onColor={onColor} reduce />
+            <StepText key={s.kicker} step={s} progress={scrollYProgress} color={color} onColor={onColor} reduce offer={offer} />
           ))}
         </div>
       </section>
@@ -215,7 +248,7 @@ export function BasketShowcase() {
           )}
         </div>
         {STEPS.map((s) => (
-          <StepText key={s.kicker} step={s} progress={scrollYProgress} color={color} onColor={onColor} reduce={false} />
+          <StepText key={s.kicker} step={s} progress={scrollYProgress} color={color} onColor={onColor} reduce={false} offer={offer} />
         ))}
         <ProgressRail progress={scrollYProgress} />
       </div>

@@ -191,6 +191,10 @@ const KEYBOARD: (string | null)[][] = [
   ["address", "wifi"],
 ];
 
+// Quick enough that a visitor sees every key in under 20 seconds without tapping through them.
+const BUBBLE_MS = 380; // between chat bubbles
+const HOLD_MS = 1500; // a finished exchange stays this long before the next key
+
 export function BotDemo() {
   const [active, setActive] = useState(0);
   const [shown, setShown] = useState(0);
@@ -212,7 +216,7 @@ export function BotDemo() {
       i += 1;
       setShown(i);
       if (i >= demo.chat.length) clearInterval(id);
-    }, 650);
+    }, BUBBLE_MS);
     return () => {
       cancelAnimationFrame(id0);
       clearInterval(id);
@@ -222,7 +226,7 @@ export function BotDemo() {
   // tour the features until someone taps a key
   useEffect(() => {
     if (!inView || reduce || touched.current) return;
-    const id = setTimeout(() => setActive((a) => (a + 1) % DEMOS.length), demo.chat.length * 650 + 2600);
+    const id = setTimeout(() => setActive((a) => (a + 1) % DEMOS.length), demo.chat.length * BUBBLE_MS + HOLD_MS);
     return () => clearTimeout(id);
   }, [active, inView, reduce, demo.chat.length]);
 

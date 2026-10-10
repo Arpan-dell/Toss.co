@@ -1,5 +1,7 @@
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { appHref } from "@/lib/hosts";
+import type { PublicPlan } from "@/lib/data";
+import { CreditOffer } from "./credit-offer";
 import { DotField } from "./dot-field";
 import { MainCta } from "./main-cta";
 import { TossOrbit } from "./toss-orbit";
@@ -15,7 +17,7 @@ function Corner({ className }: { className: string }) {
   return <span aria-hidden className={`absolute size-[0.32em] border-accent ${className}`} />;
 }
 
-export function HeroOrbit() {
+export function HeroOrbit({ plan }: { plan: PublicPlan | null }) {
   return (
     <section aria-labelledby="hero-title" className="relative isolate overflow-hidden">
       <div className="absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_62%_72%_at_74%_52%,black_30%,transparent_88%)] max-lg:[mask-image:radial-gradient(ellipse_90%_50%_at_50%_78%,black_25%,transparent_90%)]">
@@ -68,6 +70,7 @@ export function HeroOrbit() {
               Meet the basket
             </MainCta>
           </div>
+          <CreditOffer plan={plan} compact className="mt-6" />
           <dl className="mt-10 hidden max-w-md grid-cols-3 border-t border-border pt-5 font-mono sm:grid">
             {[
               ["0", "apps to install"],

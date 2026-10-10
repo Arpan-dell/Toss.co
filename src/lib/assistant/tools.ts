@@ -207,13 +207,18 @@ async function customerTool(intent: Intent, session: Session): Promise<Assistant
 async function managerTool(intent: Intent, session: Session): Promise<AssistantReply> {
   if (intent.tool === "driver" || intent.tool === "drivers") {
     const [drivers, orders] = await Promise.all([listDrivers(), listOrders()]);
-    const jobs = (d: Driver) =>
-      orders.filter((o) => (o.driverId === d.telegramChatId && (o.status === "PENDING" || o.status === "ACCEPTED")) || (o.deliveryDriverId === d.telegramChatId && (o.deliveryStatus === "ASSIGNED" || o.deliveryStatus === "OUT")));
+    // a driver's two kinds of job: pickups (clothes to the laundry) and deliveries (clean clothes back)
+    const pickupsOf = (d: Driver) => orders.filter((o) => !!d.telegramChatId && o.driverId === d.telegramChatId && (o.status === "PENDING" || o.status === "ACCEPTED"));
+    const deliveriesOf = (d: Driver) => orders.filter((o) => !!d.telegramChatId && o.deliveryDriverId === d.telegramChatId && (o.deliveryStatus === "ASSIGNED" || o.deliveryStatus === "OUT"));
+    const jobsText = (d: Driver) => {
+      const p = pickupsOf(d).length, dl = deliveriesOf(d).length;
+      return p + dl === 0 ? "no jobs" : [p && n(p, "pickup"), dl && n(dl, "delivery", "deliveries")].filter(Boolean).join(" + ");
+    };
     if (intent.tool === "drivers") {
       if (!drivers.length) return { text: "You haven't added any drivers yet.", links: [{ label: "Fleet", href: "/admin/fleet" }] };
       return {
         text: `${n(drivers.filter((d) => d.status !== "OFFLINE").length, "driver")} on duty out of ${drivers.length}.`,
-        rows: drivers.map((d) => [d.name, `${DRIVER_STATUS[d.status]} · ${n(jobs(d).length, "job")}${d.locationAt ? ` · seen ${timeAgo(d.locationAt, now())}` : ""}`]),
+        rows: drivers.map((d) => [d.name, `${DRIVER_STATUS[d.status]} · ${jobsText(d)}${d.locationAt ? ` · seen ${timeAgo(d.locationAt, now())}` : ""}`]),
         links: [{ label: "Fleet", href: "/admin/fleet" }],
         chips: drivers.slice(0, 3).map((d) => `Where is ${d.name.split(" ")[0]}?`),
       };
@@ -227,10 +232,11 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
     if (!match) {
       return { text: `I can't find a driver called "${intent.name}".`, rows: drivers.slice(0, 8).map((d) => [d.name, DRIVER_STATUS[d.status]]), links: [{ label: "Fleet", href: "/admin/fleet" }] };
     }
-    const open = jobs(match);
+    const ups = pickupsOf(match), downs = deliveriesOf(match);
     const rows: [string, string][] = [
       ["Status", DRIVER_STATUS[match.status]],
-      ["Jobs now", open.length ? open.map(label).join(", ") : "none"],
+      ["Pickups now", ups.length ? ups.map(label).join(", ") : "none"],
+      ["Deliveries now", downs.length ? downs.map((o) => `${label(o)} (${DELIVERY[o.deliveryStatus!]})`).join(", ") : "none"],
     ];
     if (!match.location) {
       return {

@@ -10,6 +10,9 @@ import type { Driver, Order, Tenant } from "../types";
 
 const DAY = 86_400_000;
 const r1 = (n: number) => Math.round(n * 10) / 10;
+const pl = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const ups = (n: number) => pl(n, "pickup", "pickups");
+const drops = (n: number) => pl(n, "delivery", "deliveries");
 const mins = (a?: string, b?: string) => (a && b ? (new Date(b).getTime() - new Date(a).getTime()) / 60_000 : undefined);
 const avg = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : undefined);
 const IST = 330 * 60_000;
@@ -49,16 +52,32 @@ export function managerSnapshot(orders: Order[], drivers: Driver[], tenant: Pick
   const active = (o: Order) => o.status === "PENDING" || o.status === "ACCEPTED";
   const onDuty = drivers.filter((d) => d.status !== "OFFLINE");
 
+  // a driver's two kinds of trip: picking clothes up, and taking them back (deliveries)
+  const since = (iso: string | undefined, from: Date) => !!iso && new Date(iso) >= from;
+  const delivering = (o: Order) => o.deliveryStatus === "ASSIGNED" || o.deliveryStatus === "OUT";
+  const deliveredWeek = orders.filter((o) => since(o.deliveredAt, week)).length;
+  const deliveredMonth = orders.filter((o) => since(o.deliveredAt, month)).length;
+
   const facts: Snapshot["facts"] = {
     "drivers in total": drivers.length,
     "drivers on duty now": onDuty.length,
-    "orders today": orders.filter((o) => new Date(o.createdAt) >= today).length,
-    "orders in the last 7 days": inWeek.length,
-    "orders per day (last 7 days)": r1(inWeek.length / 7),
-    "orders per day (last 30 days)": r1(inMonth.length / 30),
-    "orders on the go now": orders.filter(active).length,
-    "orders waiting for a driver now": orders.filter((o) => o.status === "PENDING" && !o.driverId).length,
+    "new pickup orders today": orders.filter((o) => new Date(o.createdAt) >= today).length,
+    "new pickup orders in the last 7 days": inWeek.length,
+    "pickups per day (last 7 days)": r1(inWeek.length / 7),
+    "pickups per day (last 30 days)": r1(inMonth.length / 30),
+    "pickups on the go now": orders.filter(active).length,
+    "pickups waiting for a driver now": orders.filter((o) => o.status === "PENDING" && !o.driverId).length,
   };
+  if (tenant.delivers) {
+    facts["deliveries made today"] = orders.filter((o) => since(o.deliveredAt, today)).length;
+    facts["deliveries in the last 7 days"] = deliveredWeek;
+    facts["deliveries per day (last 7 days)"] = r1(deliveredWeek / 7);
+    facts["deliveries per day (last 30 days)"] = r1(deliveredMonth / 30);
+    facts["deliveries on the way now"] = orders.filter(delivering).length;
+    facts["clean orders waiting for a delivery driver now"] = orders.filter((o) => o.deliveryStatus === "WAITING").length;
+    const back = avg(orders.filter((o) => since(o.deliveredAt, week)).map((o) => mins(o.readyAt, o.deliveredAt)).filter((m): m is number => m !== undefined && m >= 0));
+    if (back !== undefined) facts["average hours from ready to delivered (last 7 days)"] = r1(back / 60);
+  }
   const wait = avg(inWeek.map((o) => mins(o.createdAt, o.acceptedAt)).filter((m): m is number => m !== undefined && m >= 0));
   if (wait !== undefined) facts["average minutes until a driver took a pickup (last 7 days)"] = Math.round(wait);
   const pick = avg(inWeek.map((o) => mins(o.createdAt, o.completedAt)).filter((m): m is number => m !== undefined && m >= 0));
@@ -79,18 +98,24 @@ export function managerSnapshot(orders: Order[], drivers: Driver[], tenant: Pick
 
   const rows: Snapshot["rows"] = [];
   drivers.forEach((d, i) => {
-    const mine = (o: Order) => o.driverId === d.telegramChatId || o.deliveryDriverId === d.telegramChatId;
-    const now_ = orders.filter((o) => mine(o) && (active(o) || o.deliveryStatus === "ASSIGNED" || o.deliveryStatus === "OUT")).length;
-    const todayJobs = orders.filter((o) => mine(o) && ((o.completedAt && new Date(o.completedAt) >= today && o.driverId === d.telegramChatId) || (o.deliveredAt && new Date(o.deliveredAt) >= today && o.deliveryDriverId === d.telegramChatId))).length;
-    const weekJobs = orders.filter((o) => mine(o) && ((o.completedAt && new Date(o.completedAt) >= week && o.driverId === d.telegramChatId) || (o.deliveredAt && new Date(o.deliveredAt) >= week && o.deliveryDriverId === d.telegramChatId))).length;
-    const line = `${d.status === "OFFLINE" ? "offline" : d.status === "ON_JOB" ? "on a job" : "available"}, ${now_} job${now_ === 1 ? "" : "s"} now (limit ${d.maxJobs}), ${todayJobs} today, ${weekJobs} in 7 days (${r1(weekJobs / 7)}/day)`;
-    facts[`Driver ${i + 1}`] = line;
-    rows.push([d.name, `${now_}/${d.maxJobs} now · ${todayJobs} today · ${weekJobs} this week`]);
+    const id = d.telegramChatId;
+    const pickedUp = (o: Order) => !!id && o.driverId === id;
+    const delivered = (o: Order) => !!id && o.deliveryDriverId === id;
+    const jobsNow = orders.filter((o) => (pickedUp(o) && active(o)) || (delivered(o) && delivering(o))).length;
+    const pickups = (from: Date) => orders.filter((o) => pickedUp(o) && since(o.completedAt, from)).length;
+    const deliveries = (from: Date) => orders.filter((o) => delivered(o) && since(o.deliveredAt, from)).length;
+    const [pT, pW, dT, dW] = [pickups(today), pickups(week), deliveries(today), deliveries(week)];
+    const state = d.status === "OFFLINE" ? "offline" : d.status === "ON_JOB" ? "on a job" : "available";
+    facts[`Driver ${i + 1}`] =
+      `${state}, ${pl(jobsNow, "job", "jobs")} now (limit ${d.maxJobs}); today ${ups(pT)} and ${drops(dT)}; ` +
+      `last 7 days ${ups(pW)} and ${drops(dW)} (${r1((pW + dW) / 7)} trips/day)`;
+    rows.push([d.name, `${jobsNow}/${d.maxJobs} now · this week ${ups(pW)} + ${drops(dW)} · today ${pT} + ${dT}`]);
   });
   rows.unshift(
-    ["Orders per day", `${facts["orders per day (last 7 days)"]} (7 days) · ${facts["orders per day (last 30 days)"]} (30 days)`],
-    ["Waiting for a driver", String(facts["orders waiting for a driver now"])],
-    ...(wait !== undefined ? ([["Avg wait for a driver", `${Math.round(wait)} min`]] as [string, string][]) : []),
+    ["Pickups per day", `${facts["pickups per day (last 7 days)"]} (7 days) · ${facts["pickups per day (last 30 days)"]} (30 days)`],
+    ...(tenant.delivers ? ([["Deliveries per day", `${facts["deliveries per day (last 7 days)"]} (7 days) · ${facts["deliveries per day (last 30 days)"]} (30 days)`]] as [string, string][]) : []),
+    ["Waiting for a driver", tenant.delivers ? `${ups(Number(facts["pickups waiting for a driver now"]))} · ${drops(Number(facts["clean orders waiting for a delivery driver now"]))}` : String(facts["pickups waiting for a driver now"])],
+    ...(wait !== undefined ? ([["Avg wait for a pickup driver", `${Math.round(wait)} min`]] as [string, string][]) : []),
     ["Drivers on duty", `${onDuty.length} of ${drivers.length}`],
   );
   return { facts, rows };

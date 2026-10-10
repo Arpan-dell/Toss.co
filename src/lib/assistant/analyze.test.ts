@@ -17,19 +17,28 @@ describe("advice numbers for a manager", () => {
     order({ deviceOrderId: 3, driverId: "2", status: "ACCEPTED", createdAt: ago(1), acceptedAt: ago(0.5) }),
     order({ deviceOrderId: 4, status: "PENDING", createdAt: ago(0.2) }),
     order({ deviceOrderId: 5, paymentStatus: "UNPAID", amountDue: 300, driverId: "1", createdAt: ago(100), completedAt: ago(99) }),
+    // deliveries back to customers: one done today by Amit, one on the way with Amit, one waiting for a driver
+    order({ deviceOrderId: 6, driverId: "1", createdAt: ago(200), completedAt: ago(199), deliveryDriverId: "2", deliveryStatus: "DELIVERED", readyAt: ago(4), deliveredAt: ago(2) }),
+    order({ deviceOrderId: 7, driverId: "1", createdAt: ago(220), completedAt: ago(219), deliveryDriverId: "2", deliveryStatus: "OUT" }),
+    order({ deviceOrderId: 8, driverId: "1", createdAt: ago(240), completedAt: ago(239), deliveryStatus: "WAITING" }),
   ];
   const snap = managerSnapshot(orders, drivers, TENANT, NOW);
 
   it("works out workload and waiting", () => {
     expect(snap.facts["drivers on duty now"]).toBe(2);
-    expect(snap.facts["orders waiting for a driver now"]).toBe(1);
-    expect(snap.facts["orders in the last 7 days"]).toBe(5);
+    expect(snap.facts["pickups waiting for a driver now"]).toBe(1);
+    expect(snap.facts["new pickup orders in the last 7 days"]).toBe(5);
+    expect(snap.facts["deliveries made today"]).toBe(1);
+    expect(snap.facts["deliveries on the way now"]).toBe(1);
+    expect(snap.facts["clean orders waiting for a delivery driver now"]).toBe(1);
+    expect(snap.facts["average hours from ready to delivered (last 7 days)"]).toBe(2);
     expect(snap.facts["unpaid bills"]).toBe("1 worth ₹300");
-    expect(snap.facts["Driver 2"]).toBe("on a job, 1 job now (limit 2), 0 today, 1 in 7 days (0.1/day)");
+    expect(snap.facts["Driver 2"]).toBe("on a job, 2 jobs now (limit 2); today 0 pickups and 1 delivery; last 7 days 1 pickup and 1 delivery (0.3 trips/day)");
   });
 
   it("shows real names to the manager but never sends names, phones or addresses to the AI", () => {
-    expect(snap.rows).toContainEqual(["Amit", "1/2 now · 0 today · 1 this week"]);
+    expect(snap.rows).toContainEqual(["Amit", "2/2 now · this week 1 pickup + 1 delivery · today 0 + 1"]);
+    expect(snap.rows).toContainEqual(["Waiting for a driver", "1 pickup · 1 delivery"]);
     const sheet = factSheet(snap.facts);
     for (const secret of ["Ravi", "Amit", "+9198", "Saket"]) expect(sheet).not.toContain(secret);
   });

@@ -63,7 +63,8 @@ describe("assistant tools", () => {
     data.orders = [order({ deviceOrderId: 104, status: "ACCEPTED", driverId: "55" })];
     const r = await runIntent({ tool: "driver", name: "ravi" }, manager);
     expect(r.text).toBe("Here's where Ravi Kumar is now:");
-    expect(r.rows).toContainEqual(["Jobs now", "#104"]);
+    expect(r.rows).toContainEqual(["Pickups now", "#104"]);
+    expect(r.rows).toContainEqual(["Deliveries now", "none"]);
     expect(r.links?.[0]).toEqual({ label: "Open in Google Maps", href: "https://www.google.com/maps?q=28.52,77.21", external: true });
   });
 

@@ -60,8 +60,8 @@ export async function askAssistant(message: string, history: Turn[] = []): Promi
 }
 
 const TOOLS: Record<AssistantRole, string> = {
-  CUSTOMER: `overview (everything about my account), basket (how full the basket is), credit (basket credit), orders (filter: active | unpaid | recent), order (number), go (page), theme (mode), password, analyze (a question that needs judgement or an explanation from their numbers: why a bill is higher, should I, is it worth, compare, trends), help (how the app works, how to do something, what a feature means)`,
-  MANAGER: `overview (today's summary of the business), attention (the live list of problems: only when they ask what is wrong or what needs attention), orders (filter: active | waiting | unpaid | recent | delivery), order (number), driver (name: where a driver is), drivers (list of drivers and their status), go (page), theme (mode), password, analyze (any question that needs judgement, advice, a comparison or an explanation from the business numbers: should I hire or add a driver, are drivers overworked or idle, is business growing, busiest days or hours, why are pickups late, how to earn more, pricing), help (how the app works, how to do something, what a feature or term means)`,
+  CUSTOMER: `money (how much I spent; set period), overview (everything about my account), basket (how full the basket is), credit (basket credit), orders (filter: active | unpaid | recent), order (number), go (page), theme (mode), password, analyze (a question that needs judgement or an explanation from their numbers: why a bill is higher, should I, is it worth, compare, trends), help (how the app works, how to do something, what a feature means)`,
+  MANAGER: `money (profit, revenue, earnings, costs or sales; set period), overview (today's summary of the business), attention (the live list of problems: only when they ask what is wrong or what needs attention), orders (filter: active | waiting | unpaid | recent | delivery), order (number), driver (name: where a driver is), drivers (list of drivers and their status), go (page), theme (mode), password, analyze (any question that needs judgement, advice, a comparison or an explanation from the business numbers: should I hire or add a driver, are drivers overworked or idle, is business growing, busiest days or hours, why are pickups late, how to earn more, pricing), help (how the app works, how to do something, what a feature or term means)`,
   OWNER: `overview (platform summary), orders (filter: unpaid = subscription payments to check), go (page), theme (mode), password, analyze (questions that need judgement from the numbers: which business is growing or shrinking, who might stop paying), help (how the app works)`,
 };
 
@@ -76,13 +76,15 @@ async function aiRoute(text: string, history: Turn[], role: AssistantRole): Prom
   if (!geminiEnabled()) return null;
   const pages = PAGES[role].map((p) => p.label).join(", ");
   const recent = history.slice(-4).filter((t) => t.role === "user").map((t) => `User earlier: ${t.text.slice(0, 200)}`).join("\n");
-  const { data } = await geminiJson<{ tool: string; rephrased?: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string }>({
-    system: `You route requests in the Toss app's assistant for a ${role.toLowerCase()} account in India. People often write in Hindi, Hinglish or quick, misspelt English: understand them, and put their request in "rephrased" as one short, correct, simple English sentence (keep names and numbers exactly). Answer "help" questions in simple English. Pick exactly one tool: ${TOOLS[role]}. For "go", set page to one of: ${pages}. For "help", write a short, friendly answer (at most 5 sentences, no markdown) in "answer". Use these facts about Toss: ${ABOUT} For general questions (laundry care, running a business, technology) you may use general knowledge. Never invent numbers or details about this account: the tools fetch those, so pick "analyze" or a data tool instead.`,
+  const { data } = await geminiJson<{ tool: string; rephrased?: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string; period?: string; days?: number }>({
+    system: `You route requests in the Toss app's assistant for a ${role.toLowerCase()} account in India. People often write in Hindi, Hinglish or quick, misspelt English: understand them, and put their request in "rephrased" as one short, correct, simple English sentence (keep names and numbers exactly). Answer "help" questions in simple English. Pick exactly one tool: ${TOOLS[role]}. Use "go" ONLY when they explicitly ask to open, go to or see a page; when they ask for a number or a fact (like "profit this week"), use a data tool, never "go". For "go", set page to one of: ${pages}. For "money", set period to one of: today, yesterday, week, lastweek, month, lastmonth, days (and days = how many). For "help", write a short, friendly answer (at most 5 sentences, no markdown) in "answer". Use these facts about Toss: ${ABOUT} For general questions (laundry care, running a business, technology) you may use general knowledge. Never invent numbers or details about this account: the tools fetch those, so pick "analyze" or a data tool instead.`,
     prompt: `${recent ? `${recent}\n` : ""}User: ${text}`,
     schema: {
       type: "object",
       properties: {
-        tool: { type: "string", enum: ["overview", "basket", "credit", "orders", "order", "driver", "drivers", "attention", "go", "theme", "password", "analyze", "help"] },
+        tool: { type: "string", enum: ["money", "overview", "basket", "credit", "orders", "order", "driver", "drivers", "attention", "go", "theme", "password", "analyze", "help"] },
+        period: { type: "string", enum: ["today", "yesterday", "week", "lastweek", "month", "lastmonth", "days"] },
+        days: { type: "integer" },
         rephrased: { type: "string" },
         name: { type: "string" },
         number: { type: "integer" },
@@ -101,12 +103,17 @@ async function aiRoute(text: string, history: Turn[], role: AssistantRole): Prom
   return { intent: allowed.has(data.tool) ? toIntent(data, role) : null, rephrased };
 }
 
-function toIntent(data: { tool: string; rephrased?: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string }, role: AssistantRole): Intent | null {
+function toIntent(data: { tool: string; rephrased?: string; name?: string; number?: number; filter?: string; page?: string; mode?: string; answer?: string; period?: string; days?: number }, role: AssistantRole): Intent | null {
   switch (data.tool) {
     case "help":
       return { tool: "help", question: data.answer?.trim() || "I'm not sure about that one." };
     case "analyze":
       return { tool: "analyze", question: data.rephrased?.trim() || "" };
+    case "money": {
+      const keys = ["today", "yesterday", "week", "lastweek", "month", "lastmonth", "days"] as const;
+      const key = keys.find((k) => k === data.period) ?? "days";
+      return { tool: "money", period: key === "days" ? { key, days: Math.min(365, Math.max(1, data.days ?? 30)) } : { key } };
+    }
     case "go": {
       const want = (data.page ?? "").toLowerCase();
       const hit = PAGES[role].find((p) => p.label.toLowerCase() === want) ?? PAGES[role].find((p) => p.words.some((w) => want.includes(w)));

@@ -103,3 +103,19 @@ describe("no more keyword guessing", () => {
     expect(matchIntent("what is dark mode", "OWNER")).toBeNull();
   });
 });
+
+describe("money questions get numbers, not a page", () => {
+  it("routes profit, revenue and spending with their period", () => {
+    expect(matchIntent("profit this week", "MANAGER")).toEqual({ tool: "money", period: { key: "week" } });
+    expect(matchIntent("revenue today", "MANAGER")).toEqual({ tool: "money", period: { key: "today" } });
+    expect(matchIntent("profit last month", "MANAGER")).toEqual({ tool: "money", period: { key: "lastmonth" } });
+    expect(matchIntent("earnings in the last 10 days", "MANAGER")).toEqual({ tool: "money", period: { key: "days", days: 10 } });
+    expect(matchIntent("how much did I spend this month", "CUSTOMER")).toEqual({ tool: "money", period: { key: "month" } });
+    expect(matchIntent(understand("aaj ki kamai"), "MANAGER")).toEqual({ tool: "money", period: { key: "today" } });
+  });
+
+  it("still opens the page when asked to, and gives advice when asked for it", () => {
+    expect(matchIntent("open profit", "MANAGER")).toEqual({ tool: "go", href: "/admin/profit", label: "Profit" });
+    expect(matchIntent("how can I increase profit", "MANAGER")).toBeNull();
+  });
+});

@@ -25,7 +25,12 @@ vi.mock("../data", () => ({
   getCustomerCredit: async () => ({ granted: 500, used: 120, left: 380, expiresAt: "2026-11-30T00:00:00Z", expired: false }),
 }));
 
-const { runIntent } = await import("./tools");
+const report = { pickups: 4, kg: 20, earned: 1000, supplies: 120, other: 80, driver: 200, costs: 400, profit: 600, rows: [] };
+vi.mock("../profit-report", () => ({ profitReport: async () => report }));
+let plan = "ACTIVE";
+vi.mock("../plan", async (orig) => ({ ...(await orig<typeof import("../plan")>()), planState: () => ({ state: plan }) }));
+
+const { runIntent, periodRange } = await import("./tools");
 const manager = { userId: "u1", role: "MANAGER" as const, tenantId: "t1" };
 const customer = { userId: "c1", role: "CUSTOMER" as const };
 
@@ -76,5 +81,34 @@ describe("assistant tools", () => {
     expect(r.rows).toContainEqual(["Waiting for a driver", "1"]);
     expect(r.rows).toContainEqual(["Unpaid", "1 · ₹250"]);
     expect(r.rows).toContainEqual(["Drivers on duty", "1 of 2"]);
+  });
+});
+
+describe("money", () => {
+  it("gives a Pro manager profit for the period", async () => {
+    plan = "ACTIVE";
+    const r = await runIntent({ tool: "money", period: { key: "week" } }, manager);
+    expect(r.text).toBe("Your profit this week is ₹600 on ₹1,000 of revenue.");
+    expect(r.rows).toContainEqual(["Profit per kg", "₹30"]);
+  });
+
+  it("gives a Free manager revenue, with profit as part of Pro", async () => {
+    plan = "EXPIRED";
+    const r = await runIntent({ tool: "money", period: { key: "today" } }, manager);
+    expect(r.text).toBe("You earned ₹1,000 from 4 pickups today. Profit after costs is part of Pro.");
+    plan = "ACTIVE";
+  });
+
+  it("tells a customer what they spent", async () => {
+    data.orders = [order({ status: "COMPLETED", amountDue: 270, weightKg: 5.4, completedAt: new Date(NOW.getTime() - 3600_000).toISOString() }), order({ status: "COMPLETED", amountDue: 130, weightKg: 2.6, completedAt: "2026-01-01T00:00:00Z", createdAt: "2026-01-01T00:00:00Z" })];
+    const r = await runIntent({ tool: "money", period: { key: "month" } }, customer);
+    expect(r.text).toBe("You spent ₹270 on 1 pickup this month.");
+  });
+
+  it("starts weeks on Monday and days at midnight in India", () => {
+    // 2026-10-11 08:00 UTC is Sunday 13:30 in India; that week began Monday 5 October, 00:00 India time
+    expect(periodRange({ key: "week" }, NOW).from.toISOString()).toBe("2026-10-04T18:30:00.000Z");
+    expect(periodRange({ key: "today" }, NOW).from.toISOString()).toBe("2026-10-10T18:30:00.000Z");
+    expect(periodRange({ key: "lastmonth" }, NOW).from.toISOString()).toBe("2026-08-31T18:30:00.000Z");
   });
 });

@@ -18,7 +18,11 @@ export type Intent =
   | { tool: "basket" }
   | { tool: "credit" }
   | { tool: "help"; question: string }
-  | { tool: "analyze"; question: string };
+  | { tool: "analyze"; question: string }
+  | { tool: "money"; period: Period };
+
+/** A span of time in plain words: "today", "this week" (since Monday), "last month", "last 10 days". */
+export type Period = { key: "today" | "yesterday" | "week" | "lastweek" | "month" | "lastmonth" | "days"; days?: number };
 
 /** The pages each role may be sent to, with the words people use for them. */
 export const PAGES: Record<AssistantRole, { href: string; label: string; words: string[] }[]> = {
@@ -69,6 +73,22 @@ export const isPasswordRequest = (text: string) => /\b(pass ?word|passcode)\b/i.
 
 // General questions ("how do I…", "why…", "what does … mean") go to the AI even when they mention a data word:
 // "how do I add drivers" is not a request for the driver list.
+/** The period a message talks about; 30 days when it doesn't say. */
+export function periodFrom(t: string): Period {
+  const m = t.match(/\b(?:last|past|previous)\s+(\d{1,3})\s+days?\b/);
+  if (m) return { key: "days", days: Math.min(365, Number(m[1])) };
+  if (/\byesterday\b|\bkal\b/.test(t)) return { key: "yesterday" };
+  if (/\btoday\b|\baaj\b/.test(t)) return { key: "today" };
+  if (/\b(last|previous|pichhle|pichle) (week|hafte|hafta)\b/.test(t)) return { key: "lastweek" };
+  if (/\b(this|current|is) (week|hafte|hafta)\b|\bweekly\b|\bweek\b/.test(t)) return { key: "week" };
+  if (/\b(last|previous|pichhle|pichle) (month|mahine|mahina)\b/.test(t)) return { key: "lastmonth" };
+  if (/\b(this|current|is) (month|mahine|mahina)\b|\bmonthly\b|\bmonth\b/.test(t)) return { key: "month" };
+  if (/\b(last|past) year\b|\byearly\b/.test(t)) return { key: "days", days: 365 };
+  return { key: "days", days: 30 };
+}
+
+const MONEY = /\b(profit|profits|revenue|earnings|earned|earn|income|sales|turnover|kamai|munafa|money made|made money|costs?|expenses?|spent|spend|spending)\b/;
+
 // Asking for a judgement ("should I add a driver", "are they overworked", "is it worth it"): the analysis answers.
 const ADVICE = /\b(should|worth|overwork\w*|over ?loaded|idle|enough|too (many|few|much|little)|hire|recommend\w*|advice|advise|better|compare|growing|grow|improve|increase|reduce|why)\b/;
 const GENERAL = /^(how (do|does|can|to|should|would)|why|explain|what (does|is a|is an|happens|do i do|should i)|can i|could i|should i|is it possible|what if)\b/;
@@ -112,6 +132,9 @@ export function matchIntent(raw: string, role: AssistantRole): Intent | null {
 
   // everything below answers from data; a general question, or one asking for judgement, goes to the AI instead
   if (GENERAL.test(t) || ADVICE.test(t)) return null;
+
+  // money for a period: "profit this week", "revenue today", "how much did I spend this month"
+  if ((role === "MANAGER" || role === "CUSTOMER") && MONEY.test(t) && !/^(open|go to|take me to|navigate to)\b/.test(t)) return { tool: "money", period: periodFrom(t) };
 
   if (role === "MANAGER" && has(t, /^(show |list |see )?(me )?(all |my |the )?drivers( list| status)?$/, /\b(list|show)( me)?( all| my| the)? drivers\b/, /\bwhere are (my|the|all) drivers\b/, /\bwho is (on duty|available|online|working)\b/)) return { tool: "drivers" };
 

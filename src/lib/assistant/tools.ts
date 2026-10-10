@@ -20,7 +20,8 @@ import type { Session } from "../session";
 import type { Driver, Order } from "../types";
 import { geminiEnabled, geminiText } from "../ai/gemini";
 import { customerSnapshot, factSheet, managerSnapshot, ownerSnapshot, type Snapshot } from "./analyze";
-import { nowText, type Intent } from "./intents";
+import { profitReport } from "../profit-report";
+import { nowText, type Intent, type Period } from "./intents";
 
 // What the assistant does for each request. Every read goes through the signed-in user's own database client, so
 // row-level security decides what they see: a customer only their own pickups, a manager only their business.
@@ -89,6 +90,36 @@ export async function runIntent(intent: Intent, session: Session): Promise<Assis
   return ownerTool(intent);
 }
 
+// ---------- periods ("this week" = since Monday, India time) ----------
+const IST = 330 * 60_000;
+function istMidnight(at: Date, daysBack = 0) {
+  const d = new Date(at.getTime() + IST);
+  d.setUTCHours(0, 0, 0, 0);
+  return new Date(d.getTime() - IST - daysBack * 86_400_000);
+}
+export function periodRange(p: Period, at: Date): { from: Date; to: Date; label: string } {
+  const today = istMidnight(at);
+  const dow = (new Date(at.getTime() + IST).getUTCDay() + 6) % 7; // Monday = 0
+  const ist = new Date(at.getTime() + IST);
+  const monthStart = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), 1) - IST);
+  switch (p.key) {
+    case "today":
+      return { from: today, to: at, label: "today" };
+    case "yesterday":
+      return { from: istMidnight(at, 1), to: today, label: "yesterday" };
+    case "week":
+      return { from: istMidnight(at, dow), to: at, label: "this week" };
+    case "lastweek":
+      return { from: istMidnight(at, dow + 7), to: istMidnight(at, dow), label: "last week" };
+    case "month":
+      return { from: monthStart, to: at, label: "this month" };
+    case "lastmonth":
+      return { from: new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth() - 1, 1) - IST), to: monthStart, label: "last month" };
+    default:
+      return { from: new Date(at.getTime() - (p.days ?? 30) * 86_400_000), to: at, label: `the last ${p.days ?? 30} days` };
+  }
+}
+
 // ---------- customers ----------
 async function customerTool(intent: Intent, session: Session): Promise<AssistantReply> {
   const orders = (await listOrdersForCustomer(session.userId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -96,6 +127,23 @@ async function customerTool(intent: Intent, session: Session): Promise<Assistant
   const owed = orders.filter(unpaid);
   const owedSum = owed.reduce((s, o) => s + o.amountDue, 0);
 
+  if (intent.tool === "money") {
+    const { from, to, label } = periodRange(intent.period, now());
+    const done = orders.filter((o) => o.status === "COMPLETED" && new Date(o.completedAt ?? o.createdAt) >= from && new Date(o.completedAt ?? o.createdAt) < to);
+    const spent = done.reduce((s, o) => s + o.amountDue, 0);
+    const credit = done.reduce((s, o) => s + (o.creditApplied ?? 0), 0);
+    if (!done.length) return { text: `No pickups ${label}, so nothing spent.` };
+    return {
+      text: `You spent ${formatINR(spent)} on ${n(done.length, "pickup")} ${label}.`,
+      rows: [
+        ["Spent", formatINR(spent)],
+        ["Pickups", String(done.length)],
+        ["Laundry", formatKg(done.reduce((s, o) => s + o.weightKg, 0))],
+        ...(credit ? ([["Credit used", formatINR(credit)]] as [string, string][]) : []),
+      ],
+      links: [{ label: "Order history", href: "/app/orders" }],
+    };
+  }
   if (intent.tool === "basket") {
     const device = await getDeviceForCustomer(session.userId);
     if (!device) return { text: "You don't have a basket linked to your account yet.", links: [{ label: "Overview", href: "/app" }] };
@@ -200,6 +248,39 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
         { label: "Open in Google Maps", href: `https://www.google.com/maps?q=${match.location.lat},${match.location.lng}`, external: true },
         { label: "Fleet", href: "/admin/fleet" },
       ],
+    };
+  }
+
+  if (intent.tool === "money") {
+    const { from, to, label } = periodRange(intent.period, now());
+    const tenant = await getTenantById(session.tenantId);
+    const pro = tenant ? tierOf(planState(tenant).state) === "PRO" : false;
+    const r = await profitReport(session.tenantId, from, to);
+    if (!r) return { text: "This account isn't linked to a business yet." };
+    if (!r.pickups) return { text: `No completed pickups ${label} yet, so no revenue or profit to show.`, links: [{ label: "Profit", href: "/admin/profit" }] };
+    const base: [string, string][] = [
+      ["Pickups", `${r.pickups} · ${formatKg(r.kg)}`],
+      ["Revenue", formatINR(Math.round(r.earned))],
+    ];
+    if (!pro) {
+      return {
+        text: `You earned ${formatINR(Math.round(r.earned))} from ${n(r.pickups, "pickup")} ${label}. Profit after costs is part of Pro.`,
+        rows: base,
+        links: [{ label: "See Pro", href: "/admin/billing" }],
+      };
+    }
+    return {
+      text: `Your profit ${label} is ${formatINR(Math.round(r.profit))} on ${formatINR(Math.round(r.earned))} of revenue.`,
+      rows: [
+        ...base,
+        ["Supplies", formatINR(Math.round(r.supplies))],
+        ["Running costs", formatINR(Math.round(r.other))],
+        ["Driver pay", formatINR(Math.round(r.driver))],
+        ["Profit", formatINR(Math.round(r.profit))],
+        ["Profit per kg", r.kg > 0 ? formatINR(Math.round((r.profit / r.kg) * 100) / 100) : "-"],
+      ],
+      links: [{ label: "Profit page", href: "/admin/profit" }],
+      chips: ["Profit last week", "Profit this month"],
     };
   }
 

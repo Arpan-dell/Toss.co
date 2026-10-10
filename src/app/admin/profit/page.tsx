@@ -4,12 +4,11 @@ import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { proGate } from "@/components/plan-gate";
 import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { updateCosts } from "@/lib/actions/supplies";
-import { getPlatformSettings, getTenantById, listCustomers, listDrivers, listOrders, listSupplies, now } from "@/lib/data";
-import { distanceKm } from "@/lib/dispatch/core";
+import { getPlatformSettings, getTenantById, listCustomers, listSupplies, now } from "@/lib/data";
 import { formatINR, formatKg } from "@/lib/format";
-import { driverPay, orderProfit, supplyRates, type OrderProfit } from "@/lib/profit";
+import { supplyRates } from "@/lib/profit";
+import { profitReport } from "@/lib/profit-report";
 import { getSession } from "@/lib/session";
-import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Profit" };
 
@@ -20,17 +19,15 @@ export default async function Profit() {
   if (locked) return locked;
 
   const session = await getSession();
-  const supabase = await createClient();
-  const [tenant, platform, supplies, orders, customers, devices, drivers] = await Promise.all([
+  const [tenant, platform, supplies, customers, report] = await Promise.all([
     getTenantById(session?.tenantId),
     getPlatformSettings(),
     listSupplies(),
-    listOrders({ status: "COMPLETED" }),
     listCustomers(),
-    supabase.from("devices").select("device_id, lat, lng"),
-    listDrivers(),
+    // the last 30 days, worked out the same way as the assistant's "profit this week" (lib/profit-report.ts)
+    profitReport(session?.tenantId, new Date(now().getTime() - 30 * 86_400_000), now()),
   ]);
-  if (!tenant) return null;
+  if (!tenant || !report) return null;
 
   const costs = {
     otherCostPerKg: tenant.otherCostPerKg,
@@ -39,35 +36,8 @@ export default async function Profit() {
     tossSharePct: platform.creditTossSharePct,
   };
   const rates = supplyRates(supplies);
-  const store = tenant.storeLat != null && tenant.storeLng != null ? { lat: tenant.storeLat, lng: tenant.storeLng } : null;
-  const where = new Map((devices.data ?? []).filter((d) => d.lat != null && d.lng != null).map((d) => [d.device_id as string, { lat: d.lat as number, lng: d.lng as number }]));
   const names = new Map(customers.map((c) => [c.id, c.name ?? c.customerCode]));
-
-  const since = now().getTime() - 30 * 86_400_000;
-  const recent = orders.filter((o) => new Date(o.completedAt ?? o.createdAt).getTime() >= since);
-  // a salaried driver costs their salary spread over their trips (pickups + deliveries) in these 30 days
-  const tripCount = new Map<string, number>();
-  for (const o of recent) {
-    if (o.driverId) tripCount.set(o.driverId, (tripCount.get(o.driverId) ?? 0) + 1);
-    if (o.deliveryStatus === "DELIVERED" && o.deliveryDriverId) tripCount.set(o.deliveryDriverId, (tripCount.get(o.deliveryDriverId) ?? 0) + 1);
-  }
-  const salaryPerTrip = new Map(
-    drivers.filter((d) => d.payType === "SALARY" && d.telegramChatId).map((d) => [d.telegramChatId!, d.monthlySalary / Math.max(1, tripCount.get(d.telegramChatId!) ?? 0)]),
-  );
-  const tripCost = (chatId: string | undefined, km?: number) => (chatId && salaryPerTrip.has(chatId) ? salaryPerTrip.get(chatId)! : driverPay(costs, km));
-  const rows = recent.map((o) => {
-    const at = where.get(o.deviceId);
-    const km = store && at ? distanceKm(store, at) : undefined;
-    // the pickup trip, plus the delivery trip back when there was one
-    const driverCost = tripCost(o.driverId, km) + (o.deliveryStatus === "DELIVERED" ? tripCost(o.deliveryDriverId, km) : 0);
-    return { o, p: orderProfit(o, rates, costs, km, driverCost) };
-  });
-
-  const sum = (f: (p: OrderProfit) => number) => rows.reduce((a, r) => a + f(r.p), 0);
-  const kg = rows.reduce((a, r) => a + (r.o.weightKg || 0), 0);
-  const profit = sum((p) => p.profit);
-  const earned = sum((p) => p.paid + p.tossPayback);
-  const costTotal = sum((p) => p.supplies + p.other + p.driver);
+  const { rows, kg, profit, earned, costs: costTotal } = report;
 
   // customers by profit per kg (2+ orders, so one odd order doesn't decide it)
   const byCustomer = new Map<string, { name: string; kg: number; profit: number; n: number }>();

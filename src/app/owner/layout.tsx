@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Assistant } from "@/components/assistant";
 import type { PortalNavItem } from "@/components/portal-dock";
 import { PortalShell } from "@/components/portal-shell";
 import { requireRole } from "@/lib/session";
@@ -18,6 +19,7 @@ export default async function OwnerLayout({ children }: LayoutProps<"/owner">) {
   return (
     <PortalShell badge="Owner" subtitle={session.email ?? ""} nav={nav}>
       {children}
+      <Assistant role="OWNER" />
     </PortalShell>
   );
 }

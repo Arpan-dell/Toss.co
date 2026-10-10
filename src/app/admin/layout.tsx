@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Assistant } from "@/components/assistant";
 import Link from "next/link";
 import { BranchSwitcher } from "@/components/branch-switcher";
 import { LiveRefresh } from "@/components/live-refresh";
@@ -71,6 +72,7 @@ export default async function ManagerLayout({ children }: LayoutProps<"/admin">)
         </div>
       )}
       {children}
+      <Assistant role="MANAGER" />
     </PortalShell>
   );
 }

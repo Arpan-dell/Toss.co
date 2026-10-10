@@ -21,6 +21,7 @@ export const LIMITS = {
   resetRequestAccount: { limit: 3, windowSec: 60 * 60 }, // and per account
   resetSubmitIp: { limit: 10, windowSec: 60 * 60 },
   basketRequestIp: { limit: 3, windowSec: 60 * 60 }, // "Get a basket" requests
+  assistant: { limit: 40, windowSec: 10 * 60 }, // in-app assistant questions per account (keeps the free AI quota safe)
 } as const;
 
 /** The caller's IP as seen by Vercel's edge (first x-forwarded-for hop). */

@@ -23,6 +23,19 @@ function saveTheme(theme: "dark" | "light") {
   document.cookie = `${THEME_KEY}=${theme}; ${cookieAttrs}${domain}`;
 }
 
+/** Sets the theme from code (the assistant: "switch to dark mode"); "toggle" flips it. Returns the new theme. */
+export function setTheme(mode: "dark" | "light" | "toggle"): "dark" | "light" {
+  const root = document.documentElement;
+  const next = mode === "toggle" ? (root.dataset.theme === "light" ? "dark" : "light") : mode;
+  const apply = () => {
+    root.dataset.theme = next;
+    saveTheme(next);
+  };
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !document.startViewTransition) apply();
+  else document.startViewTransition(apply);
+  return next;
+}
+
 // Flips the theme and saves it. Where the browser supports view transitions, the new theme spreads out
 // from the click point as a growing circle. Used by the nav toggle and the dock.
 export function switchTheme(e: React.MouseEvent) {

@@ -26,8 +26,8 @@ export function PasswordChecklist({ value, id }: { value: string; id?: string })
 }
 
 /** A new-password input with the checklist under it. */
-export function NewPasswordInput({ name, className, placeholder, label }: { name: string; className: string; placeholder?: string; label?: string }) {
-  const [value, setValue] = useState("");
+export function NewPasswordInput({ name, className, placeholder, label, defaultValue = "" }: { name: string; className: string; placeholder?: string; label?: string; defaultValue?: string }) {
+  const [value, setValue] = useState(defaultValue);
   const hint = `${name}-rules`;
   return (
     <>

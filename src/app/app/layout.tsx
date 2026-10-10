@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Assistant } from "@/components/assistant";
 import { PortalShell } from "@/components/portal-shell";
 import { TelegramMiniApp } from "@/components/telegram-miniapp";
 import { getCustomer } from "@/lib/data";
@@ -15,6 +16,7 @@ export default async function CustomerLayout({ children }: LayoutProps<"/app">) 
     <PortalShell subtitle={customer?.name ?? ""} nav={CUSTOMER_NAV}>
       {children}
       <TelegramMiniApp linked={Boolean(customer?.telegramId)} />
+      <Assistant role="CUSTOMER" />
     </PortalShell>
   );
 }

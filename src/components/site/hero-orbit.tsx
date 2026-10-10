@@ -5,9 +5,9 @@ import { MainCta } from "./main-cta";
 import { TossOrbit } from "./toss-orbit";
 
 // First screen. Complete without scrolling: a dot field, HUD labels in the corners, the headline, and the orbit
-// that shows how the basket, the two bots and the accounts connect. Deliberately still (no looping motion, no
-// entrance animation): it is the first thing every phone renders, and it stayed busy while people scrolled.
-// Server component; DotField (canvas) and TossOrbit (tap a part) are client islands.
+// that shows how the basket, the two bots and the accounts connect. The text and the dot field are still (no
+// entrance animation: it is the first thing every phone renders); only the orbit moves.
+// Server component; DotField (canvas) and TossOrbit are client islands.
 
 const LINES = [["Laundry", "that"], ["calls", "its", "own"]];
 

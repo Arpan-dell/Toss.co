@@ -404,22 +404,33 @@ html[data-theme] { background-color: var(--bg); }
 [data-theme="dark"] .area-map .leaflet-control-attribution { color: var(--text-muted); }
 [data-theme="dark"] .area-map .leaflet-control-attribution a { color: var(--text-secondary); }
 
-/* the pricing card's live dot */
+/* ---------- Toss orbit (hero): rings of text spin on the compositor ---------- */
+.orbit-ring {
+  animation: orbit-spin var(--orbit-dur, 60s) linear infinite;
+  animation-direction: var(--orbit-dir, normal);
+  will-change: transform;
+}
+@keyframes orbit-spin {
+  to { transform: rotate(360deg); }
+}
 .orbit-pulse { animation: orbit-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
 @keyframes orbit-pulse {
   from { transform: scale(0.9); opacity: 0.9; }
   to { transform: scale(1.9); opacity: 0; }
 }
+[data-paused] .orbit-ring,
+[data-paused] .orbit-pulse { animation-play-state: paused; }
 
 /* Phones: no endless decorative loops. Each one kept a layer repainting or recompositing every frame, and
-   together they made scrolling stutter on mid-range phones. One-off entrances and the logo strip still run. */
+   together they made scrolling stutter on mid-range phones. One-off entrances, the logo strip and the hero
+   orbit still run. */
 @media (max-width: 767px) {
-  .orbit-pulse, .hs-twinkle, .mg-orbit, .mg-orbit-rev, .mg-spin, .mg-bob, .float, .animate-pulse, .shimmer-text, .hs-radar,
+  .hs-twinkle, .mg-orbit, .mg-orbit-rev, .mg-spin, .mg-bob, .float, .animate-pulse, .shimmer-text, .hs-radar,
   .glow-loop { animation: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .orbit-pulse { animation: none; }
+  .orbit-ring, .orbit-pulse { animation: none; }
 }
 
 /* ---------- Glass sign-in: keep autofill from painting a solid box over the glass ---------- */

@@ -9,6 +9,9 @@ const PAGES: { path: string; priority: number; changeFrequency: MetadataRoute.Si
   { path: "/contact", priority: 0.6, changeFrequency: "monthly" },
   { path: "/privacy", priority: 0.3, changeFrequency: "yearly" },
   { path: "/terms", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/refund", priority: 0.3, changeFrequency: "yearly" },
+  { path: "/cookies", priority: 0.2, changeFrequency: "yearly" },
+  { path: "/data-deletion", priority: 0.2, changeFrequency: "yearly" },
 ];
 
 // No lastModified: it used to be "now" on every request, which told Google every page was brand new each time it

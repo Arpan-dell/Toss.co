@@ -7,8 +7,10 @@ export const SITE_URL = clean(process.env.SITE_URL ?? "https://tosslaundry.onlin
 export const APP_URL = clean(process.env.APP_URL ?? process.env.SITE_URL ?? "https://app.tosslaundry.online");
 
 export const SITE_NAME = "Toss Smart Laundry";
+// What Google shows under the result. About 155 characters so it isn't cut off, and no apostrophes: an old crawl
+// showed "it's" as a raw "&#39;".
 export const SITE_DESCRIPTION =
-  "Toss is a smart laundry basket that weighs your clothes and books a laundry pickup by itself when it's full. Find laundries that pick up near you in Delhi, compare price per kg, and pay by UPI.";
+  "Toss is a smart laundry basket that books its own pickup when full. A nearby driver collects your clothes, then you track it and pay by UPI. Now in Delhi.";
 
 // Paths that belong to the app host. Everything else (the website, /laundries, assets) stays on the main host;
 // /api answers on any host, because the basket and the bots post to whichever address they were set up with.

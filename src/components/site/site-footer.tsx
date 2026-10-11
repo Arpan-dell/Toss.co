@@ -1,3 +1,4 @@
+import { BUSINESS, businessDetails } from "@/lib/business";
 import { COMPANY_LINKS } from "./info-page";
 import { MainCta } from "./main-cta";
 import { Reveal } from "./reveal";
@@ -67,7 +68,9 @@ export function SiteFooter({ logo }: { logo: React.ReactNode }) {
           ))}
         </div>
         <div className="mt-16 flex flex-wrap justify-between gap-4 border-t border-ink/5 pt-6 text-xs text-muted">
-          <span>© 2026 Toss</span>
+          <span>
+            © 2026 {BUSINESS.legalName || BUSINESS.brand} · {businessDetails().filter(([k]) => k !== "Business").map(([, v]) => v).join(" · ")}
+          </span>
           <a href="#top" className="transition-colors hover:text-secondary">Back to top</a>
         </div>
       </div>

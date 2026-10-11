@@ -7,7 +7,7 @@ import { siteHref } from "@/lib/hosts";
 // generic one); the digest is the reference that matches the full details in the server logs.
 export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return (
-    <main className="mx-auto grid min-h-[60vh] w-full max-w-md place-items-center px-4 py-16">
+    <main id="main" tabIndex={-1} className="outline-none mx-auto grid min-h-[60vh] w-full max-w-md place-items-center px-4 py-16">
       <div className="w-full rounded-[10px] border border-t-2 border-border border-t-critical bg-surface-solid p-7">
         <p className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">Something went wrong</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">We couldn&apos;t load this page</h1>

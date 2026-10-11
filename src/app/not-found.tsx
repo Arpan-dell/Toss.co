@@ -3,7 +3,7 @@ import { siteHref } from "@/lib/hosts";
 
 export default function NotFound() {
   return (
-    <main className="mx-auto grid min-h-[60vh] w-full max-w-md place-items-center px-4 py-16">
+    <main id="main" tabIndex={-1} className="outline-none mx-auto grid min-h-[60vh] w-full max-w-md place-items-center px-4 py-16">
       <div className="w-full rounded-[10px] border border-t-2 border-border border-t-accent bg-surface-solid p-7">
         <p className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">404</p>
         <h1 className="mt-2 text-2xl font-bold tracking-tight">This page doesn&apos;t exist</h1>

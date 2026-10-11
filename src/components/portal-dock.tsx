@@ -22,6 +22,7 @@ import {
   Package,
   Receipt,
   Sliders,
+  ShieldCheck,
   Sparkle,
   Storefront,
   Truck,
@@ -55,6 +56,7 @@ const ICONS = {
   branches: TreeStructure,
   driverpay: Wallet,
   ratings: Star,
+  privacy: ShieldCheck,
 } satisfies Record<string, Icon>;
 
 // match: other pages that belong under this item (e.g. Settings is lit on every settings page)

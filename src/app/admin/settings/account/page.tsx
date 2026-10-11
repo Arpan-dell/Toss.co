@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { BackLink } from "@/components/back-link";
-import { ChangePasswordCard } from "@/components/change-password";
+import { ChangePasswordCard, YourDataCard } from "@/components/change-password";
 import { PasswordField } from "@/components/password-field";
 import { Card, PageTitle } from "@/components/ui";
 import { requestClosure } from "@/lib/actions/manager";
@@ -30,6 +30,7 @@ export default async function AccountSettings() {
       </Card>
 
       <ChangePasswordCard email={session.email} />
+      <YourDataCard />
 
       <Card title="Close your business">
         {tenant.closureRequestedAt ? (

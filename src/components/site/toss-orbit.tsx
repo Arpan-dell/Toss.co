@@ -237,7 +237,7 @@ export function TossOrbit({ className = "" }: { className?: string }) {
               />
             )}
           </span>
-          <span>{held ? "Paused" : "Live loop"}</span>
+          <span>{held ? "Paused" : "How a pickup flows"}</span>
         </div>
         <div className="relative mt-3 min-h-[5.5rem]">
           <AnimatePresence mode="wait" initial={false}>

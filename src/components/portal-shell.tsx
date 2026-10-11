@@ -32,7 +32,7 @@ export function PortalShell({ badge, subtitle, nav, children }: {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-32">{children}</main>
+      <main id="main" tabIndex={-1} className="outline-none mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-32">{children}</main>
       <PortalDock items={nav} />
     </div>
   );

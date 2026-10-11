@@ -12,6 +12,7 @@ const nav: PortalNavItem[] = [
   { href: "/owner/payments", label: "Subscription payments", icon: "subscriptions" },
   { href: "/owner/credits", label: "Basket credits", icon: "credits" },
   { href: "/owner/settings", label: "Plan & UPI", icon: "plan" },
+  { href: "/owner/privacy", label: "Privacy requests", icon: "privacy" },
 ];
 
 export default async function OwnerLayout({ children }: LayoutProps<"/owner">) {

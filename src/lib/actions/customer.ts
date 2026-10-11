@@ -68,6 +68,7 @@ export async function registerBusiness(_prev: FormState, formData: FormData): Pr
   if (customer?.tenantId) {
     return { error: "This account is a customer of a laundry. Use a separate email to register your own business." };
   }
+  if (formData.get("consent") !== "yes") return { error: "Tick the box to agree to the Terms and Privacy Policy." };
 
   const name = text(formData, "name");
   const upiId = text(formData, "upiId");

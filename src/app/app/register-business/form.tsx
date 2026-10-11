@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { registerBusiness } from "@/lib/actions/customer";
 
@@ -18,6 +19,20 @@ export function RegisterBusinessForm() {
       <Field label="Name shown in UPI apps (optional)">
         <input name="upiName" maxLength={50} placeholder="Same as business name" className={fieldClass} />
       </Field>
+      <label className="flex items-start gap-2.5 text-sm text-secondary">
+        <input type="checkbox" name="consent" value="yes" required className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]" />
+        <span>
+          I agree to the{" "}
+          <Link href="/terms" className="text-fg underline underline-offset-2">
+            Terms of Service
+          </Link>{" "}
+          (including the part for laundries) and will use customers&apos; details only to serve them, as the{" "}
+          <Link href="/privacy" className="text-fg underline underline-offset-2">
+            Privacy Policy
+          </Link>{" "}
+          explains.
+        </span>
+      </label>
     </ActionForm>
   );
 }

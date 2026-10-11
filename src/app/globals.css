@@ -441,3 +441,18 @@ html[data-theme] { background-color: var(--bg); }
   caret-color: var(--text);
   transition: background-color 600000s 0s;
 }
+
+/* ---------- Keyboard access ---------- */
+/* "Skip to content": hidden until focused, then the first thing on screen. */
+.skip-link {
+  position: fixed; left: 12px; top: -60px; z-index: 100;
+  padding: 10px 16px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-contrast); font-weight: 600; font-size: 14px;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 12px; }
+/* A clear focus ring on everything you can reach with Tab (mouse clicks don't show it). */
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

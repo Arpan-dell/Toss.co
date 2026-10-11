@@ -65,6 +65,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   if (!phone) return { error: "Enter a valid mobile number, like 98765 43210." };
   const weak = passwordError(password);
   if (weak) return { error: weak };
+  if (formData.get("consent") !== "yes") return { error: "Tick the box to agree to the Terms and Privacy Policy." };
   if (!(await allow("signUpIp", await clientIp()))) return { error: "Too many sign-ups from this network. Try again later." };
   if (await phoneTaken(phone)) return { error: "That mobile number already has a Toss account. Sign in instead." };
 

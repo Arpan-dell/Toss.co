@@ -131,11 +131,11 @@ function CustomerScene({ step }: { step: number }) {
       <div className="space-y-3 p-4">
         <p className="mg-rise text-sm font-semibold text-fg">Create your account</p>
         <div className="mg-rise rounded-xl border border-ink/10 bg-ink/[0.04] px-3 py-2 text-[11px] text-ink/80" style={{ animationDelay: "200ms" }}>
-          <p className="text-[9px] text-ink/40">Mobile number</p>
+          <p className="text-[9px] text-ink/60">Mobile number</p>
           <TypeLine text="+91 98765 43210" delay={500} />
         </div>
         <div className="mg-rise rounded-xl border border-ink/10 bg-ink/[0.04] px-3 py-2 text-[11px] text-ink/80" style={{ animationDelay: "350ms" }}>
-          <p className="text-[9px] text-ink/40">Your laundry&apos;s Business ID</p>
+          <p className="text-[9px] text-ink/60">Your laundry&apos;s Business ID</p>
           <TypeLine text="B-E2ZRFP" delay={1500} />
         </div>
         <div className="mg-pop flex items-center gap-2 rounded-xl bg-emerald-400/15 px-3 py-2 text-[11px] text-emerald-300" style={{ animationDelay: "2300ms" }}>
@@ -171,7 +171,7 @@ function CustomerScene({ step }: { step: number }) {
   if (step === 2)
     return (
       <div className="flex h-full flex-col gap-2 bg-[#0e1621] p-3">
-        <p className="mg-rise text-center text-[10px] text-ink/40">Toss Control · today</p>
+        <p className="mg-rise text-center text-[10px] text-ink/60">Toss Control · today</p>
         <Bubble delay={200}>🚚 <b>Pickup requested!</b><br />Order #104 · 5.0 kg</Bubble>
         <Bubble delay={900} accent>🙋 <b>Vikram</b> is on the way<br />ETA about 18 min</Bubble>
         <div className="mg-rise relative mt-1 h-24 overflow-hidden rounded-xl bg-[#13202c]" style={{ animationDelay: "1500ms" }}>
@@ -394,7 +394,7 @@ function ManagerScene({ step }: { step: number }) {
               <span key={i} data-p className="flex-1 rounded-t" style={{ height: `calc(${b}% * min(1, var(--p) * 1.3))`, background: i === 6 ? "#d95926" : "#3987e5", transition: "height 0.2s linear" }} />
             ))}
           </div>
-          <p className="mt-1.5 text-[9px] text-ink/40">Backtested accuracy 86%</p>
+          <p className="mt-1.5 text-[9px] text-ink/60">Forecast from your past pickups</p>
         </div>
         <div className="col-span-2 flex flex-col items-center justify-center gap-1 rounded-xl bg-ink/[0.04] p-3">
           <svg viewBox="0 0 80 80" className="size-16 -rotate-90">
@@ -464,7 +464,7 @@ const CHIPS: Record<Role, [Icon, string][][]> = {
     [[IdentificationBadge, "Business ID"], [Ticket, "Free trial"], [Users, "48 customers"]],
     [[Lightning, "Live updates"], [Truck, "Auto-assigned"], [Basket, "52 baskets"]],
     [[Coins, "96% collected"], [EnvelopeSimple, "Invoice emailed"], [Receipt, "UPI verified"]],
-    [[ChartLineUp, "86% accurate"], [Heartbeat, "Health 82"], [Warning, "₹18k at risk"]],
+    [[ChartLineUp, "7-day forecast"], [Heartbeat, "Health 82"], [Warning, "₹18k at risk"]],
     [[Rocket, "Autopilot"], [ShieldCheck, "Your limits"], [SunHorizon, "Every morning"]],
   ],
 };

@@ -18,7 +18,7 @@ export default async function RatePage({ params }: PageProps<"/rate/[token]">) {
   const t = o ? ((Array.isArray(o.tenants) ? o.tenants[0] : o.tenants) as { name?: string } | null) : null;
 
   return (
-    <main className="grid min-h-[100dvh] flex-1 place-items-center px-4 py-12">
+    <main id="main" tabIndex={-1} className="outline-none grid min-h-[100dvh] flex-1 place-items-center px-4 py-12">
       <div className="w-full max-w-sm">
         <Link href={siteHref("/")} aria-label="Toss home" className="mb-8 flex justify-center">
           <Logo className="h-10" />

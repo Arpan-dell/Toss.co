@@ -82,6 +82,19 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
         next={next}
         className="flex w-full items-center justify-center gap-2.5 rounded-full border border-ink/20 bg-ink/[0.06] px-4 py-3 text-sm font-medium text-fg shadow-[inset_0_1px_0_rgb(255_255_255/0.15)] backdrop-blur-md transition-colors hover:bg-ink/[0.1] disabled:opacity-70"
       />
+      {!signin && (
+        <p className="mt-2 text-center text-xs text-muted">
+          By continuing with Google you agree to the{" "}
+          <Link href="/terms" className="underline underline-offset-2 hover:text-fg">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-fg">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+      )}
       <div className="my-5 flex items-center gap-3" aria-hidden>
         <span className="h-px flex-1 bg-gradient-to-r from-transparent to-ink/25" />
         <span className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">or use email</span>
@@ -137,6 +150,22 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
           </button>
         </Field>
         {!signin && <PasswordChecklist value={pw} id="signup-pw-rules" />}
+        {!signin && (
+          <label className="flex items-start gap-2.5 pt-2 text-sm text-secondary">
+            <input type="checkbox" name="consent" value="yes" required className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]" />
+            <span>
+              I agree to the{" "}
+              <Link href="/terms" className="text-fg underline underline-offset-2">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-fg underline underline-offset-2">
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+        )}
 
         {signin && (
           <p className="pt-1 text-right text-xs">

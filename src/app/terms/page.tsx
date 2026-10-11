@@ -23,7 +23,7 @@ export default async function TermsPage() {
   const days = plan?.creditValidDays ?? 50;
   const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
   return (
-    <InfoPage kicker="Terms of Service" title="The rules, kept short." updated="10 October 2026">
+    <InfoPage kicker="Terms of Service" title="The rules, kept short." updated="11 October 2026">
       <p>
         These terms cover the Toss website, the Toss baskets, our Telegram bots and the platform laundries use (together, &ldquo;Toss&rdquo;).
         By using Toss you agree to them. Our <Link href="/privacy">Privacy Policy</Link> explains how we handle your data.
@@ -69,7 +69,8 @@ export default async function TermsPage() {
       <h2>The basket</h2>
       <p>
         Baskets are printed to order. Price, colour and delivery are confirmed with you before you pay. Power it from a normal USB-C charger,
-        keep it dry and don&apos;t stand on it. If it arrives faulty, tell us within 7 days and we&apos;ll fix or replace it.
+        keep it dry and don&apos;t stand on it. If it arrives faulty, tell us within 7 days and we&apos;ll fix or replace it. Refunds and
+        cancellations are covered by our <Link href="/refund">Refund Policy</Link>.
       </p>
 
       <h2 id="basket-credit" className="scroll-mt-28">Basket credit</h2>

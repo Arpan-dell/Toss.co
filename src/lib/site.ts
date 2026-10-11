@@ -14,7 +14,7 @@ export const SITE_DESCRIPTION =
 // /api answers on any host, because the basket and the bots post to whichever address they were set up with.
 const APP_PATHS = ["/app", "/admin", "/owner", "/login", "/auth", "/reset-password", "/invoice", "/r"];
 // The website's own pages, which the app host sends back to the main host.
-const SITE_PATHS = ["/about", "/contact", "/terms", "/privacy"];
+const SITE_PATHS = ["/about", "/contact", "/terms", "/privacy", "/refund", "/cookies", "/data-deletion", "/unsubscribe"];
 
 const under = (path: string, prefix: string) => path === prefix || path.startsWith(prefix + "/");
 export const isAppPath = (path: string) => APP_PATHS.some((p) => under(path, p));

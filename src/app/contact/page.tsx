@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BUSINESS, businessDetails } from "@/lib/business";
 import Link from "next/link";
 import { InfoPage } from "@/components/site/info-page";
 import { appHref } from "@/lib/hosts";
@@ -9,13 +10,15 @@ export const metadata: Metadata = {
   description: "Get in touch with Toss: baskets, laundries joining the platform, account help and privacy requests.",
 };
 
-const EMAIL = "toss.smartlaundry@gmail.com";
+const EMAIL = BUSINESS.email;
 
 const REASONS = [
   { title: "Buy a basket", body: "Pick a colour and leave your number and email. We'll reply about availability, price and delivery.", href: "/#buy", cta: "Ask about a basket" },
   { title: "Run a laundry", body: "Put your business on Toss: live pickups, drivers, weighing and UPI payments, and a listing in the directory.", href: appHref("/login"), cta: "Get started" },
   { title: "Account or order help", body: "Something wrong with a pickup, a weight or an invoice? Email us with your customer ID (shown on your dashboard).", href: `mailto:${EMAIL}?subject=Help%20with%20my%20account`, cta: "Email support" },
-  { title: "Privacy request", body: "Ask what we hold about you, or have it corrected or deleted.", href: `mailto:${EMAIL}?subject=Privacy%20request`, cta: "Send a request" },
+  { title: "Privacy request", body: "Ask what we hold about you, or have it corrected. To have it deleted, use the deletion form.", href: `mailto:${EMAIL}?subject=Privacy%20request`, cta: "Send a request" },
+  { title: "Delete my data", body: "Close your account and have your personal details deleted. We confirm within 30 days.", href: "/data-deletion", cta: "Request deletion" },
+  { title: "Refunds", body: "A faulty basket, a duplicate payment or a wash that went wrong: here's how refunds work.", href: "/refund", cta: "Refund policy" },
 ];
 
 export default function ContactPage() {
@@ -44,6 +47,24 @@ export default function ContactPage() {
       <p className="pt-2 text-sm">
         Drivers for a laundry on Toss work through the <a href="https://t.me/toss_driver_bot">driver bot on Telegram</a>. Customers with a
         basket control it from the Toss Control bot their basket was set up with.
+      </p>
+
+      <h2>Business details</h2>
+      <dl className="grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-[auto_1fr]">
+        {businessDetails().map(([k, v]) => (
+          <div key={k} className="contents">
+            <dt className="text-muted">{k}</dt>
+            <dd className="text-fg">{v}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <h2>Grievance officer</h2>
+      <p>
+        For complaints about your personal data or this service (under India&apos;s IT Rules and the Digital Personal Data Protection Act),
+        contact {BUSINESS.grievance.name ? <b>{BUSINESS.grievance.name}</b> : "our grievance officer"} at{" "}
+        <a href={`mailto:${BUSINESS.grievance.email}?subject=Grievance`}>{BUSINESS.grievance.email}</a>. We acknowledge within 2 working days
+        and resolve within {BUSINESS.grievance.replyDays} days.
       </p>
     </InfoPage>
   );

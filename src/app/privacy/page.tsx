@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { InfoPage } from "@/components/site/info-page";
+import { BUSINESS } from "@/lib/business";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
@@ -8,14 +9,15 @@ export const metadata: Metadata = {
   description: "What Toss collects, why, who it's shared with, and how to get it corrected or deleted.",
 };
 
-const EMAIL = "toss.smartlaundry@gmail.com";
+const EMAIL = BUSINESS.email;
 
 // Kept in step with the code: if a new field, service or cookie is added, update this page.
 export default function PrivacyPage() {
   return (
-    <InfoPage kicker="Privacy Policy" title="Your data, in plain words." updated="3 October 2026">
+    <InfoPage kicker="Privacy Policy" title="Your data, in plain words." updated="11 October 2026">
       <p>
-        Toss (&ldquo;we&rdquo;) runs this website, the Toss baskets and the Telegram bots that go with them. This page explains what we
+        {BUSINESS.legalName || BUSINESS.brand} (&ldquo;Toss&rdquo;, &ldquo;we&rdquo;), {BUSINESS.address || BUSINESS.city}, runs this website,
+        the Toss baskets and the Telegram bots that go with them. This page explains what we
         collect, why, and what you can ask us to do with it. If anything is unclear, email <a href={`mailto:${EMAIL}`}>{EMAIL}</a>.
       </p>
 
@@ -46,6 +48,14 @@ export default function PrivacyPage() {
           <b>Basket requests:</b> the name, phone, email, city and message you send when you ask about buying a basket.
         </li>
         <li>
+          <b>Questions to the assistant:</b> what you type into the in-app assistant, to answer it. The conversation stays in your browser tab
+          and is cleared when you close it; we don&apos;t keep it.
+        </li>
+        <li>
+          <b>Privacy and email choices:</b> requests you make to delete your data, and the email address and kind of email you unsubscribe
+          from, so we respect it.
+        </li>
+        <li>
           <b>Security records:</b> to stop abuse we count sign-in and form attempts. The network address used for this is stored only as a
           one-way hash, and each record is only a short running count.
         </li>
@@ -67,12 +77,25 @@ export default function PrivacyPage() {
           address and order for the job they accept.
         </li>
         <li>
-          <b>Services we run on:</b> Supabase (database and sign-in), Vercel (hosting), Google (sign-in with Google, and email delivery
-          through Gmail), Telegram (the bots) and OpenStreetMap (maps and turning addresses into map positions).
+          <b>Services we run on,</b> each getting only what it needs:
+          <ul>
+            <li>Supabase: stores the database and handles sign-in.</li>
+            <li>Vercel: hosts the website and the app, and sees your network address when you load a page.</li>
+            <li>Google: sign-in, only if you choose &ldquo;Continue with Google&rdquo;, and sending our emails through Gmail.</li>
+            <li>Telegram: runs the bots, and gets your messages to them.</li>
+            <li>
+              OpenStreetMap: shows maps, and turns a typed address or area into a map position, so that address text is sent to it.
+            </li>
+            <li>
+              Google Gemini (AI): writes a laundry&apos;s morning briefing from totals and customer codes, and helps the assistant understand
+              questions and give advice. It gets your typed question and counts and totals; never names, phone numbers, emails, addresses or
+              locations.
+            </li>
+          </ul>
         </li>
         <li>
-          <b>Toss AI</b> uses Google&apos;s Gemini to write a laundry&apos;s morning briefing. It is only ever sent totals and customer codes,
-          never names, phone numbers, emails or addresses.
+          <b>Where it&apos;s stored:</b> these services run on servers that may be outside India (our hosting runs in Singapore). They
+          protect the data under their own security and privacy terms.
         </li>
         <li>We may share data if the law requires it.</li>
       </ul>
@@ -80,16 +103,23 @@ export default function PrivacyPage() {
       <h2>Cookies and storage</h2>
       <p>
         We use only the cookies needed to keep you signed in. They can&apos;t be read by scripts on the page and are only sent over a secure
-        connection. Your browser also remembers your light or dark theme choice. There are no advertising or tracking cookies.
+        connection. Your browser also remembers your light or dark theme choice. There are no advertising, analytics or tracking cookies.
+        Every cookie and storage item is listed in the <Link href="/cookies">Cookie Policy</Link>.
       </p>
 
       <h2>How long we keep it</h2>
       <p>
-        We keep your account and order history while your account is open, because laundries need past orders and invoices. Password reset
-        links expire after a short time, and security counters only ever hold a short running count.
+        We keep your account and order history while your account is open, because laundries need past orders and invoices. When you ask
+        us to delete your data we do it within 30 days, except invoices, which are kept for as long as Indian tax law requires, with your
+        name removed where the law allows. Basket requests are deleted once they&apos;re dealt with. Password reset links expire after a
+        short time, and security counters only ever hold a short running count.
       </p>
 
-      <h2>Your choices</h2>
+      <h2>Your rights and choices</h2>
+      <p>
+        Under India&apos;s Digital Personal Data Protection Act you can ask what we hold about you, have it corrected or completed, have it
+        deleted, withdraw consent, name someone to act for you, and complain to us (and then to the Data Protection Board of India).
+      </p>
       <ul>
         <li>Change your phone number from your dashboard and your pickup address from the Toss Control bot.</li>
         <li>
@@ -97,6 +127,10 @@ export default function PrivacyPage() {
           from the address on your account. We&apos;ll reply within 30 days. A laundry may need to keep invoices it is legally required to
           keep.
         </li>
+        <li>
+          Have your account and data deleted with the <Link href="/data-deletion">Delete my data</Link> form.
+        </li>
+        <li>Stop optional emails (reminders and alerts) with the unsubscribe link at the bottom of any of them.</li>
         <li>
           Sharing your location is optional: you can type your area instead. To remove a saved location, unlink Telegram or change anything
           else, email us.
@@ -107,6 +141,13 @@ export default function PrivacyPage() {
       <p>
         Data travels over HTTPS, each laundry can only reach its own records, passwords are stored hashed by our sign-in provider, and secret
         keys never reach your browser. No system is perfect; if we ever learn of a breach that affects you, we&apos;ll tell you.
+      </p>
+
+      <h2>Grievance officer</h2>
+      <p>
+        Complaints about your data go to {BUSINESS.grievance.name ? <b>{BUSINESS.grievance.name}</b> : "our grievance officer"} at{" "}
+        <a href={`mailto:${BUSINESS.grievance.email}?subject=Grievance`}>{BUSINESS.grievance.email}</a>. We acknowledge within 2 working days
+        and resolve within {BUSINESS.grievance.replyDays} days. See <Link href="/contact">Contact</Link> for our business details.
       </p>
 
       <h2>Children</h2>

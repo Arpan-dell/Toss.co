@@ -40,7 +40,7 @@ ${o.paragraphs.map((p) => `<p style="margin:0 0 12px;font-size:15px;line-height:
 ${rows ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb">${rows}</table>` : ""}
 ${o.cta ? `<p style="margin:22px 0 4px"><a href="${o.cta.url}" style="display:inline-block;background:${accent};color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:12px 22px;border-radius:999px">${escapeHtml(o.cta.label)}</a></p>` : ""}
 </td></tr>
-<tr><td style="padding:16px 28px;background:#f9fafb;color:#9ca3af;font-size:12px">Toss · smart laundry pickups · <a href="${SITE}" style="color:#9ca3af">${SITE.replace(/^https?:\/\//, "")}</a></td></tr>
+<tr><td style="padding:16px 28px;background:#f9fafb;color:#9ca3af;font-size:12px">Toss · smart laundry pickups · <a href="${SITE}" style="color:#9ca3af">${SITE.replace(/^https?:\/\//, "")}</a><!--UNSUBSCRIBE--></td></tr>
 </table></td></tr></table></body></html>`;
   const strip = (s: string) => s.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
   const text = [
@@ -378,3 +378,27 @@ export const managerLateOrders = (p: { business: string; orders: { label: string
       tone: "warn",
     }),
   );
+
+// ---------- privacy: data deletion requests ----------
+export const ownerDeletionRequest = (r: { email: string; name?: string; role: string; details?: string; id: number }) =>
+  mail(`Data deletion request #${r.id}: ${r.email}`, layout({
+    preheader: `${r.email} asked for their data to be deleted.`,
+    heading: "Someone asked for their data to be deleted",
+    paragraphs: [
+      "Reply within 30 days. Delete or anonymise their personal details; invoices the law requires you to keep can stay, with a note of why.",
+    ],
+    rows: [["Request", `#${r.id}`], ["Email", r.email], ["Name", r.name || "—"], ["Account", r.role], ["Details", r.details || "—"]],
+    cta: { label: "Open privacy requests", url: `${APP}/owner/privacy` },
+    tone: "warn",
+  }));
+
+export const deletionRequestReceived = (r: { id: number }) =>
+  mail("We got your data deletion request", layout({
+    preheader: "We'll confirm when it's done, within 30 days.",
+    heading: "We got your request",
+    paragraphs: [
+      `Your request to delete your data is number <b>#${r.id}</b>. We'll check it's really you, then delete your personal details and confirm by email within 30 days.`,
+      "Invoices a laundry must keep by law stay on record, with your name removed where the law allows.",
+      "Didn't ask for this? Reply to this email and we'll stop.",
+    ],
+  }));

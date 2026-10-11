@@ -310,7 +310,7 @@ async function perform(a: Row, ctx: Context): Promise<{ ok: boolean; result: str
       const viaBot = who.telegram
         ? await tellCustomer(who.telegram, `🧾 <b>Friendly reminder</b>\n━━━━━━━━━━━━━━\nPickup #${o.device_order_id} from ${business}: <b>₹${amount}</b> is due.${note}\n\nTap <b>📱 Open Toss</b> to pay by UPI in seconds.`)
         : false;
-      const viaEmail = await sendEmail(who.email, customerPaymentReminder({ business: ctx.tenant.name as string, name: who.name, orderNo: Number(o.device_order_id), amount, note: p.message ? String(p.message) : undefined }));
+      const viaEmail = await sendEmail(who.email, customerPaymentReminder({ business: ctx.tenant.name as string, name: who.name, orderNo: Number(o.device_order_id), amount, note: p.message ? String(p.message) : undefined }), { category: "reminders" });
       return viaBot || viaEmail ? { ok: true, result: `Reminded ${who.code} about ₹${amount}${viaBot ? " in Toss Control" : ""}${viaEmail ? `${viaBot ? " and" : ""} by email` : ""}.` } : { ok: false, result: "Couldn't reach the customer." };
     }
     case "basket_nudge": {

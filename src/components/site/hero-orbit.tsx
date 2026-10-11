@@ -26,7 +26,7 @@ export function HeroOrbit() {
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-24 z-10 mx-auto hidden max-w-7xl justify-between px-4 font-mono text-[11px] tracking-[0.16em] text-muted uppercase sm:flex sm:px-6 lg:px-8">
         <span>Toss · Smart laundry · New Delhi</span>
         <span className="flex items-center gap-2">
-          <span className="size-1.5 rounded-full bg-accent" /> Live · basket 04 · 5.8 / 6.0 kg
+          <span className="size-1.5 rounded-full bg-accent" /> Example · a basket at 5.8 / 6.0 kg
         </span>
       </div>
 

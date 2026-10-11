@@ -18,7 +18,7 @@ const NOTICES: Record<string, string> = {
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
   const { notice, next } = await searchParams;
   return (
-    <main className="relative isolate grid min-h-[100dvh] flex-1 place-items-center px-4 py-10">
+    <main id="main" tabIndex={-1} className="outline-none relative isolate grid min-h-[100dvh] flex-1 place-items-center px-4 py-10">
       <LoginBackdrop />
       <AuthForm
         notice={typeof notice === "string" ? NOTICES[notice] : undefined}

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Outfit } from "next/font/google";
 import { Effects } from "@/components/effects";
+import { CookieNotice } from "@/components/cookie-notice";
 import { themeInitScript } from "@/components/theme-toggle";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -43,7 +44,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             loaded during hydration are appended to <head>, and React then finds nodes it didn't render there. */}
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <Effects />
+        {/* keyboard and screen-reader users jump straight past the navigation */}
+        <a href="#main" className="skip-link">
+          Skip to content
+        </a>
         {children}
+        <CookieNotice />
       </body>
     </html>
   );

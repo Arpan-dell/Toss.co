@@ -85,7 +85,7 @@ export default async function LaundriesPage() {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-24">{content}</main>
+      <main id="main" tabIndex={-1} className="outline-none mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-24">{content}</main>
       <SiteDock page="laundries" />
       <TelegramMiniApp linked />
     </div>

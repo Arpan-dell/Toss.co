@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Forgot password", robots: { index: f
 
 export default function ForgotPasswordPage() {
   return (
-    <main className="grid flex-1 place-items-center px-4 py-12">
+    <main id="main" tabIndex={-1} className="outline-none grid flex-1 place-items-center px-4 py-12">
       <div className="w-full max-w-sm">
         <Link href={siteHref("/")} className="mb-8 flex justify-center">
           <Logo variant="full" className="h-28" />

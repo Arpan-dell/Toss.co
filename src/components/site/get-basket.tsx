@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { requestBasket } from "@/lib/actions/basket";
 import type { FormState } from "@/lib/actions/shared";
 import { BASKET_COLORS, colorOf } from "./basket-colors";
@@ -64,12 +65,12 @@ export function GetBasket() {
               </div>
               <div>
                 <label htmlFor="br-email" className={label}>
-                  Email <span className="text-critical">*</span>
+                  Email <span className="font-normal text-muted">(optional)</span>
                 </label>
-                <input id="br-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" required maxLength={254} enterKeyHint="next" className={field} />
+                <input id="br-email" name="email" type="email" autoComplete="email" placeholder="you@example.com" maxLength={254} enterKeyHint="next" className={field} />
               </div>
             </div>
-            <p className="-mt-3 text-xs text-muted">We&apos;ll call you about availability and email you a confirmation.</p>
+            <p className="-mt-3 text-xs text-muted">We&apos;ll call you about availability, and email a confirmation if you add your email.</p>
             <div className="grid gap-5 sm:grid-cols-[1fr_8rem]">
               <div>
                 <label htmlFor="br-city" className={label}>
@@ -96,6 +97,16 @@ export function GetBasket() {
               </label>
               <textarea id="br-msg" name="message" rows={3} maxLength={500} className={field} placeholder="For a laundry business, a PG, a hostel…" />
             </div>
+            <label className="flex items-start gap-2.5 text-sm text-secondary">
+              <input type="checkbox" name="consent" value="yes" required className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]" />
+              <span>
+                Toss may use these details to contact me about this request, as set out in the{" "}
+                <Link href="/privacy" className="text-accent underline-offset-4 hover:underline">
+                  Privacy Policy
+                </Link>
+                . Nothing else, no marketing.
+              </span>
+            </label>
             {/* honeypot: hidden from people, irresistible to bots */}
             <div aria-hidden className="absolute -left-[9999px] h-px w-px overflow-hidden">
               <label htmlFor="br-company">Company</label>

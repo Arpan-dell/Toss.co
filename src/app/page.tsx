@@ -58,7 +58,7 @@ export default async function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }} />
       <SiteNav logo={<Logo className="h-9" />} />
 
-      <main className="flex-1">
+      <main id="main" tabIndex={-1} className="outline-none flex-1">
         <HeroOrbit />
 
         <Suspense><WorksWith /></Suspense>
@@ -109,6 +109,7 @@ export default async function Home() {
           </div>
           <Reveal delay={0.1}>
             <Suspense><InsideGallery /></Suspense>
+            <p className="mt-3 text-xs text-muted">Real Toss screens, shown with a demo laundry&apos;s data.</p>
           </Reveal>
         </section>
 

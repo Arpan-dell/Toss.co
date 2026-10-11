@@ -126,7 +126,7 @@ export async function runPlanReminders(): Promise<{ sent: number }> {
         monthlyPrice: ((b.parent_tenant_id ? ps?.branch_price : ps?.monthly_price) as number) ?? 0,
         bestDiscount: Math.max((ps?.discount_3m as number) ?? 0, (ps?.discount_6m as number) ?? 0, (ps?.discount_12m as number) ?? 0),
       }),
-      { replyTo: ownerEmail() },
+      { replyTo: ownerEmail(), category: "reminders" },
     );
     if (r.daysLeft <= 0) await sendEmail(ownerEmail(), t.ownerBusinessLapsed({ name: b.name, joinCode: b.join_code, managerEmail: manager ?? "—", wasTrial: r.kind === "TRIAL" }));
     if (ok) {
@@ -161,6 +161,7 @@ export async function runLowStockAlerts(): Promise<{ sent: number }> {
             : undefined,
         })),
       }),
+      { category: "alerts" },
     );
     if (ok) {
       sent++;
@@ -199,6 +200,7 @@ export async function runLateAlerts(): Promise<{ sent: number }> {
           return { label: `${String(o.device_id).slice(-5).replace(":", "")}-#${o.device_order_id}`, late: h >= 48 ? `late by ${Math.round(h / 24)} days` : `late by ${h} h` };
         }),
       }),
+      { category: "alerts" },
     );
     if (ok) sent++;
   }

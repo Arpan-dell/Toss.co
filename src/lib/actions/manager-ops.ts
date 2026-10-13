@@ -121,12 +121,17 @@ export async function updateBasket(_prev: FormState, formData: FormData): Promis
 // (use Remind driver for that), so a driver isn't sent the same pickup two or three times. The previous driver's
 // messages about it are deleted from their chat, with a one-line note, so they don't go anyway.
 async function setPickupDriver(formData: FormData): Promise<"same" | "assigned" | "removed"> {
-  await requireManager();
+  const session = await requireManager();
   const chatId = text(formData, "driverChatId");
   const supabase = await createClient();
   const orderId = text(formData, "orderId");
   const { data: order } = await supabase.from("orders").select("status, accepted_at, driver_id, device_order_id").eq("id", orderId).maybeSingle();
   if (!order) throw new Error("Order not found in your business");
+  // only this business's own drivers: a forged form must not send a pickup to another laundry's driver
+  if (chatId) {
+    const { data: driver } = await supabaseAdmin().from("drivers").select("id").eq("tenant_id", session.tenantId!).eq("telegram_chat_id", chatId).maybeSingle();
+    if (!driver) throw new Error("That driver isn't in your fleet.");
+  }
   const previous = (order.driver_id as string | null) ?? null;
   if ((chatId || null) === previous) return chatId ? "same" : "removed";
   const patch: Record<string, unknown> = { driver_id: chatId || null };

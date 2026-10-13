@@ -16,7 +16,7 @@ export default async function OwnerCredits() {
   const kgToUse = s.creditPerKg > 0 ? Math.ceil(s.basketCredit / s.creditPerKg) : null;
 
   return (
-    <div className="stagger max-w-3xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-3xl space-y-6">
       <PageTitle kicker="Toss baskets">Basket credits</PageTitle>
 
       <Card title="Add credit for a sold basket">

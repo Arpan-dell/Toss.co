@@ -13,7 +13,7 @@ export default async function OwnerSettings() {
   const session = await requireRole("OWNER");
   const s = await getPlatformSettings();
   return (
-    <div className="stagger max-w-xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-xl space-y-6">
       <PageTitle kicker="Toss platform">Plan &amp; UPI</PageTitle>
       <Card title="Subscription for laundry businesses">
         <ActionForm action={updatePlatformSettings} submitLabel="Save settings">

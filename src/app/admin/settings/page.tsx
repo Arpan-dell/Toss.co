@@ -61,7 +61,7 @@ export default async function Settings() {
   const pro = tier?.tier === "PRO";
 
   return (
-    <div className="stagger max-w-4xl space-y-8">
+    <div className="stagger mx-auto w-full max-w-4xl space-y-8">
       <PageTitle kicker="Set up once, check now and then">Settings</PageTitle>
       {GROUPS.map((g) => (
         <section key={g.title} className="space-y-3">

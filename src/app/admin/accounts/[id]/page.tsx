@@ -42,7 +42,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
       : undefined;
 
   return (
-    <div className="stagger max-w-5xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-5xl space-y-6">
       <PageTitle kicker={`Business account · ${account.id}`}>{account.name}</PageTitle>
       <Link href="/admin/accounts" className="text-sm text-accent hover:text-accent-2">
         ← All accounts

@@ -19,7 +19,7 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
   const mine = customers.filter((c) => c.tenantId === tenant.id);
 
   return (
-    <div className="stagger max-w-3xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-3xl space-y-6">
       <PageTitle kicker="Your business">{tenant.name}</PageTitle>
       <BackLink />
 

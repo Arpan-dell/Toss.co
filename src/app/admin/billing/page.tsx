@@ -52,7 +52,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
   const badge = STATE_BADGE[plan.state];
 
   return (
-    <div className="stagger max-w-3xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-3xl space-y-6">
       <PageTitle kicker="Toss subscription">Billing</PageTitle>
 
       <Card title="Your plan" action={<Badge tone={badge.tone} icon="●">{badge.label}</Badge>}>

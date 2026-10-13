@@ -11,7 +11,7 @@ export default async function RegisterBusiness() {
   const [customer, platform] = await Promise.all([getCustomer(session.userId), getPlatformSettings()]);
 
   return (
-    <div className="stagger max-w-xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-xl space-y-6">
       <PageTitle kicker="For laundry businesses">Register your business</PageTitle>
       <Card>
         {customer?.tenantId ? (

@@ -23,7 +23,7 @@ export default async function PrivacyRequests() {
     return days < 0 ? `${-days} days overdue` : `${days} days left`;
   };
   return (
-    <div className="stagger max-w-3xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-3xl space-y-6">
       <PageTitle kicker="Privacy">Data deletion requests</PageTitle>
       <Card title={`Open (${open.length})`}>
         {open.length === 0 ? (

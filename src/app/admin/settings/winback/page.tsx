@@ -19,7 +19,7 @@ export default async function Winback() {
   const offers = await getOfferStats(tenant.id);
 
   return (
-    <div className="stagger max-w-3xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-3xl space-y-6">
       <PageTitle kicker={pro ? "Settings" : "Settings · Pro"}>Win-back offers</PageTitle>
       <BackLink />
 

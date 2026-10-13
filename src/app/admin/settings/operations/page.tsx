@@ -20,7 +20,7 @@ export default async function Operations() {
   const pro = tierOf(planState(tenant).state) === "PRO";
 
   return (
-    <div className="stagger max-w-3xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-3xl space-y-6">
       <PageTitle kicker="Settings">How you work</PageTitle>
       <BackLink />
 

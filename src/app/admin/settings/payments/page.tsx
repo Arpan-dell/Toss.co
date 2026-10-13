@@ -16,7 +16,7 @@ export default async function PaymentsSettings() {
   if (!tenant) return <Card>This manager account isn&apos;t linked to a business.</Card>;
 
   return (
-    <div className="stagger max-w-2xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-2xl space-y-6">
       <PageTitle kicker="Settings · protected">Price &amp; UPI</PageTitle>
       <BackLink />
       <Card title="What customers pay, and where it goes">

@@ -64,7 +64,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
   const gap = order.weighedKg != null ? weightGapPct(order.reportedWeightKg ?? order.weightKg, order.weighedKg) : null;
 
   return (
-    <div className="stagger max-w-4xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-4xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageTitle kicker={`Order ${orderLabel(order)}`}>{formatINR(order.amountDue)}</PageTitle>
         <div className="flex gap-2">

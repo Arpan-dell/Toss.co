@@ -40,7 +40,7 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
   const telegramReady = getTelegramOidcConfig() !== null;
 
   return (
-    <div className="stagger max-w-2xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-2xl space-y-6">
       <PageTitle kicker="Account">Settings</PageTitle>
 
       {result && (

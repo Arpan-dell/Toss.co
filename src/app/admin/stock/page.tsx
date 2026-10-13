@@ -79,7 +79,7 @@ export default async function Stock() {
   };
 
   return (
-    <div className="stagger max-w-4xl space-y-6">
+    <div className="stagger mx-auto w-full max-w-4xl space-y-6">
       <PageTitle kicker="Pro">Supplies</PageTitle>
 
       <Card title="Stock">

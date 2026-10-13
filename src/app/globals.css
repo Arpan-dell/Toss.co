@@ -456,3 +456,23 @@ html[data-theme] { background-color: var(--bg); }
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* ---------- Phone layout ---------- */
+/* Nothing may make a page wider than the screen: on iPhones, Safari shrinks the whole page to fit the widest
+   element, which leaves an empty strip down the right side. Wide tables scroll inside their own boxes instead. */
+html, body { overflow-x: clip; }
+
+/* The portal's side menu on phones (components/portal-menu.tsx): slides in from the right over a dimmed page. */
+html:has(dialog.portal-menu[open]) { overflow: hidden; }
+dialog.portal-menu {
+  translate: 100% 0;
+  transition: translate 0.28s cubic-bezier(0.32, 0.72, 0, 1), overlay 0.28s allow-discrete, display 0.28s allow-discrete;
+}
+dialog.portal-menu[open] { translate: 0 0; }
+@starting-style { dialog.portal-menu[open] { translate: 100% 0; } }
+dialog.portal-menu::backdrop { opacity: 0; transition: opacity 0.28s, overlay 0.28s allow-discrete, display 0.28s allow-discrete; }
+dialog.portal-menu[open]::backdrop { opacity: 1; }
+@starting-style { dialog.portal-menu[open]::backdrop { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  dialog.portal-menu, dialog.portal-menu::backdrop { transition: none; }
+}

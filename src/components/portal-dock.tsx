@@ -32,7 +32,7 @@ import {
 import { Dock, DockIcon, DockItem, DockLabel } from "@/components/core/dock";
 
 // Layouts are Server Components and can't pass icon components across, so nav items name their icon.
-const ICONS = {
+export const NAV_ICONS = {
   live: Broadcast,
   ai: Sparkle,
   payments: CurrencyInr,
@@ -60,21 +60,26 @@ const ICONS = {
 } satisfies Record<string, Icon>;
 
 // match: other pages that belong under this item (e.g. Settings is lit on every settings page)
-export type PortalNavItem = { href: string; label: string; icon: keyof typeof ICONS; match?: string[] };
+export type PortalNavItem = { href: string; label: string; icon: keyof typeof NAV_ICONS; match?: string[] };
 
-// The dashboards' main navigation, as a magnifying dock pinned to the bottom of the screen.
+// The portal root (/app, /admin) only matches exactly; sub-pages match by prefix.
+export function isNavItemOn(item: PortalNavItem, items: PortalNavItem[], pathname: string) {
+  return item.href === items[0]?.href
+    ? pathname === item.href
+    : pathname.startsWith(item.href) || !!item.match?.some((m) => pathname.startsWith(m));
+}
+
+// The dashboards' main navigation on tablets and computers, as a magnifying dock pinned to the bottom of the
+// screen. Phones get the side menu instead (portal-menu.tsx).
 export function PortalDock({ items }: { items: PortalNavItem[] }) {
   const pathname = usePathname();
   const router = useRouter();
-  // The portal root (/app, /admin) only matches exactly; sub-pages match by prefix.
-  const rootHref = items[0]?.href;
   return (
-    <nav aria-label="Dashboard" className="fixed bottom-3 left-1/2 z-40 max-w-full -translate-x-1/2">
+    <nav aria-label="Dashboard" className="fixed bottom-3 left-1/2 z-40 hidden max-w-[calc(100vw-1.5rem)] -translate-x-1/2 md:block">
       <Dock className="items-end rounded-2xl border border-ink/15 bg-surface-solid/95 pb-2.5 shadow-[0_20px_50px_-15px_rgb(0_0_0/0.8),inset_0_1px_0_rgb(255_255_255/0.08)] light:shadow-[0_2px_4px_rgb(11_20_48/0.06),0_20px_44px_-14px_rgb(11_20_48/0.4)]">
         {items.map((item) => {
-          const on =
-            item.href === rootHref ? pathname === item.href : pathname.startsWith(item.href) || !!item.match?.some((m) => pathname.startsWith(m));
-          const Glyph = ICONS[item.icon];
+          const on = isNavItemOn(item, items, pathname);
+          const Glyph = NAV_ICONS[item.icon];
           return (
             <DockItem
               key={item.href}

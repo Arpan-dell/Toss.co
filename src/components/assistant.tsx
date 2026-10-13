@@ -122,7 +122,7 @@ export function Assistant({ role }: { role: AssistantRole }) {
         aria-expanded={open}
         aria-controls="toss-assistant"
         aria-label={open ? "Close the assistant" : "Ask the Toss assistant"}
-        className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+6.5rem)] z-50 grid size-14 place-items-center rounded-full bg-accent text-accent-contrast shadow-[0_12px_32px_-8px_rgb(var(--accent-rgb)/0.7)] transition-transform hover:scale-105 active:scale-95 sm:right-6 sm:bottom-6"
+        className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] z-50 grid size-14 place-items-center rounded-full bg-accent text-accent-contrast shadow-[0_12px_32px_-8px_rgb(var(--accent-rgb)/0.7)] transition-transform hover:scale-105 active:scale-95 sm:right-6 sm:bottom-6"
       >
         {open ? <X size={24} weight="bold" /> : <Robot size={28} weight="fill" />}
       </button>
@@ -132,7 +132,7 @@ export function Assistant({ role }: { role: AssistantRole }) {
           id="toss-assistant"
           role="dialog"
           aria-label="Toss assistant"
-          className="fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+11rem)] z-50 flex h-[min(34rem,calc(100dvh-13rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-solid shadow-[0_30px_80px_-20px_rgb(0_0_0/0.55)] sm:inset-x-auto sm:right-6 sm:bottom-24 sm:h-[min(38rem,calc(100dvh-8rem))] sm:w-[24rem]"
+          className="fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-50 flex h-[min(36rem,calc(100dvh-8rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-solid shadow-[0_30px_80px_-20px_rgb(0_0_0/0.55)] sm:inset-x-auto sm:right-6 sm:bottom-24 sm:h-[min(38rem,calc(100dvh-8rem))] sm:w-[24rem]"
         >
           <header className="flex items-center gap-3 border-b border-border px-4 py-3">
             <span className="grid size-9 place-items-center rounded-full bg-accent/15 text-accent">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PortalDock, type PortalNavItem } from "./portal-dock";
+import { PortalMenu } from "./portal-menu";
 import { ThemeToggle } from "./theme-toggle";
 import { Logo } from "./ui";
 import { signOut } from "@/app/login/actions";
@@ -23,16 +24,18 @@ export function PortalShell({ badge, subtitle, nav, children }: {
               </span>
             )}
           </Link>
-          <div className="ml-auto flex items-center gap-3 text-sm">
+          <div className="ml-auto flex items-center gap-2 text-sm sm:gap-3">
             <span className="hidden text-muted sm:inline">{subtitle}</span>
             <ThemeToggle className="size-9" />
-            <form action={signOut}>
+            {/* on phones, Sign out lives in the side menu */}
+            <form action={signOut} className="hidden md:block">
               <button className="btn-ghost rounded-full px-3.5 py-1.5 text-secondary">Sign out</button>
             </form>
+            <PortalMenu items={nav} title={subtitle} />
           </div>
         </div>
       </header>
-      <main id="main" tabIndex={-1} className="outline-none mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-32">{children}</main>
+      <main id="main" tabIndex={-1} className="outline-none mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-28 md:pb-32">{children}</main>
       <PortalDock items={nav} />
     </div>
   );

@@ -92,6 +92,12 @@ export const notifySuspension = (tenantId: string, suspended: boolean) =>
     if (b) await sendEmail(await managerEmail(b.manager_id), t.managerSuspended({ business: b.name, suspended }), { replyTo: ownerEmail() });
   });
 
+export const notifyTrialChanged = (tenantId: string, until: string, ended: boolean) =>
+  safely("trial change", async () => {
+    const b = await tenant(tenantId);
+    if (b) await sendEmail(await managerEmail(b.manager_id), t.managerTrialChanged({ business: b.name, until, ended }), { replyTo: ownerEmail() });
+  });
+
 export const notifyClosureRequested = (tenantId: string, reason: string) =>
   safely("closure request", async () => {
     const b = await tenant(tenantId);

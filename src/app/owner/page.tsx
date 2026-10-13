@@ -9,6 +9,7 @@ import { requireRole } from "@/lib/session";
 import { OptimisticForm } from "@/components/optimistic";
 import { formatPhone } from "@/lib/phone";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
+import { TrialControls } from "./trial-controls";
 
 export const metadata: Metadata = { title: "Businesses" };
 
@@ -57,7 +58,7 @@ export default async function OwnerHome() {
           <EmptyState>No businesses yet. They appear here when someone registers one.</EmptyState>
         ) : (
           <div className="-mx-5 overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] tracking-[0.12em] text-muted uppercase">
                   <th className="px-5 py-2 font-medium">Business</th>
@@ -73,7 +74,7 @@ export default async function OwnerHome() {
                   <tr key={t.id} className="border-b border-border transition-colors last:border-0 hover:bg-ink/[0.03]">
                     <td className="px-5 py-2.5">
                       <p className="font-medium">{t.name}</p>
-                      <p className="font-mono text-xs text-muted">{t.joinCode}</p>
+                      <p className="font-mono text-xs whitespace-nowrap text-muted">{t.joinCode}</p>
                       {t.closureRequestedAt && (
                         <p className="mt-1 text-xs text-warn" title={t.closureReason ?? undefined}>
                           Asked to be removed{t.closureReason ? `: “${t.closureReason}”` : ""}
@@ -86,6 +87,10 @@ export default async function OwnerHome() {
                     <td className="px-3 py-2.5">
                       <Badge tone={BADGE[plan.state].tone} icon="●">{BADGE[plan.state].label}</Badge>
                       {plan.until && <span className="ml-2 text-xs text-muted">until {formatDate(plan.until)}</span>}
+                      {/* a paid plan or a suspension isn't changed by trial days, so only trials and lapsed ones get these */}
+                      {(plan.state === "TRIAL" || plan.state === "EXPIRED") && (
+                        <TrialControls tenantId={t.id} business={t.name} onTrial={plan.state === "TRIAL"} />
+                      )}
                     </td>
                     <td className="px-5 py-2.5 text-right">
                       <OptimisticForm action={setBusinessSuspended} done={plan.state === "SUSPENDED" ? "Reactivated" : "Suspended"}>

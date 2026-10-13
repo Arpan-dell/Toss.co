@@ -69,7 +69,7 @@ const TOOLS: Record<AssistantRole, string> = {
 function tidy(q: string): string {
   const t = q.trim().replace(/\s+/g, " ");
   const s = t.charAt(0).toUpperCase() + t.slice(1);
-  return /[?.!]$/.test(s) ? s : /^(where|what|how|who|when|which|is|are|do|does|can|show|tell)/i.test(s) ? `${s}?` : s;
+  return /[?.!]$/.test(s) ? s : /^(where|what|how|who|when|which|is|are|do|does|can|show|tell)\b/i.test(s) ? `${s}?` : s;
 }
 
 async function aiRoute(text: string, history: Turn[], role: AssistantRole): Promise<{ intent: Intent | null; rephrased?: string } | null> {

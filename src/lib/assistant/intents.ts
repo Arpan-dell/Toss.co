@@ -19,7 +19,8 @@ export type Intent =
   | { tool: "credit" }
   | { tool: "help"; question: string }
   | { tool: "analyze"; question: string }
-  | { tool: "money"; period: Period };
+  | { tool: "money"; period: Period }
+  | { tool: "trial"; op: "extend" | "end"; business: string; days?: number; confirmed?: boolean };
 
 /** A span of time in plain words: "today", "this week" (since Monday), "last month", "last 10 days". */
 export type Period = { key: "today" | "yesterday" | "week" | "lastweek" | "month" | "lastmonth" | "days"; days?: number };
@@ -113,6 +114,12 @@ export function matchIntent(raw: string, role: AssistantRole): Intent | null {
   // password (the browser normally catches this first, so the password itself never travels)
   if (isPasswordRequest(raw)) return { tool: "password", newPassword: newPasswordFrom(raw) };
 
+  // owner: "extend Fresh's trial by 10 days", "end the trial for B-E2ZRFP"
+  if (role === "OWNER") {
+    const trial = trialIntent(t);
+    if (trial) return trial;
+  }
+
   // date and time
   if (has(t, /\b(what|which|tell me)\b.*\b(date|day|time)\b/, /^(date|time|today'?s date)( today| now)?$/, /\bwhat day is (it|today)\b/) && !has(t, /\b(pickup|order|delivery|ready)\b/)) return { tool: "now" };
 
@@ -160,6 +167,31 @@ export function matchIntent(raw: string, role: AssistantRole): Intent | null {
   return null;
 }
 
+// ---------- owner: change a business's free trial ----------
+const TRIAL_FILLER =
+  /\b(?:yes|confirm|please|now|immediately|right away|today|the|a|an|free|trials?|period|for|of|to|by|on|end|stop|cancel|finish|close|expire|terminate|extend|increase|add|give|lengthen|more|longer|prolong|its|their|business|laundry|it|days?|weeks?|months?)\b/g;
+
+/** "extend Fresh's trial by 2 weeks" → extend Fresh by 14 days; "yes, end the trial for Fresh (B-E2ZRFP)" → end, confirmed. */
+export function trialIntent(t: string): Intent | null {
+  if (!/\btrials?\b/.test(t) || /^(how|why|what|when|can|should|does|do|is|will)\b/.test(t)) return null;
+  const end = /\b(end|stop|cancel|finish|close|expire|terminate)\b/.test(t);
+  const extend = /\b(extend|increase|add|give|lengthen|more|longer|prolong)\b/.test(t);
+  if (end === extend) return null; // neither, or both: not a clear command
+  const n = t.match(/\b(\d{1,3})\s*(days?|weeks?|months?)\b/);
+  const days = n ? Number(n[1]) * (n[2].startsWith("week") ? 7 : n[2].startsWith("month") ? 30 : 1) : 7;
+  const code = t.match(/\bb-[a-z0-9]{6}\b/)?.[0];
+  const business =
+    code ??
+    t
+      .replace(/\b\d{1,3}\s*(?:days?|weeks?|months?)\b/g, " ")
+      .replace(/'s\b/g, " ")
+      .replace(TRIAL_FILLER, " ")
+      .replace(/[^a-z0-9 &-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  return end ? { tool: "trial", op: "end", business, confirmed: /^(yes|confirm)\b/.test(t) } : { tool: "trial", op: "extend", business, days };
+}
+
 // ---------- "Did you mean": spelling, Hinglish, suggestions ----------
 // Many laundry managers type in Hinglish or quick, misspelt English. Before giving up on a message, the router
 // rewrites common Hinglish phrasings into plain English and fixes typos against the words the assistant knows
@@ -171,7 +203,7 @@ const VOCAB = [
   "today", "attention", "problems", "issues", "basket", "credit", "balance", "full", "weight", "active", "recent",
   "delivery", "deliveries", "waiting", "open", "settings", "profit", "fleet", "customers", "supplies", "stock",
   "billing", "branches", "ratings", "analytics", "business", "overview", "owe", "show", "status", "available",
-  "online", "report", "platform", "subscription", "credits", "history", "account", "everything", "please", "about",
+  "online", "report", "platform", "subscription", "trial", "extend", "end", "credits", "history", "account", "everything", "please", "about",
   "bills", "dues", "outstanding", "current", "latest", "right", "what", "needs", "tell", "with", "from", "have",
   "much", "many", "list", "all", "now", "how", "my", "is", "are", "the", "to", "me",
 ];
@@ -190,6 +222,9 @@ const HINGLISH: [RegExp, string][] = [
   [/\b(?:kya|kyaa)\s+(?:problem|dikkat|gadbad|issue)\b|\b(?:problem|dikkat|gadbad)\s+(?:kya|kaun)\b/, "what needs attention"],
   [/\b(?:mera|meri|mere)\s+(?:basket|tokri)\s+(?:kitna|kitni|kitne)\s+(?:bhara|bhari|full)\b/, "how full is my basket"],
   [/\b(?:order|pickup)\s+(?:dikha do|dikhao|batao)\b/, "show my orders"],
+  [/\b(\d{1,3})\s*din\b/, "$1 days"],
+  [/\b(?:badha do|badhao|badha de|badha dijiye|aur de do)\b/, "extend"],
+  [/\b(?:khatam|khtm|band)\s+(?:kar do|kardo|karo|kar de|kar dijiye)\b/, "end"],
 ];
 
 export function fromHinglish(text: string): string {
@@ -242,7 +277,7 @@ export const differs = (a: string, b: string) => a.toLowerCase().replace(/[^a-z0
 const EXAMPLES: Record<AssistantRole, string[]> = {
   CUSTOMER: ["How full is my basket?", "Where is my pickup?", "What do I owe?", "How much credit do I have?", "Show my recent orders", "Switch to dark mode", "Change my password"],
   MANAGER: ["Today's summary", "What needs attention?", "Where are my drivers?", "Show unpaid bills", "Orders waiting for a driver", "Orders out for delivery", "Open payments", "Switch to dark mode", "Change my password"],
-  OWNER: ["Platform summary", "Pending subscription payments", "Open basket credits", "Switch to dark mode", "Change my password"],
+  OWNER: ["Platform summary", "Pending subscription payments", "Extend a trial by 7 days", "Open basket credits", "Switch to dark mode", "Change my password"],
 };
 
 /** The closest example questions, for "Did you mean" buttons when nothing matched. */

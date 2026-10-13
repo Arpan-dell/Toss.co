@@ -1,4 +1,5 @@
 import "server-only";
+import { revalidatePath } from "next/cache";
 import { attentionItems } from "../attention";
 import {
   getCustomer,
@@ -14,10 +15,11 @@ import {
   listTenants,
   now,
 } from "../data";
-import { formatDateTime, formatINR, formatKg, timeAgo } from "../format";
+import { formatDate, formatDateTime, formatINR, formatKg, timeAgo } from "../format";
 import { planState, tierOf } from "../plan";
 import type { Session } from "../session";
-import type { Driver, Order } from "../types";
+import type { Driver, Order, Tenant } from "../types";
+import { endTrialNow, extendTrialBy } from "../trial";
 import { geminiEnabled, geminiText } from "../ai/gemini";
 import { customerSnapshot, factSheet, managerSnapshot, ownerSnapshot, type Snapshot } from "./analyze";
 import { profitReport } from "../profit-report";
@@ -371,8 +373,54 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
 }
 
 // ---------- the Toss owner ----------
+// "Extend Fresh's trial by 10 days" / "End the trial for B-E2ZRFP". Extending happens straight away; ending asks
+// first, with a button that sends the confirmation (with the business ID, so it can't hit the wrong one).
+async function trialTool(intent: Extract<Intent, { tool: "trial" }>, tenants: Tenant[]): Promise<AssistantReply> {
+  const want = intent.business.toLowerCase();
+  const verb = intent.op === "end" ? "End the trial for" : "Extend the trial for";
+  const tail = intent.op === "extend" ? ` by ${intent.days} days` : "";
+  const byCode = tenants.filter((t) => t.joinCode.toLowerCase() === want);
+  const byName = want ? tenants.filter((t) => t.name.toLowerCase().includes(want) || want.includes(t.name.toLowerCase())) : [];
+  // no name given ("Extend a trial by 7 days"): always ask which one, even with a single business
+  const hits = byCode.length ? byCode : byName;
+  if (hits.length !== 1) {
+    const choices = (hits.length ? hits : tenants).filter((t) => planState(t).state !== "ACTIVE").slice(0, 4);
+    return {
+      text: hits.length ? "Which business did you mean?" : want ? `I couldn't find a business called "${intent.business}".` : "Which business?",
+      chips: choices.map((t) => `${verb} ${t.name} (${t.joinCode})${tail}`),
+    };
+  }
+  const t = hits[0];
+  const p = planState(t);
+  if (p.state === "SUSPENDED") return { text: `${t.name} is suspended. Reactivate it on the Businesses page first.`, links: [{ label: "Businesses", href: "/owner" }] };
+  if (p.state === "ACTIVE") return { text: `${t.name} is on a paid plan until ${formatDate(p.until!)}, so trial days wouldn't change anything.` };
+  try {
+    if (intent.op === "extend") {
+      const until = await extendTrialBy(t.id, intent.days ?? 7);
+      revalidatePath("/owner", "layout");
+      return {
+        text: `Done: ${t.name}'s free trial now runs until ${formatDate(until)} (${intent.days} more days). I've emailed the manager.`,
+        links: [{ label: "Businesses", href: "/owner" }],
+      };
+    }
+    if (p.state !== "TRIAL") return { text: `${t.name} isn't on a trial: it ended on ${formatDate(p.until!)}.` };
+    if (!intent.confirmed) {
+      return {
+        text: `End ${t.name}'s trial now? It drops to Toss Free straight away: pickups and payments keep working, the Pro tools turn off, and the manager gets an email. The trial would otherwise run until ${formatDate(p.until!)}.`,
+        chips: [`Yes, end the trial for ${t.name} (${t.joinCode})`],
+      };
+    }
+    await endTrialNow(t.id);
+    revalidatePath("/owner", "layout");
+    return { text: `Done: ${t.name}'s trial has ended and it's on Toss Free now. I've emailed the manager.`, links: [{ label: "Businesses", href: "/owner" }] };
+  } catch (e) {
+    return { text: e instanceof Error ? e.message : "Couldn't change the trial." };
+  }
+}
+
 async function ownerTool(intent: Intent): Promise<AssistantReply> {
   const [tenants, pending] = await Promise.all([listTenants(), listSubscriptionPayments({ status: "PENDING" })]);
+  if (intent.tool === "trial") return trialTool(intent, tenants);
   if (intent.tool === "orders" && intent.filter === "unpaid") {
     if (!pending.length) return { text: "No subscription payments are waiting for you." };
     return {

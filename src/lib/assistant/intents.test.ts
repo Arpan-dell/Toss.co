@@ -119,3 +119,25 @@ describe("money questions get numbers, not a page", () => {
     expect(matchIntent("how can I increase profit", "MANAGER")).toBeNull();
   });
 });
+
+describe("owner trial commands", () => {
+  it("extends by days, weeks or months, with the business name", () => {
+    expect(matchIntent("Extend Fresh's trial by 10 days", "OWNER")).toEqual({ tool: "trial", op: "extend", business: "fresh", days: 10 });
+    expect(matchIntent("give fresh 2 weeks more trial", "OWNER")).toMatchObject({ op: "extend", business: "fresh", days: 14 });
+    expect(matchIntent("increase the trial for Clean & Co by 1 month", "OWNER")).toMatchObject({ op: "extend", business: "clean & co", days: 30 });
+    expect(matchIntent("extend trial for B-E2ZRFP", "OWNER")).toMatchObject({ op: "extend", business: "b-e2zrfp", days: 7 });
+  });
+  it("ends only with a confirmation, which the button sends with the business ID", () => {
+    expect(matchIntent("end fresh's trial now", "OWNER")).toEqual({ tool: "trial", op: "end", business: "fresh", confirmed: false });
+    expect(matchIntent("Yes, end the trial for Fresh (B-E2ZRFP)", "OWNER")).toEqual({ tool: "trial", op: "end", business: "b-e2zrfp", confirmed: true });
+  });
+  it("leaves questions about trials to the AI, and ignores other roles", () => {
+    expect(matchIntent("how long is the free trial", "OWNER")).toBeNull();
+    expect(matchIntent("what happens when a trial ends", "OWNER")).toBeNull();
+    expect(matchIntent("extend my trial by 10 days", "MANAGER")?.tool).not.toBe("trial");
+  });
+  it("understands Hinglish", () => {
+    expect(matchIntent(understand("fresh ka trial 10 din badha do"), "OWNER")).toMatchObject({ tool: "trial", op: "extend", days: 10 });
+    expect(matchIntent(understand("fresh ka trial khatam kar do"), "OWNER")).toMatchObject({ tool: "trial", op: "end", confirmed: false });
+  });
+});

@@ -280,6 +280,23 @@ export const managerSuspended = (p: { business: string; suspended: boolean }) =>
     }),
   );
 
+// The owner changed a business's free trial: extended it, or ended it early.
+export const managerTrialChanged = (p: { business: string; until: string; ended: boolean }) =>
+  mail(
+    p.ended ? `Your Toss free trial has ended` : `Your Toss free trial now runs until ${day(p.until)}`,
+    layout({
+      preheader: p.ended ? "Pickups and payments keep working; Pro tools need a plan." : "Every Pro feature stays on until then.",
+      heading: p.ended ? `${p.business}'s trial has ended` : `More time to try Toss`,
+      paragraphs: [
+        p.ended
+          ? `Toss has ended the free trial for <b>${e(p.business)}</b>. Pickups, driver dispatch, payments and orders keep working on Toss Free. Subscribe to turn the Pro tools back on.`
+          : `Toss has extended the free trial for <b>${e(p.business)}</b> until <b>${day(p.until)}</b>. Every Pro feature stays on until then.`,
+      ],
+      cta: p.ended ? { label: "See plans", url: `${APP}/admin/billing` } : { label: "Open your dashboard", url: `${APP}/admin` },
+      tone: p.ended ? "warn" : "good",
+    }),
+  );
+
 export const managerClosureReceived = (b: { name: string }) =>
   mail(
     `We received your request to close ${b.name}`,

@@ -6,6 +6,7 @@ import { notifySubscriptionReviewed, notifySuspension } from "../email/notify";
 import { checkPassword } from "../password-check";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
+import { endTrialNow, extendTrialBy } from "../trial";
 import { createClient } from "../supabase/server";
 import { isValidUpiId, normalizeUpiId } from "../upi";
 import { friendlyError, text, type FormState } from "./shared";
@@ -66,6 +67,27 @@ export async function setBusinessSuspended(formData: FormData) {
   if (error) throw new Error(friendlyError(error));
   await notifySuspension(tenantId, suspend);
   revalidatePath("/owner", "layout");
+}
+
+// The owner's trial controls on the Businesses page (the logic is in lib/trial.ts, shared with the assistant).
+export async function extendTrial(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireOwner();
+  const days = Number(text(formData, "days"));
+  try {
+    await extendTrialBy(text(formData, "tenantId"), days);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Couldn't extend the trial." };
+  }
+  revalidatePath("/owner", "layout");
+  revalidatePath("/admin", "layout");
+  return { message: `Trial extended by ${days} day${days === 1 ? "" : "s"}. The manager has been emailed.` };
+}
+
+export async function endTrial(formData: FormData) {
+  await requireOwner();
+  await endTrialNow(text(formData, "tenantId"));
+  revalidatePath("/owner", "layout");
+  revalidatePath("/admin", "layout");
 }
 
 // ---------- basket credits ----------

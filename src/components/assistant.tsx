@@ -204,7 +204,7 @@ export function Assistant({ role }: { role: AssistantRole }) {
 // "where is ravi" → "Where is ravi?"
 function tidyQuestion(q: string): string {
   const s = q.charAt(0).toUpperCase() + q.slice(1);
-  return /[?.!]$/.test(s) ? s : /^(where|what|how|who|when|which|is|are|do|does|can)/i.test(s) ? `${s}?` : s;
+  return /[?.!]$/.test(s) ? s : /^(where|what|how|who|when|which|is|are|do|does|can)\b/i.test(s) ? `${s}?` : s;
 }
 
 function Bubble({ from, children }: { from: "user" | "bot"; children: React.ReactNode }) {

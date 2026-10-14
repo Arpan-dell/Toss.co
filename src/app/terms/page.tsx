@@ -23,7 +23,7 @@ export default async function TermsPage() {
   const days = plan?.creditValidDays ?? 50;
   const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
   return (
-    <InfoPage kicker="Terms of Service" title="The rules, kept short." updated="11 October 2026">
+    <InfoPage kicker="Terms of Service" title="The rules, kept short." updated="15 October 2026">
       <p>
         These terms cover the Toss website, the Toss baskets, our Telegram bots and the platform laundries use (together, &ldquo;Toss&rdquo;).
         By using Toss you agree to them. Our <Link href="/privacy">Privacy Policy</Link> explains how we handle your data.
@@ -55,8 +55,11 @@ export default async function TermsPage() {
 
       <h2>Payments</h2>
       <p>
-        You pay the laundry directly, by UPI or cash. Toss records the payment but doesn&apos;t hold your money or see your bank details.
-        Disputes about a charge are between you and the laundry; send us the order number if you need help.
+        You pay the laundry directly, in its currency: by UPI in India, and elsewhere by the ways the laundry offers (such as PayPal,
+        Venmo, a bank transfer, Pix or a payment link), or cash. Prices include any tax the laundry shows on its invoices, and a laundry
+        may set a minimum order. Tips are optional and go to the laundry for its driver. Toss records the payment but doesn&apos;t hold
+        your money or see your bank details. Disputes about a charge are between you and the laundry; send us the order number if you need
+        help.
       </p>
 
       <h2>For laundries</h2>
@@ -64,6 +67,13 @@ export default async function TermsPage() {
         <li>Set honest prices and a service area you can actually cover.</li>
         <li>Use customer details only to serve those customers, and keep them private.</li>
         <li>You&apos;re responsible for your drivers, the clothes in your care, and the taxes and records your business must keep.</li>
+        <li>
+          You choose your country, currency and the ways customers pay you, and you&apos;re responsible for the accounts they go to and for
+          following your local rules on prices, tax and consumer rights.
+        </li>
+        <li>
+          The Toss subscription is billed in rupees in India and in US dollars elsewhere, paid in advance; it never renews on its own.
+        </li>
       </ul>
 
       <h2>The basket</h2>
@@ -103,7 +113,7 @@ export default async function TermsPage() {
       <p>
         We work hard to keep Toss running, but it&apos;s provided as it is, and it may sometimes be down or make mistakes (a missed reading,
         a late message). As far as the law allows, we aren&apos;t liable for indirect losses, and our total liability to you is limited to what
-        you paid Toss in the past 12 months. Nothing here limits rights you have under Indian consumer law.
+        you paid Toss in the past 12 months. Nothing here limits rights you have under the consumer law of your country.
       </p>
 
       <h2>Ending things</h2>
@@ -115,7 +125,8 @@ export default async function TermsPage() {
       <h2>Changes and law</h2>
       <p>
         If we change these terms we&apos;ll update the date at the top and tell signed-in users about anything important. These terms are
-        governed by the laws of India, and the courts of New Delhi have jurisdiction.
+        governed by the laws of India, and the courts of New Delhi have jurisdiction, except where the law of your country gives you the
+        right to bring a claim where you live.
       </p>
 
       <p className="pt-2">

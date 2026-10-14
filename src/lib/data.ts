@@ -5,6 +5,7 @@ import { createClient } from "./supabase/server";
 import { isSupabaseConfigured, supabaseAdmin } from "./supabase/admin";
 import type { Report } from "./ai/brain";
 import type { AiAction, BusinessAccount, Customer, CustomerOffer, Device, Driver, Order, PayMethods, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
+import type { LaundryPrefs } from "./prefs";
 
 // Data access layer. Every query runs as the signed-in user, so Postgres RLS decides what is
 // visible: customers see only their own rows, managers their own business, the owner everything.
@@ -195,6 +196,14 @@ export const getCustomer = cache(async (id: string): Promise<Customer | undefine
   if (claims?.claims.sub === id) customer.phone = u(orThrow(await supabase.rpc("my_phone")));
   return customer;
 });
+
+/** A customer's laundry preferences, for themselves or their laundry. Empty if none (or before migration 0035). */
+export async function getCustomerPrefs(id: string | undefined): Promise<LaundryPrefs> {
+  if (!id) return {};
+  const supabase = await db();
+  const { data, error } = await supabase.from("customers").select("prefs").eq("id", id).maybeSingle();
+  return error || !data?.prefs ? {} : (data.prefs as LaundryPrefs);
+}
 
 /** The latest Toss AI analysis of the manager's business. */
 export async function getLatestAiRun(tenantId: string): Promise<{ id: number; createdAt: string; trigger: string; report: Report; error?: string } | undefined> {

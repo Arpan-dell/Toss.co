@@ -7,6 +7,7 @@ import { normalizePhone } from "@/lib/phone";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { allow, clientIp } from "@/lib/rate-limit";
+import { detectCountry } from "@/lib/regions";
 
 export interface AuthState {
   error?: string;
@@ -59,10 +60,13 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const name = text(formData, "name");
   const email = text(formData, "email");
-  const phone = normalizePhone(text(formData, "phone"));
+  // a number without its country code is read as the visitor's country (from Vercel's location header)
+  const h = await headers();
+  const country = detectCountry(h.get("x-vercel-ip-country"), h.get("accept-language"));
+  const phone = normalizePhone(text(formData, "phone"), country.dial || "91");
   const password = String(formData.get("password") ?? "");
   if (!name || !email) return { error: "Enter your name and email." };
-  if (!phone) return { error: "Enter a valid mobile number, like 98765 43210." };
+  if (!phone) return { error: country.code === "IN" ? "Enter a valid mobile number, like 98765 43210." : "Enter a valid mobile number, with your country code (like +1 212 555 0123)." };
   const weak = passwordError(password);
   if (weak) return { error: weak };
   if (formData.get("consent") !== "yes") return { error: "Tick the box to agree to the Terms and Privacy Policy." };

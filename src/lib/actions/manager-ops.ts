@@ -10,6 +10,7 @@ import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
 import { friendlyError, text, type FormState } from "./shared";
 import { logError } from "@/lib/log";
+import { countryOf } from "../regions";
 
 // Day-to-day operations for a manager: customers, drivers, baskets and order overrides.
 // Everything runs as the manager, so RLS keeps it inside their business and column grants
@@ -42,9 +43,10 @@ const FREE_DRIVERS = 2;
 export async function addDriver(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireManager();
   const name = text(formData, "name");
-  const phone = normalizePhone(text(formData, "phone"));
+  const country = countryOf((await getTenantById(session.tenantId))?.country);
+  const phone = normalizePhone(text(formData, "phone"), country.dial || "91");
   if (name.length < 2 || name.length > 60) return { error: "Enter the driver's name." };
-  if (!phone) return { error: "Enter the driver's mobile number, like 98765 43210." };
+  if (!phone) return { error: country.code === "IN" ? "Enter the driver's mobile number, like 98765 43210." : "Enter the driver's mobile number." };
 
   const supabase = await createClient();
   // Toss Free: up to FREE_DRIVERS drivers (the ones you have keep working); Pro: as many as you need

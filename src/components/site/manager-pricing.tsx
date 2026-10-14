@@ -6,6 +6,7 @@ import { ArrowRight, Broadcast, ChartLineUp, Check, MapPinLine, Receipt, Robot, 
 import { MainCta } from "./main-cta";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
 import { appHref } from "@/lib/hosts";
+import { useAbroad } from "@/lib/use-abroad";
 import type { PublicPlan } from "@/lib/data";
 
 // "For laundry managers": the pitch on the left, a live product demo on the right. Each feature in the list
@@ -502,7 +503,11 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
     setHeld(true);
   };
   const Scene = SCENES[FEATURES[active].id];
-  const perDay = plan && plan.monthlyPrice > 0 ? Math.ceil(plan.monthlyPrice / 30) : null;
+  // visitors outside India see the US dollar plan (billed by PayPal) instead of rupees and UPI
+  const abroad = useAbroad();
+  const monthly = plan ? (abroad ? plan.usdMonthlyPrice : plan.monthlyPrice) : 0;
+  const price = (n: number) => (abroad ? `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : `₹${n.toLocaleString("en-IN")}`);
+  const perDay = plan && monthly > 0 ? (abroad ? Math.round((monthly / 30) * 100) / 100 : Math.ceil(monthly / 30)) : null;
   const best = plan ? Math.max(plan.discount3m, plan.discount6m, plan.discount12m) : 0;
 
   return (
@@ -603,15 +608,15 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
         <div className="order-4 min-w-0 lg:order-none lg:col-start-1 lg:row-start-3 lg:self-start">
           <div className="flex flex-wrap items-end gap-x-8 gap-y-4 border-t border-border pt-5 lg:mt-5">
             <div>
-              {plan && plan.monthlyPrice > 0 ? (
+              {plan && monthly > 0 ? (
                 <>
                   <p className="mb-1 font-mono text-[11px] tracking-[0.14em] text-accent uppercase">Toss Pro</p>
                   <p className="text-4xl font-black tracking-tight text-fg tabular-nums">
-                    ₹{plan.monthlyPrice.toLocaleString("en-IN")}
+                    {price(monthly)}
                     <span className="ml-1.5 text-base font-medium text-muted">/month</span>
                   </p>
                   <p className="mt-1 text-sm text-secondary">
-                    That&apos;s <span className="font-semibold text-fg">₹{perDay} a day</span>
+                    That&apos;s <span className="font-semibold text-fg">{price(perDay ?? 0)} a day</span>
                     {plan.trialDays > 0 ? `, after ${plan.trialDays} days free` : ""}
                     {best > 0 ? ` · up to ${best}% off upfront` : ""}.
                   </p>
@@ -619,7 +624,7 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
               ) : (
                 <p className="text-2xl font-black tracking-tight text-fg">One simple monthly plan.</p>
               )}
-              <p className="mt-1 text-xs text-muted">Paid month by month over UPI. 0% fee on your customers&apos; payments. Not ready? Stay on Free: pickups and payments keep working.</p>
+              <p className="mt-1 text-xs text-muted">Paid month by month {abroad ? "in US dollars by PayPal" : "over UPI"}. 0% fee on your customers&apos; payments. Not ready? Stay on Free: pickups and payments keep working.</p>
             </div>
             <div className="w-fit">
               <MainCta

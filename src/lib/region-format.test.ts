@@ -52,3 +52,15 @@ describe("money and weight", () => {
     expect(us.dateTime(iso)).toMatch(/Oct 14/); // 16:30 in New York
   });
 });
+
+describe("phone numbers by country", () => {
+  it("keeps Indian rules, and adds other countries' codes", async () => {
+    const { normalizePhone } = await import("./phone");
+    expect(normalizePhone("98765 43210")).toBe("+919876543210");
+    expect(normalizePhone("(212) 555-0123", "1")).toBe("+12125550123");
+    expect(normalizePhone("1 212 555 0123", "1")).toBe("+12125550123");
+    expect(normalizePhone("07911 123456", "44")).toBe("+447911123456");
+    expect(normalizePhone("+49 151 23456789", "1")).toBe("+4915123456789");
+    expect(normalizePhone("123", "44")).toBeNull();
+  });
+});

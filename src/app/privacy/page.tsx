@@ -14,7 +14,7 @@ const EMAIL = BUSINESS.email;
 // Kept in step with the code: if a new field, service or cookie is added, update this page.
 export default function PrivacyPage() {
   return (
-    <InfoPage kicker="Privacy Policy" title="Your data, in plain words." updated="11 October 2026">
+    <InfoPage kicker="Privacy Policy" title="Your data, in plain words." updated="15 October 2026">
       <p>
         {BUSINESS.legalName || BUSINESS.brand} (&ldquo;Toss&rdquo;, &ldquo;we&rdquo;), {BUSINESS.address || BUSINESS.city}, runs this website,
         the Toss baskets and the Telegram bots that go with them. This page explains what we
@@ -34,8 +34,9 @@ export default function PrivacyPage() {
           <b>Basket readings:</b> the weight in your basket, the target weight you set, and whether the basket is online.
         </li>
         <li>
-          <b>Orders and payments:</b> each pickup&apos;s weight, price, status and times, and the UPI reference or cash note used to mark it
-          paid. We never see or store card or bank details; you pay the laundry directly.
+          <b>Orders and payments:</b> each pickup&apos;s weight, price, status and times, and the payment reference (a UPI reference,
+          PayPal or bank transfer ID, and so on) or cash note used to mark it paid, plus any tip you add. We never see or store card or bank
+          details; you pay the laundry directly, in its own app or bank.
         </li>
         <li>
           <b>Telegram:</b> your Telegram user ID, when you link your account or use one of our bots, so the bot can talk to you.
@@ -94,8 +95,9 @@ export default function PrivacyPage() {
           </ul>
         </li>
         <li>
-          <b>Where it&apos;s stored:</b> these services run on servers that may be outside India (our hosting runs in Singapore). They
-          protect the data under their own security and privacy terms.
+          <b>Where it&apos;s stored:</b> these services run on servers that may be outside your country (our hosting runs in Singapore).
+          They protect the data under their own security and privacy terms. For people in the European Economic Area, the UK and
+          Switzerland, transfers rely on the providers&apos; standard contractual clauses.
         </li>
         <li>We may share data if the law requires it.</li>
       </ul>
@@ -136,6 +138,17 @@ export default function PrivacyPage() {
           else, email us.
         </li>
       </ul>
+      <p>
+        <b>In the EU, EEA, UK or Switzerland (GDPR):</b> you also have the right to object to how we use your data, to restrict it, and to
+        take it with you (data portability). We use your data to provide the service you signed up for (contract), to keep it secure and
+        improve it (legitimate interest), and, where we ask, with your consent, which you can withdraw at any time. You can complain to your
+        local data protection authority.
+      </p>
+      <p>
+        <b>In California (CCPA/CPRA) and other US states with privacy laws:</b> you can ask what personal information we collected and why,
+        have it corrected or deleted, and not be treated differently for asking. <b>We do not sell or share personal information</b> for
+        advertising, and we don&apos;t use it for profiling. Send requests to the email above; you can also ask someone to act for you.
+      </p>
 
       <h2>Security</h2>
       <p>

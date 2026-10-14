@@ -5,8 +5,9 @@ import { ChangePasswordCard, YourDataCard } from "@/components/change-password";
 import { IdChip } from "@/components/id-chip";
 import { JoinBusiness } from "@/components/join-business";
 import { Badge, Card, PageTitle } from "@/components/ui";
-import { updatePhone } from "@/lib/actions/customer";
-import { deviceLabel, getCustomer, getDeviceForCustomer, getTenantById } from "@/lib/data";
+import { savePrefs, updatePhone } from "@/lib/actions/customer";
+import { deviceLabel, getCustomer, getCustomerPrefs, getDeviceForCustomer, getTenantById } from "@/lib/data";
+import { PREF_KEYS, PREF_OPTIONS } from "@/lib/prefs";
 import { formatPhone } from "@/lib/phone";
 import { requireRole } from "@/lib/session";
 import { getTelegramOidcConfig } from "@/lib/telegram-oidc";
@@ -36,7 +37,7 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
     searchParams,
   ]);
   const result = typeof params.telegram === "string" ? RESULTS[params.telegram] : undefined;
-  const business = await getTenantById(customer?.tenantId);
+  const [business, prefs] = await Promise.all([getTenantById(customer?.tenantId), getCustomerPrefs(session.userId)]);
   const telegramReady = getTelegramOidcConfig() !== null;
 
   return (
@@ -48,6 +49,36 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
           {result.text}
         </p>
       )}
+
+      <Card title="Laundry preferences">
+        <p className="mb-4 text-sm text-secondary">How you like your clothes done. Your laundry sees this with every pickup.</p>
+        <ActionForm action={savePrefs} submitLabel="Save preferences">
+          {PREF_KEYS.map((k) => (
+            <fieldset key={k}>
+              <legend className="mb-1.5 text-sm text-secondary">{PREF_OPTIONS[k].label}</legend>
+              <div className="flex flex-wrap gap-2">
+                <label className="cursor-pointer rounded-full border border-border px-3 py-1.5 text-sm text-secondary has-[:checked]:border-accent/60 has-[:checked]:bg-accent/15 has-[:checked]:text-accent">
+                  <input type="radio" name={k} value="" defaultChecked={!prefs[k]} className="sr-only" />
+                  No preference
+                </label>
+                {Object.entries(PREF_OPTIONS[k].options).map(([v, label]) => (
+                  <label
+                    key={v}
+                    className="cursor-pointer rounded-full border border-border px-3 py-1.5 text-sm text-secondary has-[:checked]:border-accent/60 has-[:checked]:bg-accent/15 has-[:checked]:text-accent has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent"
+                  >
+                    <input type="radio" name={k} value={v} defaultChecked={prefs[k] === v} className="sr-only" />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ))}
+          <label className="block text-sm text-secondary">
+            Anything else? (optional)
+            <textarea name="notes" maxLength={200} rows={2} defaultValue={prefs.notes ?? ""} placeholder="e.g. wash the red shirt separately" className={`${fieldClass} mt-1.5`} />
+          </label>
+        </ActionForm>
+      </Card>
 
       <Card title="Account">
         <div className="flex flex-wrap items-start justify-between gap-4">

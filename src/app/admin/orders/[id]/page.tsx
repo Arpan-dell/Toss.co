@@ -10,7 +10,7 @@ import { confirmPayment, markPaidCash, rejectPayment } from "@/lib/actions/manag
 import { markReady } from "@/lib/actions/service";
 import { ActionForm } from "@/components/action-form";
 import { assignDriverForm, autoAssign, setOrderStatus } from "@/lib/actions/manager-ops";
-import { deviceLabel, getOrder, getTenantById, listCustomers, listDevices, listDrivers, listOrderEvents, now } from "@/lib/data";
+import { deviceLabel, getCustomerPrefs, getOrder, getTenantById, listCustomers, listDevices, listDrivers, listOrderEvents, now } from "@/lib/data";
 import { getSession } from "@/lib/session";
 import { bagTag, isSorted } from "@/lib/sorting";
 import { orderLabel } from "@/lib/format";
@@ -23,6 +23,7 @@ import { DriverConfirm } from "./driver-confirm";
 import { WeightForm } from "./weight-form";
 import { myFormat } from "@/lib/my-format";
 import { hasCents } from "@/lib/regions";
+import { prefsSummary } from "@/lib/prefs";
 
 // Where the billed weight came from, as a tag (never color-only).
 function weightTag(source: Order["weightSource"]) {
@@ -65,6 +66,10 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
   const driver = drivers.find((d) => d.telegramChatId === order.driverId);
   const open = order.status === "PENDING" || order.status === "ACCEPTED";
   const gap = order.weighedKg != null ? weightGapPct(order.reportedWeightKg ?? order.weightKg, order.weighedKg) : null;
+  // how this customer wants their laundry done (saved on their account)
+  const prefs = order.customerId ? await getCustomerPrefs(order.customerId) : {};
+  const wishes = prefsSummary(prefs);
+  const notes = prefs.notes;
 
   return (
     <div className="stagger mx-auto w-full max-w-4xl space-y-6">
@@ -85,6 +90,21 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
           <dl className="mt-5 grid grid-cols-[110px_1fr] gap-y-2 border-t border-border pt-4 text-sm">
             <dt className="text-muted">Customer</dt>
             <dd>{customer ? `${customer.name ?? customer.email} · ${customer.customerCode}` : "Not linked yet"}</dd>
+            {(wishes.length > 0 || notes) && (
+              <>
+                <dt className="text-muted">Wash</dt>
+                <dd>
+                  <span className="flex flex-wrap gap-1.5">
+                    {wishes.map((w) => (
+                      <Badge key={w} tone="info">
+                        {w}
+                      </Badge>
+                    ))}
+                  </span>
+                  {notes && <span className="mt-1 block text-xs text-secondary">&ldquo;{notes}&rdquo;</span>}
+                </dd>
+              </>
+            )}
             <dt className="text-muted">Basket</dt>
             <dd>{deviceLabel(device) ?? order.deviceId}</dd>
             <dt className="text-muted">Address</dt>

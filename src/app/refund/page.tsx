@@ -18,7 +18,7 @@ export default async function RefundPage() {
   const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
   const email = BUSINESS.email;
   return (
-    <InfoPage kicker="Refund & Cancellation Policy" title="Refunds, kept simple." updated="11 October 2026">
+    <InfoPage kicker="Refund & Cancellation Policy" title="Refunds, kept simple." updated="15 October 2026">
       <p>
         This page explains when you get money back for things bought through Toss. It sits alongside our <Link href="/terms">Terms</Link>.
         Nothing here limits your rights under Indian consumer law.
@@ -57,7 +57,7 @@ export default async function RefundPage() {
 
       <h2>Subscriptions for laundries</h2>
       <ul>
-        <li>Plans are paid in advance by UPI and never renew on their own, so there&apos;s nothing to cancel: just don&apos;t pay for the next period.</li>
+        <li>Plans are paid in advance (by UPI in India, by PayPal or Toss&apos;s payment link elsewhere, in US dollars) and never renew on their own, so there&apos;s nothing to cancel: just don&apos;t pay for the next period.</li>
         <li>A period you&apos;ve started isn&apos;t refunded for the days left, but the plan stays on until it ends.</li>
         <li>
           Paid twice by mistake, or a payment we couldn&apos;t verify and turned down? We refund it in full. A business we suspend for
@@ -67,7 +67,7 @@ export default async function RefundPage() {
 
       <h2>How refunds are paid</h2>
       <p>
-        Approved refunds go back to the UPI ID or bank account you paid from, within <b>7 working days</b>. To ask for one, email{" "}
+        Approved refunds go back the way you paid (UPI ID, PayPal or bank account), in the same currency, within <b>7 working days</b>. To ask for one, email{" "}
         <a href={`mailto:${email}?subject=Refund%20request`}>{email}</a> with your order number or payment reference. We reply within 2
         working days.
       </p>

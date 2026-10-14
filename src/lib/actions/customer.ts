@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getCustomer } from "../data";
+import { getCustomer, getTenantById } from "../data";
 import { formatPhone, normalizePhone } from "../phone";
 import { notifyBusinessRegistered } from "../email/notify";
 import { getSession } from "../session";
@@ -12,6 +12,7 @@ import { isValidUpiId, normalizePaymentRef, normalizeUpiId } from "../upi";
 import { friendlyError, text, type FormState } from "./shared";
 import { pricePerKgFrom } from "../region-format";
 import { countryOf } from "../regions";
+import { readPrefs } from "../prefs";
 
 async function requireCustomer() {
   const session = await getSession();
@@ -35,10 +36,12 @@ export async function joinBusiness(_prev: FormState, formData: FormData): Promis
 // Sets or changes the customer's mobile number. A new number is unverified until Telegram confirms it.
 export async function updatePhone(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireCustomer();
-  const phone = normalizePhone(text(formData, "phone"));
-  if (!phone) return { error: "Enter a valid mobile number, like 98765 43210." };
-
   const customer = await getCustomer(session.userId);
+  // numbers without a country code are read as the laundry's country (India until they join one)
+  const country = countryOf((await getTenantById(customer?.tenantId))?.country);
+  const phone = normalizePhone(text(formData, "phone"), country.dial || "91");
+  if (!phone) return { error: country.code === "IN" ? "Enter a valid mobile number, like 98765 43210." : "Enter a valid mobile number, with the country code if it's from another country." };
+
   if (customer?.phone === phone) return { message: "That's already your number." };
 
   const { error } = await supabaseAdmin().from("customers").update({ phone, phone_verified: false }).eq("id", session.userId);
@@ -129,4 +132,15 @@ function validTimezone(tz: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+// Laundry preferences (detergent, water, drying…), shown to the laundry with every pickup.
+export async function savePrefs(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await requireCustomer();
+  const prefs = readPrefs((k) => text(formData, k));
+  const supabase = await createClient();
+  const { error } = await supabase.from("customers").update({ prefs }).eq("id", session.userId);
+  if (error) return { error: error.message.includes("prefs") ? "Preferences switch on shortly. Please try again later." : friendlyError(error) };
+  revalidatePath("/app/settings");
+  return { message: "Saved. Your laundry sees these with every pickup." };
 }

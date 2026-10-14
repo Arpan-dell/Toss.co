@@ -27,7 +27,7 @@ const GROUPS: { title: string; tiles: Tile[] }[] = [
     title: "Your laundry",
     tiles: [
       { href: "/admin/business", title: "Business", text: "Name, Business ID, store address and the area you pick up from.", icon: Storefront },
-      { href: "/admin/settings/payments", title: "Price & UPI", text: "Your price per kg and the UPI ID customers pay to.", icon: CurrencyInr, locked: true },
+      { href: "/admin/settings/payments", title: "Price & payments", text: "Your country and currency, price, minimum order, tax, and how customers pay you.", icon: CurrencyInr, locked: true },
       {
         href: "/admin/settings/operations",
         title: "How you work",

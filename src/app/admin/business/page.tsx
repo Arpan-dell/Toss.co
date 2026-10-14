@@ -6,17 +6,19 @@ import { IdChip } from "@/components/id-chip";
 import { Card, PageTitle, StatTile } from "@/components/ui";
 import { updateBusiness } from "@/lib/actions/manager";
 import { getTenantById, listCustomers } from "@/lib/data";
+import { formatterFor, regionOf } from "@/lib/region-format";
 import { requireRole } from "@/lib/session";
 import { ServiceAreaEditor } from "./area-editor";
 
 export const metadata: Metadata = { title: "Business" };
 
-// Settings → Business: who you are and where you are. Price & UPI, how you work, and the account have their own pages.
+// Settings → Business: who you are and where you are. Price & payments, how you work, and the account have their own pages.
 export default async function Business({ searchParams }: PageProps<"/admin/business">) {
   const session = await requireRole("MANAGER");
   const [tenant, customers, params] = await Promise.all([getTenantById(session.tenantId), listCustomers(), searchParams]);
   if (!tenant) return <Card>This manager account isn&apos;t linked to a business.</Card>;
   const mine = customers.filter((c) => c.tenantId === tenant.id);
+  const fmt = formatterFor(regionOf(tenant));
 
   return (
     <div className="stagger mx-auto w-full max-w-3xl space-y-6">
@@ -33,14 +35,14 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
         <div className="flex flex-wrap items-center gap-6">
           <IdChip label="Business ID" value={tenant.joinCode} />
           <p className="max-w-sm text-sm text-secondary">
-            Customers enter this after signing up on Toss. Their baskets, pickups and invoices then show up here, and their payments go to your UPI ID.
+            Customers enter this after signing up on Toss. Their baskets, pickups and invoices then show up here, and they pay you directly.
           </p>
         </div>
       </Card>
 
       <div className="grid grid-cols-2 gap-4">
         <StatTile label="Connected customers" value={String(mine.length)} />
-        <StatTile label="Price per kg" value={`₹${tenant.pricePerKg}`} hint="Change it under Price & UPI" />
+        <StatTile label={`Price per ${fmt.unit}`} value={fmt.rate(tenant.pricePerKg)} hint="Change it under Price & payments" />
       </div>
 
       <Card title="Business details">
@@ -62,9 +64,9 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
           </Field>
         </ActionForm>
         <p className="mt-3 text-xs text-muted">
-          Price and UPI ID are under{" "}
+          Price and payment details are under{" "}
           <Link href="/admin/settings/payments" className="text-accent hover:text-accent-2">
-            Settings → Price &amp; UPI
+            Settings → Price &amp; payments
           </Link>
           , protected by your password.
         </p>

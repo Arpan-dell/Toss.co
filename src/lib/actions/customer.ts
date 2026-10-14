@@ -10,6 +10,8 @@ import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
 import { isValidUpiId, normalizePaymentRef, normalizeUpiId } from "../upi";
 import { friendlyError, text, type FormState } from "./shared";
+import { pricePerKgFrom } from "../region-format";
+import { countryOf } from "../regions";
 
 async function requireCustomer() {
   const session = await getSession();
@@ -77,20 +79,39 @@ export async function registerBusiness(_prev: FormState, formData: FormData): Pr
   if (formData.get("consent") !== "yes") return { error: "Tick the box to agree to the Terms and Privacy Policy." };
 
   const name = text(formData, "name");
+  const country = countryOf(text(formData, "country") || "IN");
+  const india = country.code === "IN";
+  const currency = (text(formData, "currency") || country.currency).toUpperCase();
+  const unitRaw = text(formData, "unit");
+  const unit = unitRaw === "lb" || unitRaw === "kg" ? unitRaw : country.unit;
+  // India has one time zone (browsers may still say the old name, Asia/Calcutta)
+  const timezone = india ? "Asia/Kolkata" : (validTimezone(text(formData, "timezone")) ?? country.timezone);
   const upiId = text(formData, "upiId");
   const upiName = text(formData, "upiName") || name;
   const price = Number(text(formData, "price"));
   if (name.length < 2 || name.length > 80) return { error: "Enter your business name." };
-  if (!isValidUpiId(upiId)) return { error: "Enter a valid UPI ID, like yourshop@okaxis." };
-  if (!(price > 0 && price <= 10_000)) return { error: "Enter your price per kg in rupees." };
+  if (!/^[A-Z]{3}$/.test(currency)) return { error: "Choose your currency." };
+  if (india && !isValidUpiId(upiId)) return { error: "Enter a valid UPI ID, like yourshop@okaxis." };
+  if (!(price > 0 && price <= 10_000)) return { error: `Enter your price per ${unit}.` };
 
-  const { data, error } = await supabaseAdmin().rpc("register_business", {
-    p_user: session.userId,
-    p_name: name,
-    p_upi_id: normalizeUpiId(upiId),
-    p_upi_name: upiName.slice(0, 50),
-    p_price: price,
-  });
+  // An Indian business keeps the original call (it also works before migration 0035); others pass their region
+  const plain = india && currency === "INR" && unit === "kg" && timezone === "Asia/Kolkata";
+  const { data, error } = await supabaseAdmin().rpc(
+    "register_business",
+    plain
+      ? { p_user: session.userId, p_name: name, p_upi_id: normalizeUpiId(upiId), p_upi_name: upiName.slice(0, 50), p_price: price }
+      : {
+          p_user: session.userId,
+          p_name: name,
+          p_upi_id: india ? normalizeUpiId(upiId) : "",
+          p_upi_name: india ? upiName.slice(0, 50) : "",
+          p_price: pricePerKgFrom(price, unit),
+          p_country: country.code,
+          p_currency: currency,
+          p_timezone: timezone,
+          p_weight_unit: unit,
+        },
+  );
   if (error) return { error: friendlyError(error) };
   await notifyBusinessRegistered((data as { tenant_id: string }).tenant_id);
 
@@ -98,4 +119,14 @@ export async function registerBusiness(_prev: FormState, formData: FormData): Pr
   const supabase = await createClient();
   await supabase.auth.refreshSession();
   redirect("/admin/business?welcome=1");
+}
+
+function validTimezone(tz: string): string | undefined {
+  if (!tz || tz.length > 64) return undefined;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return tz;
+  } catch {
+    return undefined;
+  }
 }

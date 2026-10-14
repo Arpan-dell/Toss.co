@@ -9,6 +9,8 @@ import { requireRole } from "@/lib/session";
 import { OptimisticForm } from "@/components/optimistic";
 import { formatPhone } from "@/lib/phone";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
+import { moneyIn } from "@/lib/region-format";
+import { countryOf } from "@/lib/regions";
 import { TrialControls } from "./trial-controls";
 
 export const metadata: Metadata = { title: "Businesses" };
@@ -34,6 +36,12 @@ export default async function OwnerHome() {
     : { data: [] };
   const rows = tenants.map((t) => ({ t, plan: planState(t), s: stats.get(t.id) }));
   const paying = rows.filter((r) => r.plan.state === "ACTIVE").length;
+  // rupees from Indian businesses, US dollars from the rest
+  const payingUsd = rows.filter((r) => r.plan.state === "ACTIVE" && r.t.currency !== "INR").length;
+  const revenue = [
+    formatINR((paying - payingUsd) * platform.monthlyPrice),
+    ...(payingUsd ? [moneyIn(payingUsd * platform.usdMonthlyPrice, "USD")] : []),
+  ].join(" + ");
 
   return (
     <div className="stagger space-y-6">
@@ -49,7 +57,7 @@ export default async function OwnerHome() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Businesses" value={String(tenants.length)} />
         <StatTile label="Paying" value={String(paying)} />
-        <StatTile label="Monthly revenue" value={formatINR(paying * platform.monthlyPrice)} hint="Paying × plan price" />
+        <StatTile label="Monthly revenue" value={revenue} hint="Paying × plan price" />
         <StatTile label="Payments to review" value={String(pending.length)} />
       </div>
 
@@ -74,7 +82,10 @@ export default async function OwnerHome() {
                   <tr key={t.id} className="border-b border-border transition-colors last:border-0 hover:bg-ink/[0.03]">
                     <td className="px-5 py-2.5">
                       <p className="font-medium">{t.name}</p>
-                      <p className="font-mono text-xs whitespace-nowrap text-muted">{t.joinCode}</p>
+                      <p className="font-mono text-xs whitespace-nowrap text-muted">
+                        {t.joinCode}
+                        {t.country !== "IN" && <span className="ml-1.5 font-sans">· {countryOf(t.country).name}</span>}
+                      </p>
                       {t.closureRequestedAt && (
                         <p className="mt-1 text-xs text-warn" title={t.closureReason ?? undefined}>
                           Asked to be removed{t.closureReason ? `: “${t.closureReason}”` : ""}

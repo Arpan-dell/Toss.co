@@ -10,6 +10,7 @@ import { endTrialNow, extendTrialBy } from "../trial";
 import { createClient } from "../supabase/server";
 import { isValidUpiId, normalizeUpiId } from "../upi";
 import { friendlyError, text, type FormState } from "./shared";
+import { isUsername } from "../pay-methods";
 
 // Owner actions cross businesses, so they run with the service role, but only after checking
 // that the caller's verified JWT says role = owner.
@@ -30,15 +31,26 @@ export async function updatePlatformSettings(_prev: FormState, formData: FormDat
   if (!(Number.isInteger(branchPrice) && branchPrice >= 0 && branchPrice <= 100_000)) return { error: "Enter a branch price in whole rupees." };
   if (!(Number.isInteger(trialDays) && trialDays >= 0 && trialDays <= 365)) return { error: "Trial must be 0–365 days." };
   if (!isValidUpiId(upiId)) return { error: "Enter your UPI ID, like you@okaxis, so businesses can pay you." };
+  const usdMonthly = Number(text(formData, "usdMonthlyPrice") || 0);
+  const usdBranch = Number(text(formData, "usdBranchPrice") || 0);
+  const paypal = text(formData, "ownerPaypal").replace(/^@/, "").replace(/^https?:\/\/(www\.)?paypal\.me\//i, "");
+  const intlLink = text(formData, "ownerIntlLink");
+  if (!(usdMonthly >= 0 && usdMonthly <= 10_000 && usdBranch >= 0 && usdBranch <= 10_000)) return { error: "Enter the US dollar prices." };
+  if (paypal && !isUsername(paypal)) return { error: "Enter just your PayPal.me username, like tosslaundry." };
+  if (intlLink && !/^https:\/\/\S{4,300}$/.test(intlLink)) return { error: "The payment link must start with https://" };
   const [d3, d6, d12] = ["discount3m", "discount6m", "discount12m"].map((k) => Number(text(formData, k)));
   if (![d3, d6, d12].every((d) => Number.isInteger(d) && d >= 0 && d <= 90)) return { error: "Discounts must be 0–90%." };
   // your UPI ID receives every subscription: changing these needs your password
   const wrong = await checkPassword(session, String(formData.get("password") ?? ""));
   if (wrong) return { error: wrong };
 
+  const base = { monthly_price: monthlyPrice, branch_price: branchPrice, trial_days: trialDays, owner_upi_id: normalizeUpiId(upiId), owner_upi_name: upiName.slice(0, 50), discount_3m: d3, discount_6m: d6, discount_12m: d12 };
+  // the dollar prices and PayPal exist from migration 0035; until then only the rupee settings are saved
+  const { data: cols } = await supabaseAdmin().from("platform_settings").select("*").eq("id", 1).maybeSingle();
+  const intl = cols && "usd_monthly_price" in cols ? { usd_monthly_price: usdMonthly, usd_branch_price: usdBranch, owner_paypal: paypal || null, owner_intl_link: intlLink || null } : {};
   const { error } = await supabaseAdmin()
     .from("platform_settings")
-    .update({ monthly_price: monthlyPrice, branch_price: branchPrice, trial_days: trialDays, owner_upi_id: normalizeUpiId(upiId), owner_upi_name: upiName.slice(0, 50), discount_3m: d3, discount_6m: d6, discount_12m: d12 })
+    .update({ ...base, ...intl })
     .eq("id", 1);
   if (error) return { error: friendlyError(error) };
   await invalidate(KEYS.platformSettings, KEYS.publicPlan);

@@ -5,7 +5,7 @@ import type { FormState } from "@/lib/actions/shared";
 import { setOrderAmount } from "@/lib/actions/manager";
 
 // Inline "edit amount" for one order: managers can correct a price (discounts, re-weighs…).
-export function AmountForm({ orderId, amount }: { orderId: string; amount: number }) {
+export function AmountForm({ orderId, amount, symbol = "₹", cents = false }: { orderId: string; amount: number; symbol?: string; cents?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [state, action, pending] = useActionState<FormState, FormData>(setOrderAmount, {});
 
@@ -19,12 +19,12 @@ export function AmountForm({ orderId, amount }: { orderId: string; amount: numbe
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="orderId" value={orderId} />
-      <span className="text-sm text-muted">₹</span>
+      <span className="text-sm text-muted">{symbol}</span>
       <input
         name="amount"
         type="number"
         min={0}
-        step="1"
+        step={cents ? "0.01" : "1"}
         defaultValue={amount}
         autoFocus
         className="w-24 rounded-lg border border-border bg-ink/[0.03] px-2 py-1 text-sm tabular-nums focus:border-accent/60 focus:outline-none"

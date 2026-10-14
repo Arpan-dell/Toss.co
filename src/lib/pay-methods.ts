@@ -252,3 +252,8 @@ export function payOptions(
   if (methods.cash !== false) out.push({ ...base("cash"), note: "Pay your driver or at the store. The laundry marks it paid; nothing to type here." });
   return out;
 }
+
+/** True when customers can pay this business online (UPI, or any method other than cash). */
+export function paidOnline(t: { upiId?: string; payMethods?: PayMethods }): boolean {
+  return !!t.upiId || Object.entries(t.payMethods ?? {}).some(([k, v]) => k !== "cash" && !!v);
+}

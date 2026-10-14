@@ -2,6 +2,7 @@
 // ignore <style> blocks and dark-mode CSS, so everything is inline and table-based.
 
 import { APP_URL, SITE_URL } from "../site";
+import { moneyIn } from "../region-format";
 
 export const SITE = SITE_URL;
 const APP = APP_URL;
@@ -15,7 +16,8 @@ export interface Email {
 export const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
-const inr = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+// in the business's currency (rupees unless told otherwise; subscriptions outside India are in US dollars)
+const inr = (n: number, currency?: string) => moneyIn(n, currency ?? 'INR');
 export const day = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Kolkata" });
 
 type Row = [label: string, value: string];
@@ -60,7 +62,7 @@ const mail = (subject: string, body: ReturnType<typeof layout>): Email => ({ ...
 
 // ---------- to the Toss owner ----------
 
-export const ownerNewBusiness = (b: { name: string; joinCode: string; managerEmail: string; pricePerKg: number; trialEndsAt?: string }) =>
+export const ownerNewBusiness = (b: { name: string; joinCode: string; managerEmail: string; pricePerKg: number; trialEndsAt?: string; rate?: string; country?: string }) =>
   mail(
     `🎉 New business on Toss: ${b.name}`,
     layout({
@@ -70,22 +72,23 @@ export const ownerNewBusiness = (b: { name: string; joinCode: string; managerEma
       rows: [
         ["Business ID", b.joinCode],
         ["Manager", b.managerEmail],
-        ["Price", `₹${b.pricePerKg}/kg`],
+        ["Price", b.rate ?? `₹${b.pricePerKg}/kg`],
+        ...(b.country && b.country !== "IN" ? ([["Country", b.country]] as Row[]) : []),
         ...(b.trialEndsAt ? ([["Trial ends", day(b.trialEndsAt)]] as Row[]) : []),
       ],
       cta: { label: "Open owner dashboard", url: `${APP}/owner` },
     }),
   );
 
-export const ownerPaymentToReview = (p: { business: string; joinCode: string; months: number; amount: number; discountPct: number; ref: string }) =>
+export const ownerPaymentToReview = (p: { currency?: string; business: string; joinCode: string; months: number; amount: number; discountPct: number; ref: string }) =>
   mail(
-    `💳 Subscription payment to confirm: ${p.business} · ${inr(p.amount)}`,
+    `💳 Subscription payment to confirm: ${p.business} · ${inr(p.amount, p.currency)}`,
     layout({
-      preheader: `${p.business} paid ${inr(p.amount)} for ${p.months} month(s). Check your UPI app and approve it.`,
+      preheader: `${p.business} paid ${inr(p.amount, p.currency)} for ${p.months} month(s). Check your UPI app and approve it.`,
       heading: "A subscription payment is waiting for you",
       paragraphs: [`<b>${e(p.business)}</b> says they paid. Check the UPI reference in your UPI app, then approve or reject it.`],
       rows: [
-        ["Amount", inr(p.amount)],
+        ["Amount", inr(p.amount, p.currency)],
         ["Plan", `${p.months} month${p.months > 1 ? "s" : ""}${p.discountPct ? ` (${p.discountPct}% off)` : ""}`],
         ["UPI reference", p.ref],
         ["Business ID", p.joinCode],
@@ -132,12 +135,13 @@ export const customerInvoice = (d: {
   number: string;
   business: { name: string };
   customer: { name?: string };
-  order: { label: string; weightKg: number; total: number; discountPct?: number; completedAt?: string };
+  order: { label: string; weightKg: number; total: number; discountPct?: number; completedAt?: string; tip?: number };
   payment: { method: string; paidAt?: string };
+  region?: { currency: string; unit?: "kg" | "lb" };
   rateUrl?: string;
 }) =>
   mail(
-    `Your invoice from ${d.business.name} · ${inr(d.order.total)} paid`,
+    `Your invoice from ${d.business.name} · ${inr(d.order.total + (d.order.tip ?? 0), d.region?.currency)} paid`,
     layout({
       preheader: `Invoice ${d.number} for your laundry pickup is attached.`,
       heading: `Thanks${d.customer.name ? `, ${d.customer.name.split(" ")[0]}` : ""}! Your payment is received`,
@@ -148,8 +152,8 @@ export const customerInvoice = (d: {
       rows: [
         ["Invoice", d.number],
         ["Pickup", d.order.label],
-        ["Weight", `${d.order.weightKg.toFixed(2)} kg`],
-        ["Amount paid", `${inr(d.order.total)}${d.order.discountPct ? ` (${d.order.discountPct}% off)` : ""}`],
+        ["Weight", d.region?.unit === "lb" ? `${(d.order.weightKg / 0.45359237).toFixed(1)} lb` : `${d.order.weightKg.toFixed(2)} kg`],
+        ["Amount paid", `${inr(d.order.total + (d.order.tip ?? 0), d.region?.currency)}${d.order.discountPct ? ` (${d.order.discountPct}% off)` : ""}`],
         ["Paid by", d.payment.method],
         ...(d.payment.paidAt ? ([["Paid on", day(d.payment.paidAt)]] as Row[]) : []),
       ],
@@ -158,14 +162,14 @@ export const customerInvoice = (d: {
     }),
   );
 
-export const customerPaymentReminder = (p: { business: string; name?: string; orderNo: number; amount: number; note?: string }) =>
+export const customerPaymentReminder = (p: { currency?: string; business: string; name?: string; orderNo: number; amount: number; note?: string }) =>
   mail(
-    `Reminder: ${inr(p.amount)} due for your ${p.business} pickup`,
+    `Reminder: ${inr(p.amount, p.currency)} due for your ${p.business} pickup`,
     layout({
-      preheader: `Pickup #${p.orderNo}: ${inr(p.amount)} is due. Pay by UPI in a few taps.`,
+      preheader: `Pickup #${p.orderNo}: ${inr(p.amount, p.currency)} is due. Pay by UPI in a few taps.`,
       heading: `Hi${p.name ? ` ${p.name.split(" ")[0]}` : ""}, a friendly reminder`,
       paragraphs: [
-        `Your laundry pickup #${p.orderNo} from <b>${e(p.business)}</b> is done and <b>${inr(p.amount)}</b> is due.`,
+        `Your laundry pickup #${p.orderNo} from <b>${e(p.business)}</b> is done and <b>${inr(p.amount, p.currency)}</b> is due.`,
         ...(p.note ? [e(p.note)] : []),
         "Open your Toss dashboard to pay with any UPI app. It takes a few seconds.",
       ],
@@ -194,15 +198,15 @@ export const managerWelcome = (b: { name: string; joinCode: string; trialEndsAt?
     }),
   );
 
-export const managerPaymentReceived = (p: { business: string; months: number; amount: number; discountPct: number; ref: string }) =>
+export const managerPaymentReceived = (p: { currency?: string; business: string; months: number; amount: number; discountPct: number; ref: string }) =>
   mail(
-    `We got your Toss payment of ${inr(p.amount)}`,
+    `We got your Toss payment of ${inr(p.amount, p.currency)}`,
     layout({
       preheader: "Toss will confirm it shortly and extend your plan.",
       heading: "Payment received, confirming it now",
       paragraphs: [`Thanks! We'll check your UPI payment and extend <b>${e(p.business)}</b>'s plan. You'll get another email once it's confirmed.`],
       rows: [
-        ["Amount", inr(p.amount)],
+        ["Amount", inr(p.amount, p.currency)],
         ["Plan", `${p.months} month${p.months > 1 ? "s" : ""}${p.discountPct ? ` (${p.discountPct}% off)` : ""}`],
         ["UPI reference", p.ref],
       ],
@@ -210,15 +214,15 @@ export const managerPaymentReceived = (p: { business: string; months: number; am
     }),
   );
 
-export const managerPaymentApproved = (p: { business: string; months: number; amount: number; paidUntil?: string }) =>
+export const managerPaymentApproved = (p: { currency?: string; business: string; months: number; amount: number; paidUntil?: string }) =>
   mail(
     `✅ Toss subscription renewed${p.paidUntil ? ` until ${day(p.paidUntil)}` : ""}`,
     layout({
-      preheader: `Your payment of ${inr(p.amount)} is confirmed.`,
+      preheader: `Your payment of ${inr(p.amount, p.currency)} is confirmed.`,
       heading: "Your subscription is renewed",
       paragraphs: [`Your payment for <b>${e(p.business)}</b> is confirmed. Thank you for using Toss!`],
       rows: [
-        ["Amount", inr(p.amount)],
+        ["Amount", inr(p.amount, p.currency)],
         ["Added", `${p.months} month${p.months > 1 ? "s" : ""}`],
         ...(p.paidUntil ? ([["Paid until", day(p.paidUntil)]] as Row[]) : []),
       ],
@@ -227,14 +231,14 @@ export const managerPaymentApproved = (p: { business: string; months: number; am
     }),
   );
 
-export const managerPaymentRejected = (p: { business: string; amount: number; ref: string }) =>
+export const managerPaymentRejected = (p: { currency?: string; business: string; amount: number; ref: string }) =>
   mail(
     `Your Toss payment couldn't be confirmed`,
     layout({
       preheader: `We couldn't find a UPI payment with reference ${p.ref}.`,
       heading: "We couldn't confirm your payment",
       paragraphs: [
-        `We couldn't find your UPI payment of <b>${inr(p.amount)}</b> for ${e(p.business)}. Please check the reference in your UPI app's payment details and submit it again.`,
+        `We couldn't find your payment of <b>${inr(p.amount, p.currency)}</b> for ${e(p.business)}. Please check the reference in your payment app or receipt and submit it again.`,
       ],
       rows: [["UPI reference you entered", p.ref]],
       cta: { label: "Go to billing", url: `${APP}/admin/billing` },
@@ -243,7 +247,7 @@ export const managerPaymentRejected = (p: { business: string; amount: number; re
   );
 
 /** Renewal reminders. daysLeft 0 means it has ended. */
-export const managerPlanReminder = (p: { business: string; kind: "TRIAL" | "ACTIVE"; daysLeft: number; until?: string; monthlyPrice: number; bestDiscount: number }) => {
+export const managerPlanReminder = (p: { currency?: string; business: string; kind: "TRIAL" | "ACTIVE"; daysLeft: number; until?: string; monthlyPrice: number; bestDiscount: number }) => {
   const what = p.kind === "TRIAL" ? "free trial" : "subscription";
   const ended = p.daysLeft <= 0;
   const when = p.daysLeft === 1 ? "tomorrow" : `in ${p.daysLeft} days`;
@@ -259,7 +263,7 @@ export const managerPlanReminder = (p: { business: string; kind: "TRIAL" | "ACTI
         p.bestDiscount > 0 ? `Tip: paying for several months at once saves up to <b>${p.bestDiscount}%</b>.` : "",
       ].filter(Boolean),
       rows: [
-        ["Plan", `${inr(p.monthlyPrice)}/month`],
+        ["Plan", `${inr(p.monthlyPrice, p.currency)}/month`],
         ...(p.until ? ([[ended ? "Ended on" : "Ends on", day(p.until)]] as Row[]) : []),
       ],
       cta: { label: ended ? "Upgrade to Pro" : "Renew", url: `${APP}/admin/billing` },

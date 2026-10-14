@@ -39,3 +39,15 @@ describe("repriceForWeight", () => {
     expect(weightGapPct(1, 7)).toBe(600);
   });
 });
+
+describe("repriceForWeight outside India", () => {
+  it("keeps cents for dollars", () => {
+    // 5 kg billed $21.94 ($4.388/kg); the driver weighs 5.4 kg
+    expect(repriceForWeight({ weightKg: 5, amountDue: 21.94 }, 5.4, 4.388, { currency: "USD" }).amountDue).toBe(23.7);
+  });
+  it("applies the minimum order, and doesn't read a minimum-order bill as the rate", () => {
+    // 1 kg at $3/kg was raised to the $30 minimum; at 6 kg it's $18 → still the $30 minimum, not $180
+    expect(repriceForWeight({ weightKg: 1, amountDue: 30 }, 6, 3, { currency: "USD", minOrder: 30 }).amountDue).toBe(30);
+    expect(repriceForWeight({ weightKg: 1, amountDue: 30 }, 12, 3, { currency: "USD", minOrder: 30 }).amountDue).toBe(36);
+  });
+});

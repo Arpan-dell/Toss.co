@@ -46,7 +46,8 @@ export async function withdrawJob(orderId: string, kind: "pickup" | "delivery", 
 }
 import { chooseDriver, directionsUrl, searchUrl, type DriverCandidate, type LatLng } from "./core";
 import { geocode } from "./geocode";
-import { MAX_KG, MIN_KG, parseKg, repriceForWeight } from "./weighing";
+import { MAX_KG, MIN_KG, parseWeight, repriceForWeight } from "./weighing";
+import { formatterFor, INDIA_FORMAT, regionOf, type Formatter } from "../region-format";
 import { earnings, monthStartIST, weekStartIST } from "../driver-pay";
 import { bagTag, bagsLine, isSorted, sortedTotal } from "../sorting";
 import { codeMatches, deliveryCode, looksLikeCode, tripRouteUrl } from "./delivery";
@@ -232,7 +233,21 @@ export async function dispatchWaiting(tenantId: string): Promise<number> {
 
 // ---------- deliveries (migration 0027) ----------
 
-const unpaidAmount = (o: Row) => (o.payment_status === "UNPAID" && !o.account_id ? Math.round(Number(o.amount_due) || 0) : 0);
+const unpaidAmount = (o: Row) => (o.payment_status === "UNPAID" && !o.account_id ? Number(o.amount_due) || 0 : 0);
+
+// Each business's currency and kg/lb, for the bots' messages. Looked up once per business and kept for 5 minutes.
+const fmtCache = new Map<string, { at: number; f: Promise<Formatter> }>();
+function fmtFor(tenantId: unknown): Promise<Formatter> {
+  if (typeof tenantId !== "string" || !tenantId) return Promise.resolve(INDIA_FORMAT);
+  const hit = fmtCache.get(tenantId);
+  if (hit && Date.now() - hit.at < 300_000) return hit.f;
+  const f = Promise.resolve(db().from("tenants").select("*").eq("id", tenantId).maybeSingle()).then(
+    ({ data }) => formatterFor(regionOf(data)),
+    () => INDIA_FORMAT,
+  );
+  fmtCache.set(tenantId, { at: Date.now(), f });
+  return f;
+}
 const bagNames = (o: Row) =>
   isSorted({ whitesKg: o.whites_kg as number | null, colouredKg: o.coloured_kg as number | null })
     ? [Number(o.whites_kg) > 0 && bagTag(o.device_order_id as number, "WHITES"), Number(o.coloured_kg) > 0 && bagTag(o.device_order_id as number, "COLOURED")]
@@ -310,6 +325,7 @@ export async function notifyDelivery(order: Row, chatId: string) {
     : { data: null };
   const id = order.id as string;
   const due = unpaidAmount(order);
+  const f = await fmtFor(order.tenant_id);
   const lines = [
     `📦 <b>NEW DELIVERY</b> · ${esc(orderLabel({ deviceId: order.device_id as string, deviceOrderId: order.device_order_id as number }))}`,
     LINE,
@@ -317,7 +333,7 @@ export async function notifyDelivery(order: Row, chatId: string) {
     `📍 Deliver to ${esc((order.address as string) || "Address not set")}`,
     c?.name ? `👤 ${esc(c.name as string)}` : null,
     c?.phone ? `📞 ${formatPhone(c.phone as string)}` : null,
-    due ? `💵 To collect: <b>₹${due}</b> (or the customer pays online)` : order.account_id ? "🧾 On a monthly account: nothing to collect" : "✅ Already paid",
+    due ? `💵 To collect: <b>${f.money(due)}</b> (or the customer pays online)` : order.account_id ? "🧾 On a monthly account: nothing to collect" : "✅ Already paid",
   ].filter(Boolean);
   const card = await sendMessage(token, chatId, lines.join("\n"), { inline: deliveryAssignButtons(order, driver, store.place, !order.delivery_ack_at) });
   await remember(id, "delivery", chatId, card);
@@ -360,18 +376,19 @@ async function completeDelivery(token: string, driver: Row, o: Row, verified: bo
     return;
   }
   const due = unpaidAmount(o);
+  const f = await fmtFor(o.tenant_id);
   await sendMessage(token, chatId, `✅ <b>Delivered</b> · #${o.device_order_id}${verified ? " · code checked ✓" : ""}`, { keyboard: MENU });
   // recording cash at the door is Pro
   if (due && (await isPro(o.tenant_id as string))) {
-    await sendMessage(token, chatId, `💵 <b>₹${due}</b> is still unpaid. Did the customer pay you cash?`, {
-      inline: [[{ text: `Collected ₹${due} cash`, callback_data: `dcash:${o.id}` }], [{ text: "No, they'll pay online", callback_data: `dnocash:${o.id}` }]],
+    await sendMessage(token, chatId, `💵 <b>${f.money(due)}</b> is still unpaid. Did the customer pay you cash?`, {
+      inline: [[{ text: `Collected ${f.money(due)} cash`, callback_data: `dcash:${o.id}` }], [{ text: "No, they'll pay online", callback_data: `dnocash:${o.id}` }]],
     });
   }
   const { data: t } = await db().from("tenants").select("name").eq("id", o.tenant_id as string).maybeSingle();
   await notifyCustomer(
     o,
     `📦 <b>Delivered!</b> Your clothes from ${esc((t?.name as string) ?? "your laundry")} are back (order #${o.device_order_id}).` +
-      (due ? `\n💵 ₹${due} is due: pay in the Toss app (${APP_URL}/app) or to the driver.` : "") +
+      (due ? `\n💵 ${f.money(due)} is due: pay in the Toss app (${APP_URL}/app) or to the driver.` : "") +
       "\nThank you!",
   ).catch(() => {});
   await nextStop(token, driver);
@@ -483,7 +500,7 @@ async function handleDeliveryButton(token: string, cb: NonNullable<TgUpdate["cal
       .eq("payment_status", "UNPAID")
       .select("id");
     await answerCallback(token, cb.id, paid?.length ? "Noted. Hand the cash to the store." : "Already paid");
-    await edit(paid?.length ? `💵 <b>Cash ₹${unpaidAmount(o as Row)} collected</b> · #${o.device_order_id}\n<i>Hand it to the store; they'll confirm it.</i>` : "💵 Already paid.");
+    await edit(paid?.length ? `💵 <b>Cash ${(await fmtFor(o.tenant_id)).money(unpaidAmount(o as Row))} collected</b> · #${o.device_order_id}\n<i>Hand it to the store; they'll confirm it.</i>` : "💵 Already paid.");
   } else if (action === "dnocash") {
     await answerCallback(token, cb.id, "OK");
     await edit("💵 <i>The customer will pay online.</i>");
@@ -510,7 +527,7 @@ export async function notifyAssignment(order: Row, chatId: string, pickup?: LatL
     // Customer numbers are private: only the driver collecting the laundry gets one, and it disappears
     // from this message once they mark it picked up.
     c?.phone ? `📞 ${formatPhone(c.phone as string)}` : null,
-    `⚖️ ${Number(order.weight_kg).toFixed(1)} kg`,
+    `⚖️ ${(await fmtFor(order.tenant_id)).weight(Number(order.weight_kg))}`,
     store.place ? `🏁 Then deliver to <b>${esc(store.name)}</b>` : null,
   ].filter(Boolean);
   const card = await sendMessage(token, chatId, lines.join("\n"), { inline: buttons });
@@ -630,12 +647,13 @@ async function earningsCard(driver: Row): Promise<string> {
     ...(drops ?? []).map((o) => ({ deviceId: o.device_id as string, at: o.delivered_at as string })),
   ];
   const count = (start: string, end?: string) => trips.filter((o) => o.at >= start && (!end || o.at < end)).length;
+  const f = await fmtFor(driver.tenant_id);
   if (driver.pay_type === "SALARY") {
     const n = (k: number) => `${k} trip${k === 1 ? "" : "s"}`;
     return [
       `💰 <b>Your pay</b> · ${esc(driver.name as string)}`,
       LINE,
-      `Salary: <b>₹${Number(driver.monthly_salary).toLocaleString("en-IN")}</b> a month`,
+      `Salary: <b>${f.money(Number(driver.monthly_salary) || 0)}</b> a month`,
       "",
       `This week: ${n(count(week))}`,
       `Last week: ${n(count(lastWeek, week))}`,
@@ -653,7 +671,7 @@ async function earningsCard(driver: Row): Promise<string> {
   const between = (start: string, end?: string) => trips.filter((o) => o.at >= start && (!end || o.at < end));
   const line = (label: string, start: string, end?: string) => {
     const e = earnings(between(start, end), rates, store, (id) => at.get(id));
-    return `${label}: <b>₹${e.pay}</b> · ${e.pickups} trip${e.pickups === 1 ? "" : "s"}${e.km ? ` · ${e.km} km` : ""}`;
+    return `${label}: <b>${f.money(e.pay)}</b> · ${e.pickups} trip${e.pickups === 1 ? "" : "s"}${e.km ? ` · ${e.km} km` : ""}`;
   };
   return [
     `💰 <b>Your earnings</b> · ${esc(driver.name as string)}`,
@@ -662,17 +680,17 @@ async function earningsCard(driver: Row): Promise<string> {
     line("Last week", lastWeek, week),
     line("This month", month),
     "",
-    `<i>₹${rates.driverPayPerPickup} per pickup or delivery${rates.driverPayPerKm ? ` + ₹${rates.driverPayPerKm}/km from the store` : ""}. Paid by your laundry.</i>`,
+    `<i>${f.money(rates.driverPayPerPickup)} per pickup or delivery${rates.driverPayPerKm ? ` + ${f.money(rates.driverPayPerKm)}/km from the store` : ""}. Paid by your laundry.</i>`,
   ].join("\n");
 }
 
 // phone: the customer's number, shown only on open pickups (never to managers).
-const pickupCard = (j: Row, title: string, phone?: string | null) =>
+const pickupCard = (j: Row, title: string, f: Formatter, phone?: string | null) =>
   [
     `🧺 <b>${title}</b> · #${j.device_order_id}`,
     LINE,
     `📍 ${esc((j.address as string) || "Address not set")}`,
-    `⚖️ ${Number(j.weight_kg).toFixed(1)} kg`,
+    `⚖️ ${f.weight(Number(j.weight_kg))}`,
     ...(phone ? [`📞 ${formatPhone(phone)}`] : []),
   ].join("\n");
 
@@ -814,9 +832,10 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
 
   // Mid weigh-in: a number is the bag's weight. Anything else (menu buttons) works as usual.
   if (driver.weighing_order_id && update.message) {
-    const kg = parseKg(text);
+    const wf = await fmtFor(driver.tenant_id);
+    const kg = parseWeight(text, wf.unit);
     if (kg === "range") {
-      await sendMessage(token, chatId, `⚖️ That doesn't look right. Send the weight in kg between ${MIN_KG} and ${MAX_KG}, like <code>6.4</code>.`);
+      await sendMessage(token, chatId, `⚖️ That doesn't look right. Send the weight in ${wf.unit} between ${wf.weightValue(MIN_KG)} and ${wf.weightValue(MAX_KG)}, like <code>${wf.unit === "lb" ? "14" : "6.4"}</code>.`);
       return;
     }
     if (kg !== null) {
@@ -862,7 +881,7 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
   } else if (text === "📋 My jobs" || text === "📋 My pickups" || text === "/pickups" || text === "/jobs") {
     const { data: jobs } = await db()
       .from("orders")
-      .select("id, device_id, device_order_id, address, weight_kg, customer_id")
+      .select("id, device_id, device_order_id, address, weight_kg, customer_id, tenant_id")
       .eq("driver_id", chatId)
       .in("status", ACTIVE)
       .order("assigned_at");
@@ -893,7 +912,7 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
       const { data: people } = ids.length ? await db().from("customers").select("id, phone").in("id", ids) : { data: [] };
       const phoneOf = new Map((people ?? []).map((p: Row) => [p.id as string, p.phone as string | null]));
       for (const j of jobs) {
-        const card = await sendMessage(token, chatId, pickupCard(j, "Pickup", phoneOf.get(j.customer_id as string)), { inline: pickupButtons(j, searchUrl(j.address as string)) });
+        const card = await sendMessage(token, chatId, pickupCard(j, "Pickup", await fmtFor(j.tenant_id), phoneOf.get(j.customer_id as string)), { inline: pickupButtons(j, searchUrl(j.address as string)) });
         await remember(j.id as string, "pickup", chatId, card);
       }
     }
@@ -928,7 +947,7 @@ async function finishPickup(
   };
   if (source === "driver") Object.assign(patch, { weight_kg: kg, weighed_kg: kg, weighed_at: now });
   if (source === "driver" && o.payment_status === "UNPAID") {
-    const { data: t } = await db().from("tenants").select("price_per_kg").eq("id", o.tenant_id as string).maybeSingle();
+    const { data: t } = await db().from("tenants").select("*").eq("id", o.tenant_id as string).maybeSingle();
     const priced = repriceForWeight(
       {
         weightKg: Number(o.weight_kg) || 0,
@@ -939,6 +958,7 @@ async function finishPickup(
       },
       kg,
       Number(t?.price_per_kg) || 0,
+      { currency: (t?.currency as string) ?? "INR", minOrder: Number(t?.min_order ?? 0) || 0 },
     );
     Object.assign(patch, { amount_due: priced.amountDue, amount_before_discount: priced.amountBeforeDiscount });
   }
@@ -948,14 +968,15 @@ async function finishPickup(
     await sendMessage(token, chatId, "This pickup was already closed.", { keyboard: MENU });
     return;
   }
-  const amount = Math.round(Number(done[0].amount_due) || 0);
+  const amount = Number(done[0].amount_due) || 0;
+  const f = await fmtFor(o.tenant_id);
   const split = bags ? `\n${bagsLine(bags, true)}` : "";
-  const weighed = (source === "driver" ? `⚖️ ${kg} kg weighed` : `⚖️ ${kg} kg (basket reading)`) + split;
+  const weighed = (source === "driver" ? `⚖️ ${f.weight(kg)} weighed` : `⚖️ ${f.weight(kg)} (basket reading)`) + split;
   if (msg) await editMessage(token, String(msg.chat.id), msg.message_id, `✅ <b>Picked up</b> · #${o.device_order_id}\n<s>${esc((o.address as string) || "")}</s>`);
-  await sendMessage(token, chatId, `✅ <b>Picked up</b> · #${o.device_order_id}\n${weighed} · ₹${amount}`, { keyboard: MENU });
+  await sendMessage(token, chatId, `✅ <b>Picked up</b> · #${o.device_order_id}\n${weighed} · ${f.money(amount)}`, { keyboard: MENU });
   await notifyCustomer(
     o,
-    `✅ Your laundry has been picked up (order #${o.device_order_id}).\n${source === "driver" ? `⚖️ Weighed at pickup: <b>${kg} kg</b>` : `⚖️ ${kg} kg`} · <b>₹${amount}</b>${
+    `✅ Your laundry has been picked up (order #${o.device_order_id}).\n${source === "driver" ? `⚖️ Weighed at pickup: <b>${f.weight(kg)}</b>` : `⚖️ ${f.weight(kg)}`} · <b>${f.money(amount)}</b>${
       bags ? `\n${bagsLine(bags, true)}\n<i>Whites and coloured clothes are washed separately.</i>` : ""
     }\nThank you!`,
   ).catch(() => {});
@@ -988,13 +1009,14 @@ async function finishPickup(
 // bag the pickup completes with their sum. At least one bag must have clothes.
 async function weighBag(token: string, driver: Row, o: Row, kind: "WHITES" | "COLOURED", kg: number) {
   const chatId = driver.telegram_chat_id as string;
+  const f = await fmtFor(o.tenant_id);
   if (kind === "WHITES") {
     await db().from("orders").update({ whites_kg: kg }).eq("id", o.id as string).eq("driver_id", chatId).in("status", ACTIVE);
     await db().from("drivers").update({ weighing_step: "COLOURED" }).eq("id", driver.id as string);
     await sendMessage(
       token,
       chatId,
-      `${kg ? `⚪ Whites: <b>${kg} kg</b> ✓` : "⚪ No whites ✓"}\n${LINE}\n🎨 <b>Now the coloured bag</b> <code>${bagTag(o.device_order_id as number, "COLOURED")}</code>\nSend its weight in kg, like <code>3.5</code>.`,
+      `${kg ? `⚪ Whites: <b>${f.weight(kg)}</b> ✓` : "⚪ No whites ✓"}\n${LINE}\n🎨 <b>Now the coloured bag</b> <code>${bagTag(o.device_order_id as number, "COLOURED")}</code>\nSend its weight in ${f.unit}, like <code>${f.unit === "lb" ? "8" : "3.5"}</code>.`,
       { inline: [[{ text: "No coloured clothes", callback_data: `nocoloured:${o.id}` }]] },
     );
     return;
@@ -1040,6 +1062,8 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
     if (!o.driver_ack_at) await db().from("orders").update({ driver_ack_at: new Date().toISOString() }).eq("id", orderId).is("driver_ack_at", null);
     const reported = Number(o.weight_kg) || 0;
     const { data: t } = await db().from("tenants").select("weigh_at_pickup, sort_whites").eq("id", o.tenant_id as string).maybeSingle();
+    const f = await fmtFor(o.tenant_id);
+    const r = f.weight(reported);
     if (t?.weigh_at_pickup === false) {
       // the business doesn't weigh at pickup: the basket's reading stands
       await answerCallback(token, cb.id, "Marked as picked up ✅");
@@ -1057,11 +1081,11 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
         chatId,
         `🧺 <b>Two bags</b> · #${o.device_order_id}\n${LINE}\nPut <b>whites</b> and <b>coloured clothes</b> in separate bags and tag them ` +
           `<code>${bagTag(o.device_order_id as number, "WHITES")}</code> and <code>${bagTag(o.device_order_id as number, "COLOURED")}</code>.\n\n` +
-          `⚪ <b>Weigh the whites bag first.</b> Send its weight in kg, like <code>2.5</code>.\nThe basket reported <b>${reported} kg</b> in total.`,
+          `⚪ <b>Weigh the whites bag first.</b> Send its weight in ${f.unit}, like <code>${f.unit === "lb" ? "6" : "2.5"}</code>.\nThe basket reported <b>${r}</b> in total.`,
         {
           inline: [
             [{ text: "No whites", callback_data: `nowhites:${orderId}` }],
-            [{ text: `No scale: use the basket's ${reported} kg`, callback_data: `basket:${orderId}` }],
+            [{ text: `No scale: use the basket's ${r}`, callback_data: `basket:${orderId}` }],
           ],
         },
       );
@@ -1074,8 +1098,8 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
     await sendMessage(
       token,
       chatId,
-      `⚖️ <b>Weigh the bag</b> · #${o.device_order_id}\n${LINE}\nSend the weight on your scale in kg, like <code>6.4</code>.\nThe basket reported <b>${reported} kg</b>.`,
-      { inline: [[{ text: `No scale: use the basket's ${reported} kg`, callback_data: `basket:${orderId}` }]] },
+      `⚖️ <b>Weigh the bag</b> · #${o.device_order_id}\n${LINE}\nSend the weight on your scale in ${f.unit}, like <code>${f.unit === "lb" ? "14" : "6.4"}</code>.\nThe basket reported <b>${r}</b>.`,
+      { inline: [[{ text: `No scale: use the basket's ${r}`, callback_data: `basket:${orderId}` }]] },
     );
   } else if (
     (action === "nowhites" || action === "nocoloured") &&

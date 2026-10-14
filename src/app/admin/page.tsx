@@ -14,6 +14,8 @@ import { getSession } from "@/lib/session";
 import { timeAgo } from "@/lib/format";
 import { washQueue } from "@/lib/sorting";
 import { myFormat } from "@/lib/my-format";
+import { paidOnline } from "@/lib/pay-methods";
+import { formatterFor, regionOf } from "@/lib/region-format";
 
 export const metadata: Metadata = { title: "Live board" };
 
@@ -45,7 +47,8 @@ export default async function LiveBoard() {
         devices,
         drivers,
         lowStock: supplies.filter((s) => s.stock <= s.lowAt),
-        business: { upiId: tenant.upiId, storeAddress: tenant.storeAddress, storeLocated: !!tenant.storeLocated, delivers: tenant.delivers },
+        business: { upiId: tenant.upiId, storeAddress: tenant.storeAddress, storeLocated: !!tenant.storeLocated, delivers: tenant.delivers, paidOnline: paidOnline(tenant), india: tenant.currency === "INR" },
+        money: formatterFor(regionOf(tenant)).money,
         plan: { state: plan!.state, daysLeft: plan!.daysLeft },
       })
     : [];

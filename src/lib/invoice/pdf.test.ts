@@ -56,3 +56,31 @@ describe("invoice PDF", () => {
     expect(money(123456.5)).toBe("Rs. 1,23,456.50");
   });
 });
+
+describe("invoices outside India", () => {
+  it("writes each currency with a symbol the PDF font has, or its code", async () => {
+    const { moneyIn } = await import("./pdf");
+    expect(moneyIn(26.27, "USD")).toBe("$26.27");
+    expect(moneyIn(26.27, "EUR")).toBe("EUR 26.27");
+    expect(moneyIn(1234.5, "GBP")).toBe("£1,234.50");
+    expect(moneyIn(123456.5, "INR")).toBe("Rs. 1,23,456.50");
+  });
+});
+
+describe("a US invoice", () => {
+  it("renders in dollars and pounds weight, with tax and a tip", async () => {
+    const { renderInvoicePdf } = await import("./pdf");
+    const bytes = await renderInvoicePdf({
+      number: "TOSS-2026-000200",
+      issuedAt: "2026-10-15T15:00:00Z",
+      business: { name: "Fresh Fold NYC", joinCode: "B-NYC123", taxId: "12-3456789", taxLabel: "Sales tax" },
+      region: { currency: "USD", unit: "lb", timezone: "America/New_York" },
+      tax: { label: "Sales tax", pct: 8.875 },
+      customer: { code: "C-ABC123", name: "Sam" },
+      order: { label: "#200", placedAt: "2026-10-15T13:00:00Z", address: "1 Main St", weightKg: 6, subtotal: 26.32, total: 26.32, tip: 4 },
+      payment: { method: "Venmo", ref: "3912345678901234567", paidAt: "2026-10-15T15:00:00Z" },
+      site: "https://tosslaundry.online",
+    });
+    expect(bytes.length).toBeGreaterThan(1000);
+  });
+});

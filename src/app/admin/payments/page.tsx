@@ -9,6 +9,7 @@ import type { Customer, Order } from "@/lib/types";
 import { AmountForm } from "./amount-form";
 import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
 import { myFormat } from "@/lib/my-format";
+import { hasCents } from "@/lib/regions";
 import { methodName } from "@/lib/pay-methods";
 
 export const metadata: Metadata = { title: "Payments" };
@@ -105,7 +106,7 @@ export default async function Payments() {
                     {fmt.weight(o.weightKg)} · picked up {o.completedAt ? fmt.dateTime(o.completedAt) : "—"}
                   </p>
                 </div>
-                <AmountForm orderId={o.id} amount={o.amountDue} />
+                <AmountForm orderId={o.id} amount={o.amountDue} symbol={fmt.symbol} cents={hasCents(fmt.region.currency)} />
                 <OptimisticForm action={markPaidCash} hide>
                   <input type="hidden" name="orderId" value={o.id} />
                   <button className="btn-ghost rounded-full px-4 py-1.5 text-sm">Mark paid (cash)</button>

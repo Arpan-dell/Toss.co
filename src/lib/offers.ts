@@ -1,5 +1,5 @@
 import "server-only";
-import { formatINR } from "./format";
+import { formatterFor, regionOf } from "./region-format";
 import { APP_URL } from "./site";
 import { supabaseAdmin } from "./supabase/admin";
 import { esc, sendMessage, type InlineButton } from "./telegram-api";
@@ -64,8 +64,10 @@ export async function applyOfferToOrder(orderId: string): Promise<{ percent: num
     const applied = data as { percent: number; before: number; after: number } | null;
     if (!applied) return null;
 
-    const { data: o } = await db.from("orders").select("device_order_id, customer_telegram_id").eq("id", orderId).maybeSingle();
+    const { data: o } = await db.from("orders").select("device_order_id, customer_telegram_id, tenant_id").eq("id", orderId).maybeSingle();
     if (o?.customer_telegram_id) {
+      const { data: t } = await db.from("tenants").select("*").eq("id", o.tenant_id as string).maybeSingle();
+      const formatINR = formatterFor(regionOf(t)).money;
       await tellCustomer(
         o.customer_telegram_id as string,
         `🎁 <b>${applied.percent}% off applied!</b>\nPickup #${o.device_order_id}: <s>${formatINR(applied.before)}</s> → <b>${formatINR(applied.after)}</b>`,

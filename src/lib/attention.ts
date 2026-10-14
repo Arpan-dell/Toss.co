@@ -20,13 +20,15 @@ export type AttentionInput = {
   devices: Device[];
   drivers: Driver[];
   lowStock?: { name: string }[]; // Pro: supplies under their alert level
-  business: { upiId?: string; storeAddress?: string; storeLocated: boolean; delivers: boolean };
+  business: { upiId?: string; storeAddress?: string; storeLocated: boolean; delivers: boolean; paidOnline?: boolean; india?: boolean };
+  /** money in the business's currency (rupees when missing) */
+  money?: (n: number) => string;
   plan: { state: "TRIAL" | "ACTIVE" | "EXPIRED" | "SUSPENDED"; daysLeft?: number };
 };
 
 const MIN = 60_000;
 const DAY = 86_400_000;
-const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
+const inrDefault = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 const s = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const orderHref = (o: Order) => `/admin/orders/${encodeURIComponent(o.id)}`;
 // one order: open it; several: the list
@@ -35,20 +37,23 @@ const hrefFor = (list: Order[], fallback: string) => (list.length === 1 ? orderH
 const RANK: Record<AttentionLevel, number> = { critical: 0, warn: 1, info: 2 };
 
 export function attentionItems(i: AttentionInput): Attention[] {
+  const inr = i.money ?? inrDefault;
   const t = i.now.getTime();
   const age = (iso?: string) => (iso ? t - new Date(iso).getTime() : 0);
   const items: Attention[] = [];
   const online = i.drivers.filter((d) => d.telegramChatId && d.status !== "OFFLINE");
 
   // money can't come in
-  if (!i.business.upiId) {
+  if (!(i.business.paidOnline ?? !!i.business.upiId)) {
     items.push({
       key: "upi",
       level: "critical",
       title: "Customers can't pay you yet",
-      fix: "Add your UPI ID so every bill shows a pay button and QR code.",
+      fix: i.business.india === false
+        ? "Add PayPal, a bank account or another way to get paid, so every bill shows how to pay you."
+        : "Add your UPI ID so every bill shows a pay button and QR code.",
       href: "/admin/settings/payments",
-      action: "Add UPI ID",
+      action: i.business.india === false ? "Set up payments" : "Add UPI ID",
     });
   }
 

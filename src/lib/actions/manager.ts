@@ -12,6 +12,10 @@ import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
 import { isValidUpiId, normalizePaymentRef, normalizeUpiId } from "../upi";
 import { friendlyError, text, type FormState } from "./shared";
+import { isBic, isUsername, isValidIban } from "../pay-methods";
+import { pricePerKgFrom } from "../region-format";
+import { countryOf } from "../regions";
+import type { PayMethods } from "../types";
 
 // All writes run as the manager, so Postgres RLS and column grants confine them to their own
 // business and to the payment/amount fields of its orders.
@@ -47,26 +51,127 @@ export async function updateBusiness(_prev: FormState, formData: FormData): Prom
     : { message: "Saved, but we couldn't find the store address on the map. Drivers' routes will search it by text. Try adding the area and city." };
 }
 
-// Price & UPI: where customers' money goes and what they pay. Needs the account password, like a bank would.
+// Price & payments: where the business is, what customers pay and where the money goes. Needs the account
+// password, like a bank would. Before migration 0035 only the original fields (price, UPI) exist, so only they're
+// saved; the region fields are disabled on the form until then.
 export async function updatePayments(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireManager();
-  const upiId = text(formData, "upiId");
+  const supabase = await createClient();
+  const { data: row } = await supabase.from("tenants").select("*").eq("id", session.tenantId).maybeSingle();
+  if (!row) return { error: "Business not found." };
+  const regionReady = row.country !== undefined;
+
+  const country = regionReady ? countryOf(text(formData, "country") || (row.country as string)) : countryOf("IN");
+  const india = country.code === "IN";
+  const currency = regionReady ? (text(formData, "currency") || country.currency).toUpperCase() : "INR";
+  const unitRaw = text(formData, "unit");
+  const unit = regionReady && (unitRaw === "lb" || unitRaw === "kg") ? unitRaw : "kg";
   const price = Number(text(formData, "price"));
-  if (!isValidUpiId(upiId)) return { error: "Enter a valid UPI ID, like yourshop@okaxis." };
-  if (!(price > 0 && price <= 10_000)) return { error: "Enter your price per kg in rupees." };
+  const upiId = text(formData, "upiId");
+  if (!(price > 0 && price <= 10_000)) return { error: `Enter your price per ${unit}.` };
+  if (!/^[A-Z]{3}$/.test(currency)) return { error: "Choose your currency." };
+  if ((india || upiId) && !isValidUpiId(upiId)) return { error: "Enter a valid UPI ID, like yourshop@okaxis." };
+
+  const patch: Record<string, unknown> = {
+    upi_id: upiId ? normalizeUpiId(upiId) : null,
+    upi_name: (text(formData, "upiName") || (row.name as string) || "").slice(0, 50),
+    price_per_kg: pricePerKgFrom(price, unit),
+  };
+  if (regionReady) {
+    const methods = readPayMethods(formData);
+    if (typeof methods === "string") return { error: methods };
+    const tz = text(formData, "timezone");
+    const minOrder = Number(text(formData, "minOrder") || 0);
+    const taxPct = Number(text(formData, "taxPct") || 0);
+    if (!(minOrder >= 0 && minOrder <= 100_000)) return { error: "Enter a minimum order of 0 or more." };
+    if (!(taxPct >= 0 && taxPct <= 50)) return { error: "Tax must be between 0% and 50%." };
+    Object.assign(patch, {
+      country: country.code,
+      currency,
+      weight_unit: unit,
+      timezone: india ? "Asia/Kolkata" : (validZone(tz) ?? country.timezone),
+      min_order: minOrder,
+      tax_label: text(formData, "taxLabel").slice(0, 30) || null,
+      tax_pct: taxPct,
+      tax_id: text(formData, "taxId").slice(0, 40) || null,
+      pay_methods: methods,
+    });
+  }
   const wrong = await checkPassword(session, String(formData.get("password") ?? ""));
   if (wrong) return { error: wrong };
 
-  const supabase = await createClient();
-  const { data: t } = await supabase.from("tenants").select("name").eq("id", session.tenantId).maybeSingle();
-  const upiName = text(formData, "upiName") || ((t?.name as string) ?? "");
-  const { error } = await supabase
-    .from("tenants")
-    .update({ upi_id: normalizeUpiId(upiId), upi_name: upiName.slice(0, 50), price_per_kg: price })
-    .eq("id", session.tenantId);
+  const { error } = await supabase.from("tenants").update(patch).eq("id", session.tenantId);
   if (error) return { error: friendlyError(error) };
   done();
-  return { message: "Saved. New pickups use this price, and customers pay to this UPI ID." };
+  return { message: "Saved. New pickups use this price, and customers see these ways to pay." };
+}
+
+function validZone(tz: string): string | undefined {
+  if (!tz || tz.length > 64) return undefined;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+    return tz;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The payment methods from the form, checked, or a message saying which one is wrong. */
+function readPayMethods(fd: FormData): PayMethods | string {
+  const t = (k: string) => text(fd, k).trim();
+  const out: PayMethods = { cash: fd.get("cash") === "yes" };
+  const user = (k: "paypal" | "venmo" | "cashapp", label: string) => {
+    const v = t(k).replace(/^[@$]/, "").replace(/^https?:\/\/(www\.)?(paypal\.me|venmo\.com|cash\.app)\/\$?/i, "");
+    if (!v) return true;
+    if (!isUsername(v)) return `${label}: enter just the username, like freshlaundry.`;
+    out[k] = v;
+    return true;
+  };
+  for (const [k, label] of [["paypal", "PayPal"], ["venmo", "Venmo"], ["cashapp", "Cash App"]] as const) {
+    const r = user(k, label);
+    if (r !== true) return r;
+  }
+  const email = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  const phone = (v: string) => /^\+?[\d\s()-]{7,20}$/.test(v);
+  if (t("zelle")) {
+    if (!email(t("zelle")) && !phone(t("zelle"))) return "Zelle: enter the email or phone number registered with Zelle.";
+    out.zelle = t("zelle");
+  }
+  if (t("interac")) {
+    if (!email(t("interac"))) return "Interac: enter the email for e-Transfers.";
+    out.interac = t("interac");
+  }
+  if (t("sepaIban") || t("sepaName")) {
+    if (!isValidIban(t("sepaIban"))) return "That IBAN doesn't check out. Copy it again from your bank.";
+    if (!t("sepaName")) return "Enter the account holder's name for SEPA transfers.";
+    if (t("sepaBic") && !isBic(t("sepaBic"))) return "That BIC doesn't look right (8 or 11 letters and digits).";
+    out.sepa = { name: t("sepaName").slice(0, 70), iban: t("sepaIban").replace(/\s+/g, "").toUpperCase(), bic: t("sepaBic").replace(/\s+/g, "").toUpperCase() || undefined };
+  }
+  if (t("bankAccount") || t("bankName")) {
+    if (!t("bankAccount") || !t("bankName")) return "Bank transfer: enter both the account name and number.";
+    out.bank = { name: t("bankName").slice(0, 70), account: t("bankAccount").slice(0, 40), code: t("bankCode").slice(0, 20) || undefined, codeLabel: t("bankCodeLabel").slice(0, 20) || undefined };
+  }
+  if (t("pixKey")) {
+    if (!t("pixName") || !t("pixCity")) return "Pix: enter the name and city too (they're part of the Pix code).";
+    out.pix = { key: t("pixKey").slice(0, 77), name: t("pixName").slice(0, 25), city: t("pixCity").slice(0, 15) };
+  }
+  if (t("paynow")) {
+    if (!/^[A-Za-z0-9+\s-]{8,20}$/.test(t("paynow"))) return "PayNow: enter your UEN or mobile number.";
+    out.paynow = t("paynow");
+  }
+  if (t("mpesaTill")) {
+    if (!/^\d{5,10}$/.test(t("mpesaTill"))) return "M-Pesa: the till or paybill number is 5 to 10 digits.";
+    out.mpesa = { till: t("mpesaTill"), account: t("mpesaAccount").slice(0, 20) || undefined };
+  }
+  if (t("gcash")) {
+    if (!phone(t("gcash"))) return "GCash: enter the mobile number.";
+    out.gcash = t("gcash");
+  }
+  if (t("linkUrl")) {
+    if (!/^https:\/\/[^\s]{4,300}$/.test(t("linkUrl"))) return "The payment link must start with https://";
+    out.link = { url: t("linkUrl"), label: t("linkLabel").slice(0, 30) || undefined };
+  }
+  return out;
 }
 
 // Service area: where the store is (a pin the manager places or their current location) and how far it picks
@@ -140,7 +245,7 @@ export async function confirmOrderWeight(_prev: FormState, formData: FormData): 
     .maybeSingle();
   if (!o || o.tenant_id !== session.tenantId) return { error: "Order not found in your business." };
   if (o.payment_status !== "UNPAID") return { error: "This order is already paid or being paid, so its amount is fixed." };
-  const { data: t } = await supabase.from("tenants").select("price_per_kg").eq("id", session.tenantId).maybeSingle();
+  const { data: t } = await supabase.from("tenants").select("*").eq("id", session.tenantId).maybeSingle();
 
   const priced = repriceForWeight(
     {
@@ -152,6 +257,7 @@ export async function confirmOrderWeight(_prev: FormState, formData: FormData): 
     },
     kg,
     Number(t?.price_per_kg) || 0,
+    { currency: (t?.currency as string) ?? "INR", minOrder: Number(t?.min_order ?? 0) || 0 },
   );
   const { data: saved, error } = await supabaseAdmin()
     .from("orders")
@@ -228,8 +334,9 @@ export async function markPaidCash(formData: FormData) {
 }
 
 export async function setOrderAmount(_prev: FormState, formData: FormData): Promise<FormState> {
-  const amount = Math.round(Number(text(formData, "amount")));
-  if (!(amount >= 0 && amount <= 1_000_000)) return { error: "Enter an amount in rupees." };
+  // cents are kept (dollars, euros); rupees are typed in whole numbers anyway
+  const amount = Math.round(Number(text(formData, "amount")) * 100) / 100;
+  if (!(amount >= 0 && amount <= 1_000_000)) return { error: "Enter the amount." };
   try {
     await updateOrder(text(formData, "orderId"), { amount_due: amount });
   } catch (err) {

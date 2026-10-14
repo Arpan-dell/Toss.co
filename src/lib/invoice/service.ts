@@ -10,6 +10,8 @@ import { esc, sendDocument } from "../telegram-api";
 import { renderInvoicePdf, type InvoiceData } from "./pdf";
 import { logError } from "@/lib/log";
 import { SITE_URL } from "@/lib/site";
+import { methodName } from "../pay-methods";
+import { regionOf } from "../region-format";
 
 // Invoices for paid pickups. Server-side with the service role: an invoice joins the business,
 // its manager, the customer and the driver, which no single client role may read together
@@ -44,7 +46,8 @@ export async function loadInvoice(orderId: string, audience: "customer" | "busin
 
   const { data: o } = await db.from("orders").select("*").eq("id", orderId).single();
   const [{ data: t }, { data: c }, { data: d }, { data: dev }] = await Promise.all([
-    db.from("tenants").select("name, join_code, store_address, upi_id, manager_id, plan_status, trial_ends_at, paid_until").eq("id", o.tenant_id).maybeSingle(),
+    // "*": currency, tax and units arrive with migration 0035
+    db.from("tenants").select("*").eq("id", o.tenant_id).maybeSingle(),
     o.customer_id
       ? db.from("customers").select("name, customer_code, email, phone, telegram_id").eq("id", o.customer_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -63,7 +66,14 @@ export async function loadInvoice(orderId: string, audience: "customer" | "busin
       storeAddress: u(t?.store_address),
       upiId: u(t?.upi_id),
       managerEmail: manager,
+      taxId: u(t?.tax_id),
+      taxLabel: u(t?.tax_label),
     },
+    region: (() => {
+      const r = regionOf(t);
+      return { currency: r.currency, unit: r.unit, timezone: r.timezone };
+    })(),
+    tax: Number(t?.tax_pct) > 0 ? { label: (t?.tax_label as string) || "Tax", pct: Number(t?.tax_pct) } : undefined,
     customer: {
       name: u((c as Row | null)?.name),
       code: ((c as Row | null)?.customer_code as string) ?? "-",
@@ -82,9 +92,10 @@ export async function loadInvoice(orderId: string, audience: "customer" | "busin
       discountPct: u(o.discount_pct),
       basketCredit: Number(o.credit_applied) || undefined,
       total: Number(o.amount_due),
+      tip: Number(o.tip ?? 0) || undefined,
     },
     driver: d?.name ? { name: d.name as string } : undefined,
-    payment: { method: (o.payment_method as string) ?? "UPI", ref: u(o.payment_ref), paidAt: u(o.payment_confirmed_at) },
+    payment: { method: methodName((o.payment_method as string) ?? "UPI"), ref: u(o.payment_ref), paidAt: u(o.payment_confirmed_at) },
     site: SITE,
   };
   return {

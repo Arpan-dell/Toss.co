@@ -1,3 +1,4 @@
+import { billFor } from "../regions";
 // Pure ingest logic for device/bridge payloads — no AWS imports, fully unit-tested.
 //
 // Accepts two payload shapes:
@@ -172,7 +173,7 @@ export function mergeOrder(
   existing: OrderRecord | undefined,
   ev: OrderEvent,
   // tenantId is unknown until the basket's owner has joined a business (entered its Business ID).
-  ctx: { now: string; tenantId?: string; pricePerKg: number; customerId?: string },
+  ctx: { now: string; tenantId?: string; pricePerKg: number; customerId?: string; currency?: string; minOrder?: number },
 ): { record: OrderRecord; changed: boolean } {
   const at = ev.at ?? ctx.now;
 
@@ -189,7 +190,7 @@ export function mergeOrder(
       weightKg: Math.round(ev.weightKg * 100) / 100,
       status: ev.status,
       paymentStatus: "UNPAID",
-      amountDue: Math.round(ev.weightKg * ctx.pricePerKg),
+      amountDue: billFor(ev.weightKg, { pricePerKg: ctx.pricePerKg, currency: ctx.currency ?? "INR", minOrder: ctx.minOrder }),
       placedAt: at,
     };
     if (RANK[ev.status] >= 1 && ev.status !== "CANCELLED") record.acceptedAt = at;

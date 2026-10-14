@@ -37,6 +37,7 @@ export interface Tenant {
   taxPct: number; // included in the price (0 = not shown)
   taxId?: string; // GSTIN, VAT number, EIN
   minOrder: number; // every bill is at least this much
+  regionReady?: boolean; // the database has the region columns (migration 0035)
   joinCode: string;
   managerId?: string;
   upiId?: string; // where customers pay this business

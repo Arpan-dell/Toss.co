@@ -94,6 +94,13 @@ export class SupabaseStore implements IngestStore {
     return u(data?.price_per_kg as number | null);
   }
 
+  async getBilling(tenantId: string) {
+    // "*": currency is old, min_order arrives with migration 0035
+    const { data, error } = await this.db.from("tenants").select("*").eq("id", tenantId).maybeSingle();
+    if (error) throw error;
+    return data ? { currency: (data.currency as string) ?? "INR", minOrder: Number(data.min_order ?? 0) || 0 } : undefined;
+  }
+
   async getOrder(id: string) {
     const { data, error } = await this.db.from("orders").select("*").eq("id", id).maybeSingle();
     if (error) throw error;

@@ -15,7 +15,8 @@ import {
   listTenants,
   now,
 } from "../data";
-import { formatDate, formatDateTime, formatINR, formatKg, timeAgo } from "../format";
+import { formatDate, timeAgo } from "../format";
+import { formatterFor, moneyIn, regionOf, type Formatter } from "../region-format";
 import { planState, tierOf } from "../plan";
 import type { Session } from "../session";
 import type { Driver, Order, Tenant } from "../types";
@@ -24,6 +25,8 @@ import { geminiEnabled, geminiText } from "../ai/gemini";
 import { customerSnapshot, factSheet, managerSnapshot, ownerSnapshot, type Snapshot } from "./analyze";
 import { profitReport } from "../profit-report";
 import { nowText, type Intent, type Period } from "./intents";
+import { paidOnline } from "../pay-methods";
+import { countryOf } from "../regions";
 
 // What the assistant does for each request. Every read goes through the signed-in user's own database client, so
 // row-level security decides what they see: a customer only their own pickups, a manager only their business.
@@ -123,7 +126,14 @@ export function periodRange(p: Period, at: Date): { from: Date; to: Date; label:
 }
 
 // ---------- customers ----------
+// Money and weights in the business's own currency and unit: the manager's business, or the laundry a customer joined.
+async function formatFor(session: Session): Promise<Formatter> {
+  const tenantId = session.role === "MANAGER" ? session.tenantId : (await getCustomer(session.userId))?.tenantId;
+  return formatterFor(regionOf(tenantId ? await getTenantById(tenantId) : undefined));
+}
+
 async function customerTool(intent: Intent, session: Session): Promise<AssistantReply> {
+  const fmt = await formatFor(session);
   const orders = (await listOrdersForCustomer(session.userId)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const active = orders.filter((o) => o.status === "PENDING" || o.status === "ACCEPTED" || (o.deliveryStatus && o.deliveryStatus !== "DELIVERED" && o.deliveryStatus !== "COLLECTED"));
   const owed = orders.filter(unpaid);
@@ -136,12 +146,12 @@ async function customerTool(intent: Intent, session: Session): Promise<Assistant
     const credit = done.reduce((s, o) => s + (o.creditApplied ?? 0), 0);
     if (!done.length) return { text: `No pickups ${label}, so nothing spent.` };
     return {
-      text: `You spent ${formatINR(spent)} on ${n(done.length, "pickup")} ${label}.`,
+      text: `You spent ${fmt.money(spent)} on ${n(done.length, "pickup")} ${label}.`,
       rows: [
-        ["Spent", formatINR(spent)],
+        ["Spent", fmt.money(spent)],
         ["Pickups", String(done.length)],
-        ["Laundry", formatKg(done.reduce((s, o) => s + o.weightKg, 0))],
-        ...(credit ? ([["Credit used", formatINR(credit)]] as [string, string][]) : []),
+        ["Laundry", fmt.weight(done.reduce((s, o) => s + o.weightKg, 0))],
+        ...(credit ? ([["Credit used", fmt.money(credit)]] as [string, string][]) : []),
       ],
       links: [{ label: "Order history", href: "/app/orders" }],
     };
@@ -152,10 +162,10 @@ async function customerTool(intent: Intent, session: Session): Promise<Assistant
     const w = device.lastWeightKg ?? 0, target = device.targetKg ?? 0;
     const pct = target > 0 ? Math.min(100, Math.round((w / target) * 100)) : undefined;
     return {
-      text: pct !== undefined ? `Your basket is ${pct}% full: ${formatKg(w)} of ${formatKg(target)}. It books a pickup by itself at ${formatKg(target)}.` : `Your basket reads ${formatKg(w)}.`,
+      text: pct !== undefined ? `Your basket is ${pct}% full: ${fmt.weight(w)} of ${fmt.weight(target)}. It books a pickup by itself at ${fmt.weight(target)}.` : `Your basket reads ${fmt.weight(w)}.`,
       rows: [
-        ["Weight", formatKg(w)],
-        ...(target ? ([["Pickup at", formatKg(target)]] as [string, string][]) : []),
+        ["Weight", fmt.weight(w)],
+        ...(target ? ([["Pickup at", fmt.weight(target)]] as [string, string][]) : []),
         ["Last reading", device.lastSeenAt ? timeAgo(device.lastSeenAt, now()) : "never"],
       ],
       chips: ["My active pickup", "What do I owe?"],
@@ -165,30 +175,30 @@ async function customerTool(intent: Intent, session: Session): Promise<Assistant
     const c = await getCustomerCredit(session.userId);
     if (!c) return { text: "You don't have any basket credit." };
     return {
-      text: c.expired ? `Your basket credit expired on ${formatDateTime(c.expiresAt)}.` : `You have ${formatINR(c.left)} of laundry credit left. It comes off your pickups automatically.`,
+      text: c.expired ? `Your basket credit expired on ${fmt.dateTime(c.expiresAt)}.` : `You have ${fmt.money(c.left)} of laundry credit left. It comes off your pickups automatically.`,
       rows: [
-        ["Left", formatINR(c.left)],
-        ["Used", formatINR(c.used)],
-        ["Expires", formatDateTime(c.expiresAt)],
+        ["Left", fmt.money(c.left)],
+        ["Used", fmt.money(c.used)],
+        ["Expires", fmt.dateTime(c.expiresAt)],
       ],
     };
   }
   if (intent.tool === "order") {
     const hit = orders.filter((o) => o.deviceOrderId === intent.number);
     if (!hit.length) return { text: `I can't find pickup #${intent.number} on your account.`, links: [{ label: "Order history", href: "/app/orders" }] };
-    return orderReply(hit[0], "/app/orders");
+    return orderReply(hit[0], "/app/orders", fmt);
   }
   if (intent.tool === "orders") {
     if (intent.filter === "unpaid") {
       return owed.length
-        ? { text: `You owe ${formatINR(owedSum)} for ${n(owed.length, "pickup")}.`, rows: owed.slice(0, 6).map((o) => [label(o), formatINR(o.amountDue)]), links: [{ label: "Pay now", href: "/app" }] }
+        ? { text: `You owe ${fmt.money(owedSum)} for ${n(owed.length, "pickup")}.`, rows: owed.slice(0, 6).map((o) => [label(o), fmt.money(o.amountDue)]), links: [{ label: "Pay now", href: "/app" }] }
         : { text: "You're all paid up. Nothing to pay." };
     }
     const list = intent.filter === "active" ? active : orders.slice(0, 5);
     if (!list.length) return { text: intent.filter === "active" ? "No pickup is on the go right now." : "You haven't had any pickups yet." };
     return {
       text: intent.filter === "active" ? `${n(list.length, "pickup")} on the go.` : "Your recent pickups:",
-      rows: list.slice(0, 6).map((o) => [label(o), `${statusOf(o)} · ${formatKg(o.weightKg)}`]),
+      rows: list.slice(0, 6).map((o) => [label(o), `${statusOf(o)} · ${fmt.weight(o.weightKg)}`]),
       links: [{ label: "Order history", href: "/app/orders" }],
     };
   }
@@ -197,16 +207,17 @@ async function customerTool(intent: Intent, session: Session): Promise<Assistant
   const tenant = customer?.tenantId ? await getTenantById(customer.tenantId) : undefined;
   const rows: [string, string][] = [];
   if (tenant) rows.push(["Your laundry", tenant.name]);
-  if (device) rows.push(["Basket", device.targetKg ? `${formatKg(device.lastWeightKg ?? 0)} of ${formatKg(device.targetKg)}` : formatKg(device.lastWeightKg ?? 0)]);
+  if (device) rows.push(["Basket", device.targetKg ? `${fmt.weight(device.lastWeightKg ?? 0)} of ${fmt.weight(device.targetKg)}` : fmt.weight(device.lastWeightKg ?? 0)]);
   rows.push(["On the go", active.length ? active.map((o) => `${label(o)} ${statusOf(o)}`).join(", ") : "nothing"]);
-  rows.push(["To pay", owedSum ? formatINR(owedSum) : "nothing"]);
-  if (credit && !credit.expired) rows.push(["Credit left", formatINR(credit.left)]);
+  rows.push(["To pay", owedSum ? fmt.money(owedSum) : "nothing"]);
+  if (credit && !credit.expired) rows.push(["Credit left", fmt.money(credit.left)]);
   rows.push(["Pickups so far", String(orders.filter((o) => o.status === "COMPLETED").length)]);
   return { text: "Here's where everything stands:", rows, chips: ["How full is my basket?", "My active pickup", "What do I owe?"] };
 }
 
 // ---------- laundry managers ----------
 async function managerTool(intent: Intent, session: Session): Promise<AssistantReply> {
+  const fmt = await formatFor(session);
   if (intent.tool === "driver" || intent.tool === "drivers") {
     const [drivers, orders] = await Promise.all([listDrivers(), listOrders()]);
     // a driver's two kinds of job: pickups (clothes to the laundry) and deliveries (clean clothes back)
@@ -247,7 +258,7 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
         links: [{ label: "Fleet", href: "/admin/fleet" }],
       };
     }
-    rows.unshift(["Last location", match.locationAt ? `${timeAgo(match.locationAt, now())} (${formatDateTime(match.locationAt)})` : "time unknown"]);
+    rows.unshift(["Last location", match.locationAt ? `${timeAgo(match.locationAt, now())} (${fmt.dateTime(match.locationAt)})` : "time unknown"]);
     const stale = match.locationAt ? now().getTime() - new Date(match.locationAt).getTime() > 30 * 60_000 : true;
     return {
       text: stale ? `${match.name}'s last shared location is from ${match.locationAt ? timeAgo(match.locationAt, now()) : "a while ago"}, so they may have moved since.` : `Here's where ${match.name} is now:`,
@@ -267,25 +278,25 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
     if (!r) return { text: "This account isn't linked to a business yet." };
     if (!r.pickups) return { text: `No completed pickups ${label} yet, so no revenue or profit to show.`, links: [{ label: "Profit", href: "/admin/profit" }] };
     const base: [string, string][] = [
-      ["Pickups", `${r.pickups} · ${formatKg(r.kg)}`],
-      ["Revenue", formatINR(Math.round(r.earned))],
+      ["Pickups", `${r.pickups} · ${fmt.weight(r.kg)}`],
+      ["Revenue", fmt.money(Math.round(r.earned))],
     ];
     if (!pro) {
       return {
-        text: `You earned ${formatINR(Math.round(r.earned))} from ${n(r.pickups, "pickup")} ${label}. Profit after costs is part of Pro.`,
+        text: `You earned ${fmt.money(Math.round(r.earned))} from ${n(r.pickups, "pickup")} ${label}. Profit after costs is part of Pro.`,
         rows: base,
         links: [{ label: "See Pro", href: "/admin/billing" }],
       };
     }
     return {
-      text: `Your profit ${label} is ${formatINR(Math.round(r.profit))} on ${formatINR(Math.round(r.earned))} of revenue.`,
+      text: `Your profit ${label} is ${fmt.money(Math.round(r.profit))} on ${fmt.money(Math.round(r.earned))} of revenue.`,
       rows: [
         ...base,
-        ["Supplies", formatINR(Math.round(r.supplies))],
-        ["Running costs", formatINR(Math.round(r.other))],
-        ["Driver pay", formatINR(Math.round(r.driver))],
-        ["Profit", formatINR(Math.round(r.profit))],
-        ["Profit per kg", r.kg > 0 ? formatINR(Math.round((r.profit / r.kg) * 100) / 100) : "-"],
+        ["Supplies", fmt.money(Math.round(r.supplies))],
+        ["Running costs", fmt.money(Math.round(r.other))],
+        ["Driver pay", fmt.money(Math.round(r.driver))],
+        ["Profit", fmt.money(Math.round(r.profit))],
+        ["Profit per kg", r.kg > 0 ? fmt.money(Math.round((r.profit / r.kg) * 100) / 100) : "-"],
       ],
       links: [{ label: "Profit page", href: "/admin/profit" }],
       chips: ["Profit last week", "Profit this month"],
@@ -299,9 +310,9 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
   if (intent.tool === "order") {
     const hit = orders.filter((o) => o.deviceOrderId === intent.number);
     if (!hit.length) return { text: `I can't find order #${intent.number}.`, links: [{ label: "Orders", href: "/admin/orders" }] };
-    if (hit.length > 1) return { text: `${hit.length} baskets have an order #${intent.number}:`, rows: hit.map((o) => [label(o), `${statusOf(o)} · ${formatDateTime(o.createdAt)}`]), links: hit.slice(0, 3).map((o) => ({ label: `Open ${label(o)} (${formatDateTime(o.createdAt)})`, href: open(o) })) };
+    if (hit.length > 1) return { text: `${hit.length} baskets have an order #${intent.number}:`, rows: hit.map((o) => [label(o), `${statusOf(o)} · ${fmt.dateTime(o.createdAt)}`]), links: hit.slice(0, 3).map((o) => ({ label: `Open ${label(o)} (${fmt.dateTime(o.createdAt)})`, href: open(o) })) };
     const o = hit[0];
-    const r = orderReply(o, open(o));
+    const r = orderReply(o, open(o), fmt);
     const name = driverName(o.driverId);
     if (name) r.rows!.splice(1, 0, ["Driver", name]);
     return r;
@@ -317,10 +328,10 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
     const list = orders.filter(pick[intent.filter]).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     const what = { active: "on the go", waiting: "waiting for a driver", unpaid: "unpaid", recent: "recent", delivery: "on the way back to customers" }[intent.filter];
     if (!list.length) return { text: `Nothing ${what} right now.` };
-    const sum = intent.filter === "unpaid" ? ` worth ${formatINR(list.reduce((s, o) => s + o.amountDue, 0))}` : "";
+    const sum = intent.filter === "unpaid" ? ` worth ${fmt.money(list.reduce((s, o) => s + o.amountDue, 0))}` : "";
     return {
       text: `${n(list.length, "order")} ${what}${sum}.`,
-      rows: list.slice(0, 8).map((o) => [label(o), intent.filter === "unpaid" ? formatINR(o.amountDue) : `${statusOf(o)}${driverName(o.driverId) ? ` · ${driverName(o.driverId)}` : ""}`]),
+      rows: list.slice(0, 8).map((o) => [label(o), intent.filter === "unpaid" ? fmt.money(o.amountDue) : `${statusOf(o)}${driverName(o.driverId) ? ` · ${driverName(o.driverId)}` : ""}`]),
       links: [{ label: intent.filter === "unpaid" ? "Payments" : "Orders", href: intent.filter === "unpaid" ? "/admin/payments" : "/admin/orders" }],
     };
   }
@@ -337,7 +348,8 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
       devices,
       drivers,
       lowStock: supplies.filter((s) => s.stock <= s.lowAt),
-      business: { upiId: tenant.upiId, storeAddress: tenant.storeAddress, storeLocated: !!tenant.storeLocated, delivers: tenant.delivers },
+      business: { upiId: tenant.upiId, storeAddress: tenant.storeAddress, storeLocated: !!tenant.storeLocated, delivers: tenant.delivers, paidOnline: paidOnline(tenant), india: tenant.currency === "INR" },
+      money: formatterFor(regionOf(tenant)).money,
       plan: { state: plan.state, daysLeft: plan.daysLeft },
     });
   };
@@ -358,11 +370,11 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
     text: `${tenant.name}, today so far:`,
     rows: [
       ["New pickups", String(today.length)],
-      ["Picked up today", `${doneToday.length} · ${formatINR(doneToday.reduce((s, o) => s + (o.amountGross ?? o.amountDue), 0))}`],
+      ["Picked up today", `${doneToday.length} · ${fmt.money(doneToday.reduce((s, o) => s + (o.amountGross ?? o.amountDue), 0))}`],
       ["On the go", String(orders.filter((o) => o.status === "PENDING" || o.status === "ACCEPTED").length)],
       ["Waiting for a driver", String(orders.filter((o) => o.status === "PENDING" && !o.driverId).length)],
       ["Out for delivery", String(orders.filter((o) => o.deliveryStatus === "OUT").length)],
-      ["Unpaid", owed.length ? `${owed.length} · ${formatINR(owed.reduce((s, o) => s + o.amountDue, 0))}` : "none"],
+      ["Unpaid", owed.length ? `${owed.length} · ${fmt.money(owed.reduce((s, o) => s + o.amountDue, 0))}` : "none"],
       ["Drivers on duty", `${drivers.filter((d) => d.status !== "OFFLINE").length} of ${drivers.length}`],
       ["Needs attention", list.length ? n(list.length, "item") : "nothing"],
       ["Plan", plan.state === "TRIAL" && plan.daysLeft !== undefined ? `trial, ${n(plan.daysLeft, "day")} left` : plan.state.toLowerCase()],
@@ -425,7 +437,7 @@ async function ownerTool(intent: Intent): Promise<AssistantReply> {
     if (!pending.length) return { text: "No subscription payments are waiting for you." };
     return {
       text: `${n(pending.length, "subscription payment")} to check:`,
-      rows: pending.slice(0, 8).map((p) => [tenants.find((t) => t.id === p.tenantId)?.name ?? "A business", formatINR(p.amount)]),
+      rows: pending.slice(0, 8).map((p) => [tenants.find((t) => t.id === p.tenantId)?.name ?? "A business", moneyIn(p.amount, p.currency)]),
       links: [{ label: "Subscription payments", href: "/owner/payments" }],
     };
   }
@@ -439,40 +451,46 @@ async function ownerTool(intent: Intent): Promise<AssistantReply> {
       ["On trial", String(count("TRIAL"))],
       ["Expired", String(count("EXPIRED"))],
       ["Suspended", String(count("SUSPENDED"))],
-      ["Payments to check", pending.length ? `${pending.length} · ${formatINR(pending.reduce((s, p) => s + p.amount, 0))}` : "none"],
+      ["Payments to check", pending.length ? `${pending.length}` : "none"],
     ],
     links: [{ label: "Businesses", href: "/owner" }, ...(pending.length ? [{ label: "Check payments", href: "/owner/payments" }] : [])],
     chips: ["Pending subscription payments", "Open basket credits"],
   };
 }
 
-function orderReply(o: Order, href: string): AssistantReply {
+function orderReply(o: Order, href: string, fmt: Formatter): AssistantReply {
   return {
     text: `Order ${label(o)} is ${statusOf(o)}.`,
     rows: [
       ["Status", statusOf(o)],
-      ["Weight", formatKg(o.weightKg)],
-      ["Amount", formatINR(o.amountDue)],
+      ["Weight", fmt.weight(o.weightKg)],
+      ["Amount", fmt.money(o.amountDue)],
       ["Payment", o.paymentStatus === "PAID" ? "paid" : o.paymentStatus === "UNPAID" ? (o.status === "COMPLETED" ? "unpaid" : "after pickup") : o.paymentStatus.toLowerCase()],
-      ["Placed", formatDateTime(o.createdAt)],
+      ["Placed", fmt.dateTime(o.createdAt)],
     ],
     links: [{ label: `Open ${label(o)}`, href }],
   };
 }
 
 // ---------- advice from the numbers ----------
+// The fact sheets are written in rupees; for a business abroad the amounts are already in its own currency, so
+// only the labels change ("(₹)" → "(USD)"), and the AI then talks in that currency.
+function inCurrency(snap: Snapshot, currency: string): Snapshot {
+  if (currency === "INR") return snap;
+  return JSON.parse(JSON.stringify(snap).replace(/\(₹\)/g, `(${currency})`).replace(/₹/g, `${currency} `)) as Snapshot;
+}
 async function analyze(question: string, session: Session): Promise<AssistantReply> {
   let snap: Snapshot;
   let who: string;
   if (session.role === "MANAGER") {
     const [orders, drivers, tenant] = await Promise.all([listOrders(), listDrivers(), getTenantById(session.tenantId)]);
     if (!tenant) return { text: "This account isn't linked to a business yet." };
-    snap = managerSnapshot(orders, drivers, tenant, now());
-    who = "the manager of a laundry business";
+    snap = inCurrency(managerSnapshot(orders, drivers, tenant, now()), tenant.currency);
+    who = `the manager of a laundry business${tenant.country !== "IN" ? ` in ${countryOf(tenant.country).name}` : " in India"}`;
   } else if (session.role === "CUSTOMER") {
     const [orders, customer, credit] = await Promise.all([listOrdersForCustomer(session.userId), getCustomer(session.userId), getCustomerCredit(session.userId)]);
     const tenant = customer?.tenantId ? await getTenantById(customer.tenantId) : undefined;
-    snap = customerSnapshot(orders, tenant?.pricePerKg, credit);
+    snap = inCurrency(customerSnapshot(orders, tenant?.pricePerKg, credit), tenant?.currency ?? "INR");
     who = "a customer of a laundry";
   } else {
     const [tenants, orders, pending] = await Promise.all([listTenants(), listOrders(), listSubscriptionPayments({ status: "PENDING" })]);

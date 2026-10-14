@@ -7,7 +7,11 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf
 export interface InvoiceData {
   number: string; // TOSS-2026-000123
   issuedAt: string;
-  business: { name: string; joinCode: string; storeAddress?: string; upiId?: string; managerEmail?: string };
+  business: { name: string; joinCode: string; storeAddress?: string; upiId?: string; managerEmail?: string; taxId?: string; taxLabel?: string };
+  /** the business's currency, unit and time zone (India's when missing) */
+  region?: { currency: string; unit: "kg" | "lb"; timezone: string };
+  /** tax included in the price, shown as its own line (0 or missing = not shown) */
+  tax?: { label: string; pct: number };
   customer: { name?: string; code: string; email?: string; phone?: string };
   order: {
     label: string; // basket · #104
@@ -21,6 +25,7 @@ export interface InvoiceData {
     discountPct?: number;
     basketCredit?: number; // Toss basket credit taken off this bill
     total: number;
+    tip?: number; // added by the customer for the driver, paid with this bill
   };
   driver?: { name: string };
   payment: { method: string; ref?: string; paidAt?: string };
@@ -44,11 +49,18 @@ export function pdfSafe(s: string | undefined | null): string {
     .replace(/[^\x20-\x7E\xA0-\xFF]/g, "?");
 }
 
-export const money = (n: number) => `Rs. ${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const when = (iso?: string) =>
-  iso
-    ? new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" })
-    : "-";
+// The standard PDF fonts only draw Latin-1, so currencies are written with a symbol they have ($ £ ¥) or their code
+// (EUR 26.27, AED 40.00). Rupees keep "Rs." and Indian digit grouping.
+const PDF_SYMBOL: Record<string, string> = { INR: "Rs. ", USD: "$", GBP: "\u00a3", JPY: "\u00a5", CAD: "CA$", AUD: "A$", NZD: "NZ$", SGD: "S$" };
+export function moneyIn(n: number, currency = "INR"): string {
+  const cur = currency.toUpperCase();
+  const digits = cur === "JPY" ? 0 : 2;
+  const num = n.toLocaleString(cur === "INR" ? "en-IN" : "en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return PDF_SYMBOL[cur] ? `${PDF_SYMBOL[cur]}${num}` : `${cur} ${num}`;
+}
+export const money = (n: number) => moneyIn(n, "INR");
+const whenIn = (tz: string) => (iso?: string) =>
+  iso ? new Date(iso).toLocaleString(tz === "Asia/Kolkata" ? "en-IN" : "en-GB", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: tz }) : "-";
 
 function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
   const words = pdfSafe(text).split(/\s+/).filter(Boolean);
@@ -67,6 +79,11 @@ function wrap(text: string, font: PDFFont, size: number, width: number): string[
 }
 
 export async function renderInvoicePdf(d: InvoiceData, logoPng?: Uint8Array): Promise<Uint8Array> {
+  const cur = d.region?.currency ?? "INR";
+  const unit = d.region?.unit ?? "kg";
+  const money = (n: number) => moneyIn(n, cur);
+  const when = whenIn(d.region?.timezone ?? "Asia/Kolkata");
+  const qty = unit === "lb" ? d.order.weightKg / 0.45359237 : d.order.weightKg;
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Invoice ${d.number}`);
   pdf.setAuthor(pdfSafe(d.business.name));
@@ -130,6 +147,7 @@ export async function renderInvoicePdf(d: InvoiceData, logoPng?: Uint8Array): Pr
     `Business ID ${d.business.joinCode}`,
     d.business.storeAddress,
     d.business.upiId ? `UPI ${d.business.upiId}` : undefined,
+    d.business.taxId ? `${d.business.taxLabel ? `${d.business.taxLabel} no.` : "Tax no."} ${d.business.taxId}` : undefined,
     d.business.managerEmail ? `Manager: ${d.business.managerEmail}` : undefined,
   ]);
   const yTo = block(M + colW + 24, "Billed to", [
@@ -174,10 +192,10 @@ export async function renderInvoicePdf(d: InvoiceData, logoPng?: Uint8Array): Pr
   y -= 8;
   rule(y);
   y -= 18;
-  const rate = d.order.weightKg > 0 ? d.order.subtotal / d.order.weightKg : 0;
+  const rate = qty > 0 ? d.order.subtotal / qty : 0;
   text("Laundry pickup & wash (by weight)", cols.desc, y, { size: 10 });
-  text(`${d.order.weightKg.toFixed(2)} kg`, cols.qty, y, { size: 10, right: true });
-  text(`${money(rate)}/kg`, cols.rate, y, { size: 10, right: true });
+  text(`${qty.toFixed(2)} ${unit}`, cols.qty, y, { size: 10, right: true });
+  text(`${money(rate)}/${unit}`, cols.rate, y, { size: 10, right: true });
   text(money(d.order.subtotal), cols.amt, y, { size: 10, right: true });
   if (d.order.bags) {
     y -= 13;
@@ -196,9 +214,13 @@ export async function renderInvoicePdf(d: InvoiceData, logoPng?: Uint8Array): Pr
   const credit = d.order.basketCredit ?? 0;
   if (d.order.discountPct) totalRow(`Discount (${d.order.discountPct}%)`, `- ${money(d.order.subtotal - d.order.total - credit)}`, { color: GOOD });
   if (credit > 0) totalRow("Toss basket credit", `- ${money(credit)}`, { color: GOOD });
+  // tax is included in the price: shown, not added
+  if (d.tax && d.tax.pct > 0) totalRow(`Includes ${pdfSafe(d.tax.label)} (${d.tax.pct}%)`, money(d.order.total - d.order.total / (1 + d.tax.pct / 100)));
+  const tip = d.order.tip ?? 0;
+  if (tip > 0) totalRow("Tip for the driver", money(tip));
   y -= 8;
   page.drawRectangle({ x: cols.rate - 120, y: y - 8, width: cols.amt - cols.rate + 128, height: 26, color: rgb(0.95, 0.98, 0.97) });
-  totalRow("Total paid", money(d.order.total), { strong: true });
+  totalRow("Total paid", money(d.order.total + tip), { strong: true });
 
   // ---- payment ----
   y -= 6;

@@ -37,6 +37,8 @@ const nextConfig: NextConfig = {
     // event-driven instead: LiveRefresh calls router.refresh() on realtime changes and every server action
     // revalidates, and both clear this cache.
     staleTimes: { dynamic: 120, static: 300 },
+    // BUILD_CPUS=2 npm run build: fewer build workers, for building on a computer short of memory
+    ...(process.env.BUILD_CPUS ? { cpus: Number(process.env.BUILD_CPUS) } : {}),
   },
   async headers() {
     return [

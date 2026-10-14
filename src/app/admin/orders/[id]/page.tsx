@@ -22,6 +22,7 @@ import { DeliveryPanel } from "./delivery-panel";
 import { DriverConfirm } from "./driver-confirm";
 import { WeightForm } from "./weight-form";
 import { myFormat } from "@/lib/my-format";
+import { hasCents } from "@/lib/regions";
 
 // Where the billed weight came from, as a tag (never color-only).
 function weightTag(source: Order["weightSource"]) {
@@ -298,7 +299,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
               )}
               {order.paymentStatus === "UNPAID" && (
                 <>
-                  <AmountForm orderId={order.id} amount={order.amountDue} />
+                  <AmountForm orderId={order.id} amount={order.amountDue} symbol={fmt.symbol} cents={hasCents(fmt.region.currency)} />
                   <form action={markPaidCash}>
                     <input type="hidden" name="orderId" value={order.id} />
                     <button className="btn-ghost rounded-full px-4 py-1.5 text-sm">Mark paid (cash)</button>

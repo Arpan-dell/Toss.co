@@ -4,6 +4,7 @@ import { supabaseAdmin } from "../supabase/admin";
 import { emailEnabled, ownerEmail, sendEmail } from "./mailer";
 import * as t from "./templates";
 import { logError } from "@/lib/log";
+import { formatterFor, regionOf } from "../region-format";
 
 // Business events → emails to the Toss owner and the business's manager. Every function is
 // best-effort and never throws: the action that triggered it has already succeeded.
@@ -21,7 +22,8 @@ type TenantRow = {
   reminder_key: string | null;
 };
 
-const COLS = "id, name, join_code, manager_id, price_per_kg, plan_status, trial_ends_at, paid_until, reminder_key, parent_tenant_id";
+// "*": currency, country and units (migration 0035) when present
+const COLS = "*";
 
 async function tenant(id: string): Promise<TenantRow | null> {
   const { data } = await supabaseAdmin().from("tenants").select(COLS).eq("id", id).maybeSingle();
@@ -52,7 +54,7 @@ export const notifyBusinessRegistered = (tenantId: string) =>
       sendEmail(manager, t.managerWelcome({ name: b.name, joinCode: b.join_code, trialEndsAt: b.trial_ends_at ?? undefined }), { replyTo: ownerEmail() }),
       sendEmail(
         ownerEmail(),
-        t.ownerNewBusiness({ name: b.name, joinCode: b.join_code, managerEmail: manager ?? "—", pricePerKg: b.price_per_kg, trialEndsAt: b.trial_ends_at ?? undefined }),
+        t.ownerNewBusiness({ name: b.name, joinCode: b.join_code, managerEmail: manager ?? "—", pricePerKg: b.price_per_kg, trialEndsAt: b.trial_ends_at ?? undefined, rate: formatterFor(regionOf(b as unknown as Record<string, string>)).rate(b.price_per_kg), country: (b as { country?: string }).country }),
         { replyTo: manager },
       ),
     ]);
@@ -62,11 +64,11 @@ export const notifySubscriptionSubmitted = (tenantId: string, ref: string) =>
   safely("subscription submitted", async () => {
     const [b, { data: p }] = await Promise.all([
       tenant(tenantId),
-      supabaseAdmin().from("subscription_payments").select("months, amount, discount_pct").eq("tenant_id", tenantId).eq("payment_ref", ref).order("id", { ascending: false }).limit(1).maybeSingle(),
+      supabaseAdmin().from("subscription_payments").select("*").eq("tenant_id", tenantId).eq("payment_ref", ref).order("id", { ascending: false }).limit(1).maybeSingle(),
     ]);
     if (!b || !p) return;
     const manager = await managerEmail(b.manager_id);
-    const info = { business: b.name, months: p.months as number, amount: p.amount as number, discountPct: (p.discount_pct as number) ?? 0, ref };
+    const info = { business: b.name, months: p.months as number, amount: p.amount as number, discountPct: (p.discount_pct as number) ?? 0, ref, currency: (p.currency as string) ?? "INR" };
     await Promise.all([
       sendEmail(ownerEmail(), t.ownerPaymentToReview({ ...info, joinCode: b.join_code }), { replyTo: manager }),
       sendEmail(manager, t.managerPaymentReceived(info), { replyTo: ownerEmail() }),
@@ -75,14 +77,14 @@ export const notifySubscriptionSubmitted = (tenantId: string, ref: string) =>
 
 export const notifySubscriptionReviewed = (paymentId: number) =>
   safely("subscription reviewed", async () => {
-    const { data: p } = await supabaseAdmin().from("subscription_payments").select("tenant_id, months, amount, status, payment_ref").eq("id", paymentId).maybeSingle();
+    const { data: p } = await supabaseAdmin().from("subscription_payments").select("*").eq("id", paymentId).maybeSingle();
     if (!p) return;
     const b = await tenant(p.tenant_id as string);
     if (!b) return;
     const email =
       p.status === "APPROVED"
-        ? t.managerPaymentApproved({ business: b.name, months: p.months as number, amount: p.amount as number, paidUntil: b.paid_until ?? undefined })
-        : t.managerPaymentRejected({ business: b.name, amount: p.amount as number, ref: p.payment_ref as string });
+        ? t.managerPaymentApproved({ business: b.name, months: p.months as number, amount: p.amount as number, paidUntil: b.paid_until ?? undefined, currency: (p.currency as string) ?? "INR" })
+        : t.managerPaymentRejected({ business: b.name, amount: p.amount as number, ref: p.payment_ref as string, currency: (p.currency as string) ?? "INR" });
     await sendEmail(await managerEmail(b.manager_id), email, { replyTo: ownerEmail() });
   });
 
@@ -115,7 +117,7 @@ export async function runPlanReminders(): Promise<{ sent: number }> {
   const db = supabaseAdmin();
   const [{ data: tenants }, { data: ps }] = await Promise.all([
     db.from("tenants").select(COLS),
-    db.from("platform_settings").select("monthly_price, branch_price, discount_3m, discount_6m, discount_12m").eq("id", 1).maybeSingle(),
+    db.from("platform_settings").select("*").eq("id", 1).maybeSingle(),
   ]);
   let sent = 0;
   for (const b of (tenants ?? []) as TenantRow[]) {
@@ -129,7 +131,10 @@ export async function runPlanReminders(): Promise<{ sent: number }> {
         kind: r.kind,
         daysLeft: r.daysLeft,
         until: r.until,
-        monthlyPrice: ((b.parent_tenant_id ? ps?.branch_price : ps?.monthly_price) as number) ?? 0,
+        // Indian businesses pay in rupees; everyone else the US dollar price
+        ...((b as { currency?: string }).currency && (b as { currency?: string }).currency !== "INR"
+          ? { monthlyPrice: Number((b.parent_tenant_id ? ps?.usd_branch_price : ps?.usd_monthly_price) ?? 0), currency: "USD" }
+          : { monthlyPrice: ((b.parent_tenant_id ? ps?.branch_price : ps?.monthly_price) as number) ?? 0 }),
         bestDiscount: Math.max((ps?.discount_3m as number) ?? 0, (ps?.discount_6m as number) ?? 0, (ps?.discount_12m as number) ?? 0),
       }),
       { replyTo: ownerEmail(), category: "reminders" },

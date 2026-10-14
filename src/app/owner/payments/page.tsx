@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
 import { reviewSubscriptionPayment } from "@/lib/actions/owner";
 import { listSubscriptionPayments, listTenants } from "@/lib/data";
-import { formatDateTime, formatINR } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
+import { moneyIn } from "@/lib/region-format";
 import { requireRole } from "@/lib/session";
 import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
 
@@ -28,7 +29,7 @@ export default async function OwnerPayments() {
               <OptimisticRow key={p.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-[240px] flex-1 text-sm">
                   <p className="font-medium">
-                    {formatINR(p.amount)} for {p.months} month{p.months > 1 ? "s" : ""}
+                    {moneyIn(p.amount, p.currency)} for {p.months} month{p.months > 1 ? "s" : ""}
                   </p>
                   <p className="text-secondary">{name.get(p.tenantId) ?? p.tenantId}</p>
                   <p className="text-xs text-muted">
@@ -62,7 +63,7 @@ export default async function OwnerPayments() {
             {reviewed.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
                 <span>
-                  {formatINR(p.amount)} · {p.months} mo · <span className="text-secondary">{name.get(p.tenantId) ?? p.tenantId}</span>
+                  {moneyIn(p.amount, p.currency)} · {p.months} mo · <span className="text-secondary">{name.get(p.tenantId) ?? p.tenantId}</span>
                 </span>
                 <span className="flex items-center gap-2 text-xs text-muted">
                   <span className="font-mono">{p.paymentRef}</span>

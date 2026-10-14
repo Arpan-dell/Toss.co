@@ -120,6 +120,7 @@ function toTenant(r: Row): Tenant {
     taxPct: Number(r.tax_pct ?? 0) || 0,
     taxId: u(r.tax_id),
     minOrder: Number(r.min_order ?? 0) || 0,
+    regionReady: r.country !== undefined,
     joinCode: r.join_code as string,
     managerId: u(r.manager_id),
     upiId: u(r.upi_id),

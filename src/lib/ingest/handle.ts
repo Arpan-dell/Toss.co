@@ -24,6 +24,8 @@ export interface IngestStore {
   /** The business a basket already belongs to, if known. */
   getDeviceTenant(deviceId: string): Promise<string | undefined>;
   getPricePerKg(tenantId: string): Promise<number | undefined>;
+  /** currency and minimum order (migration 0035); stores without it bill in rupees with no minimum */
+  getBilling?(tenantId: string): Promise<{ currency: string; minOrder: number } | undefined>;
   getOrder(id: string): Promise<StoredOrder | undefined>;
   /** Inserts, or updates only if updatedAt still equals prevUpdatedAt. Returns false on a concurrent write. */
   saveOrder(record: OrderRecord, now: string, prevUpdatedAt: string | undefined): Promise<boolean>;
@@ -88,6 +90,7 @@ async function applyOrder(
   owner: { customerId?: string; tenantId?: string },
 ) {
   const price = owner.tenantId ? await store.getPricePerKg(owner.tenantId) : undefined;
+  const billing = owner.tenantId && store.getBilling ? await store.getBilling(owner.tenantId) : undefined;
   const { customerId, tenantId } = owner;
   const id = orderKey(ev.deviceId, ev.deviceOrderId);
 
@@ -99,6 +102,8 @@ async function applyOrder(
       tenantId,
       pricePerKg: price ?? cfg.defaultPricePerKg,
       customerId,
+      currency: billing?.currency,
+      minOrder: billing?.minOrder,
     });
     if (!changed) return { id, status: record.status, changed: false };
     if (!(await store.saveOrder(record, now, existing?.updatedAt))) continue;

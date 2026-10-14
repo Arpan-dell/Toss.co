@@ -10,6 +10,7 @@ import { CATEGORY_OF, analyze, applyDecisions, type ActionType, type Candidate, 
 import { geminiEnabled, geminiJson, geminiText } from "./gemini";
 import { computeInsights, insightsSummary, type Insights } from "./insights";
 import { logError, redact } from "@/lib/log";
+import { formatterFor, regionOf } from "../region-format";
 
 // Toss AI orchestration (service role). A run: load the business → engine → Gemini briefing and
 // decisions → save the report and action queue → the autopilot executes the categories the manager
@@ -295,7 +296,7 @@ async function perform(a: Row, ctx: Context): Promise<{ ok: boolean; result: str
       const expires = new Date(Date.now() + 14 * DAY).toISOString();
       const { error } = await db().from("customer_offers").insert({ tenant_id: tenantId, customer_id: a.target, percent: pct, reason: "AI", expires_at: expires, notified_at: new Date().toISOString() });
       if (error) throw error;
-      const until = new Date(expires).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" });
+      const until = formatterFor(regionOf(ctx.tenant)).date(expires);
       const told = who.telegram
         ? await tellCustomer(who.telegram, `🎁 <b>A treat from ${business}</b>\n━━━━━━━━━━━━━━\nYour next pickup is <b>${pct}% off</b>.${note}\n\n🧺 Just fill your basket. The discount is applied automatically.\n⏳ Valid until <b>${until}</b>.`)
         : false;
@@ -306,12 +307,14 @@ async function perform(a: Row, ctx: Context): Promise<{ ok: boolean; result: str
       if (!o || o.payment_status !== "UNPAID") return { ok: false, result: "Already paid or no longer due." };
       const who = ctx.customers.get(o.customer_id as string);
       if (!who) return { ok: false, result: "Customer not found." };
-      const amount = Math.round(Number(o.amount_due));
+      const amount = Number(o.amount_due) || 0;
+      const f = formatterFor(regionOf(ctx.tenant));
+      const upi = f.region.currency === "INR";
       const viaBot = who.telegram
-        ? await tellCustomer(who.telegram, `🧾 <b>Friendly reminder</b>\n━━━━━━━━━━━━━━\nPickup #${o.device_order_id} from ${business}: <b>₹${amount}</b> is due.${note}\n\nTap <b>📱 Open Toss</b> to pay by UPI in seconds.`)
+        ? await tellCustomer(who.telegram, `🧾 <b>Friendly reminder</b>\n━━━━━━━━━━━━━━\nPickup #${o.device_order_id} from ${business}: <b>${f.money(amount)}</b> is due.${note}\n\nTap <b>📱 Open Toss</b> to pay${upi ? " by UPI" : ""} in seconds.`)
         : false;
-      const viaEmail = await sendEmail(who.email, customerPaymentReminder({ business: ctx.tenant.name as string, name: who.name, orderNo: Number(o.device_order_id), amount, note: p.message ? String(p.message) : undefined }), { category: "reminders" });
-      return viaBot || viaEmail ? { ok: true, result: `Reminded ${who.code} about ₹${amount}${viaBot ? " in Toss Control" : ""}${viaEmail ? `${viaBot ? " and" : ""} by email` : ""}.` } : { ok: false, result: "Couldn't reach the customer." };
+      const viaEmail = await sendEmail(who.email, customerPaymentReminder({ business: ctx.tenant.name as string, name: who.name, orderNo: Number(o.device_order_id), amount, note: p.message ? String(p.message) : undefined, currency: f.region.currency }), { category: "reminders" });
+      return viaBot || viaEmail ? { ok: true, result: `Reminded ${who.code} about ${f.money(amount)}${viaBot ? " in Toss Control" : ""}${viaEmail ? `${viaBot ? " and" : ""} by email` : ""}.` } : { ok: false, result: "Couldn't reach the customer." };
     }
     case "basket_nudge": {
       const { data: d } = await db().from("devices").select("customer_id, last_weight_kg, target_kg").eq("device_id", a.target as string).eq("tenant_id", tenantId).maybeSingle();
@@ -329,7 +332,8 @@ async function perform(a: Row, ctx: Context): Promise<{ ok: boolean; result: str
       const to = Math.round(Math.min(hi, Math.max(lo, Number(p.to))));
       if (to === Math.round(now)) return { ok: false, result: "Price is already there." };
       await db().from("tenants").update({ price_per_kg: to }).eq("id", tenantId);
-      return { ok: true, result: `Price changed from ₹${now}/kg to ₹${to}/kg. New pickups use it.` };
+      const pf = formatterFor(regionOf(ctx.tenant));
+      return { ok: true, result: `Price changed from ${pf.rate(now)} to ${pf.rate(to)}. New pickups use it.` };
     }
   }
   return { ok: false, result: "Unknown action." };

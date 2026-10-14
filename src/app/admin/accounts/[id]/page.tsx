@@ -8,15 +8,16 @@ import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
 import { monthLabel, statements } from "@/lib/accounts";
 import { deleteAccount, saveAccount, setBasketAccount, settleMonth } from "@/lib/actions/accounts";
 import { deviceLabel, getTenantById, listAccounts, listDevices, listOrders } from "@/lib/data";
-import { formatINR, formatKg } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { getSession } from "@/lib/session";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Business account" };
 
 // One business account: its details and price, its baskets, and its monthly bills (download, send on WhatsApp,
 // mark paid).
 export default async function Account({ params }: PageProps<"/admin/accounts/[id]">) {
+  const fmt = await myFormat();
   const locked = await proGate("Business accounts", "Put a PG or hostel's baskets on one account and bill them once a month.");
   if (locked) return locked;
 
@@ -36,8 +37,8 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
     account.phone
       ? `https://wa.me/${account.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
           `Hello ${account.contactName ?? account.name}, your ${monthLabel(b.month)} laundry bill from ${tenant.name}: ` +
-            `${b.pickups} pickup${b.pickups === 1 ? "" : "s"}, ${formatKg(b.kg)} at ₹${price}/kg = ${formatINR(b.amount)}.` +
-            (b.unpaid > 0 ? ` Due: ${formatINR(b.unpaid)}.${tenant.upiId ? ` Pay by UPI to ${tenant.upiId}.` : ""}` : " Paid in full, thank you!"),
+            `${b.pickups} pickup${b.pickups === 1 ? "" : "s"}, ${fmt.weight(b.kg)} at ₹${price}/kg = ${fmt.money(b.amount)}.` +
+            (b.unpaid > 0 ? ` Due: ${fmt.money(b.unpaid)}.${tenant.upiId ? ` Pay by UPI to ${tenant.upiId}.` : ""}` : " Paid in full, thank you!"),
         )}`
       : undefined;
 
@@ -85,7 +86,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
               <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium">Add basket</button>
             </form>
           )}
-          <p className="mt-3 text-xs text-muted">Pickups from these baskets are priced at {formatINR(price)}/kg and billed monthly; customers aren&apos;t asked to pay each pickup.</p>
+          <p className="mt-3 text-xs text-muted">Pickups from these baskets are priced at {fmt.money(price)}/kg and billed monthly; customers aren&apos;t asked to pay each pickup.</p>
         </Card>
 
         <Card title="Details">
@@ -94,7 +95,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
             <Field label="Name">
               <input name="name" required minLength={2} maxLength={80} defaultValue={account.name} className={fieldClass} />
             </Field>
-            <Field label="Price per kg (₹)" hint={`Empty: your normal ${formatINR(tenant.pricePerKg)}/kg.`}>
+            <Field label="Price per kg (₹)" hint={`Empty: your normal ${fmt.money(tenant.pricePerKg)}/kg.`}>
               <input name="pricePerKg" type="number" min={1} step="any" defaultValue={account.pricePerKg ?? ""} className={fieldClass} />
             </Field>
             <Field label="Contact person">
@@ -132,10 +133,10 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-fg">{monthLabel(b.month)}</span>
-                      {b.unpaid > 0 ? <Badge tone="warn">{formatINR(b.unpaid)} due</Badge> : <Badge tone="good">Paid</Badge>}
+                      {b.unpaid > 0 ? <Badge tone="warn">{fmt.money(b.unpaid)} due</Badge> : <Badge tone="good">Paid</Badge>}
                     </div>
                     <p className="mt-1 text-sm text-muted tabular-nums">
-                      {b.pickups} pickup{b.pickups === 1 ? "" : "s"} · {formatKg(b.kg)} · <span className="text-fg">{formatINR(b.amount)}</span>
+                      {b.pickups} pickup{b.pickups === 1 ? "" : "s"} · {fmt.weight(b.kg)} · <span className="text-fg">{fmt.money(b.amount)}</span>
                     </p>
                     <div className="mt-2 flex flex-wrap gap-3 text-sm">
                       <a href={`/admin/accounts/${encodeURIComponent(account.id)}/statement?month=${b.month}`} className="text-accent hover:text-accent-2">
@@ -149,7 +150,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
                     </div>
                   </div>
                   {b.unpaid > 0 && (
-                    <ActionForm action={settleMonth} submitLabel={`Mark ${formatINR(b.unpaid)} paid`} className="flex flex-wrap items-end gap-2">
+                    <ActionForm action={settleMonth} submitLabel={`Mark ${fmt.money(b.unpaid)} paid`} className="flex flex-wrap items-end gap-2">
                       <input type="hidden" name="accountId" value={account.id} />
                       <input type="hidden" name="month" value={b.month} />
                       <label className="sr-only" htmlFor={`method-${b.month}`}>

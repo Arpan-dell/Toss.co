@@ -5,8 +5,8 @@ import { proGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
 import { deleteSupply, restockSupply, saveSupply } from "@/lib/actions/supplies";
 import { getTenantById, listOrders, listSupplies, now, type Supply } from "@/lib/data";
-import { formatINR } from "@/lib/format";
 import { getSession } from "@/lib/session";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Supplies" };
 
@@ -61,6 +61,7 @@ function SupplyFields({ s }: { s?: Supply }) {
 // Supplies stock (Pro): what the laundry uses per kg or per order. Stock comes down by itself as pickups are
 // completed (database trigger), with an estimate of how long it lasts at the last month's pace.
 export default async function Stock() {
+  const fmt = await myFormat();
   const locked = await proGate("Supplies", "Stock that counts itself down as pickups are completed, a warning before you run out, and a one-tap reorder on WhatsApp.");
   if (locked) return locked;
 
@@ -104,7 +105,7 @@ export default async function Stock() {
                       </p>
                       <p className="text-xs text-muted">
                         {[s.perKg > 0 && `${qty(s.perKg, s.unit)} per kg`, s.perOrder > 0 && `${qty(s.perOrder, s.unit)} per order`].filter(Boolean).join(" + ")}
-                        {s.costPerUnit > 0 && ` · ${formatINR(s.costPerUnit)}/${s.unit}`}
+                        {s.costPerUnit > 0 && ` · ${fmt.money(s.costPerUnit)}/${s.unit}`}
                         {s.appliesTo !== "ALL" && ` · ${s.appliesTo === "WHITES" ? "whites only" : "coloured only"}`}
                       </p>
                     </div>

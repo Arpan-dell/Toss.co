@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
+import { RegionPay } from "@/components/region-pay";
 import { UpiPay } from "@/components/upi-pay";
 import { submitSubscriptionPayment } from "@/lib/actions/manager";
 import { getPlatformSettings, getTenantById, getTenantCreditBalance, listSubscriptionPayments } from "@/lib/data";
-import { formatDate, formatDateTime, formatINR } from "@/lib/format";
+import { myFormat } from "@/lib/my-format";
+import { payOptions } from "@/lib/pay-methods";
+import { moneyIn, subscriptionFormat } from "@/lib/region-format";
 import { planState } from "@/lib/plan";
 import { subscriptionQuote, withBasketCredit } from "@/lib/pricing";
 import { qrSvg } from "@/lib/qr";
@@ -29,17 +32,31 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
 
   const [history, creditBalance] = await Promise.all([listSubscriptionPayments({ tenantId: tenant.id }), getTenantCreditBalance(tenant.id)]);
   const plan = planState(tenant);
+  const fmt = await myFormat();
+  // Indian businesses pay in rupees by UPI; everyone else in US dollars by PayPal or Toss's payment link
+  const sub = subscriptionFormat(tenant);
+  const usd = sub.region.currency === "USD";
   const months = MONTH_OPTIONS.includes(Number(params.months)) ? Number(params.months) : 1;
   // an extra branch pays the branch price (same rule as submit_subscription_payment)
-  const monthly = tenant.parentTenantId ? platform.branchPrice : platform.monthlyPrice;
-  const quote = (m: number) => subscriptionQuote(monthly, platform, m);
+  const monthly = usd
+    ? tenant.parentTenantId ? platform.usdBranchPrice : platform.usdMonthlyPrice
+    : tenant.parentTenantId ? platform.branchPrice : platform.monthlyPrice;
+  const quote = (m: number) => subscriptionQuote(monthly, platform, m, sub.region.currency);
   const { amount: beforeCredit, pct, full, saved } = quote(months);
-  // Toss's share of the basket credit this laundry has honoured comes off the payment (same rule as the database)
-  const { credit, toPay: amount } = withBasketCredit(beforeCredit, creditBalance, platform.creditSubMaxPct);
+  // Toss's share of the basket credit this laundry has honoured comes off the payment (same rule as the database);
+  // basket credit is in rupees, so only Indian businesses have any
+  const { credit, toPay: amount } = usd ? { credit: 0, toPay: beforeCredit } : withBasketCredit(beforeCredit, creditBalance, platform.creditSubMaxPct);
   const pending = history.find((p) => p.status === "PENDING");
-  const canPay = isValidUpiId(platform.ownerUpiId) && amount > 0;
+  const intl = usd
+    ? payOptions(
+        { paypal: platform.ownerPaypal, link: platform.ownerIntlLink ? { url: platform.ownerIntlLink, label: "Card or bank" } : undefined, cash: false },
+        ["paypal", "link"],
+        { amount, currency: "USD", payee: "Toss", note: `Toss ${months} month${months > 1 ? "s" : ""} ${tenant.joinCode}`, reference: `${tenant.joinCode}M${months}` },
+      ).map((o) => ({ ...o, refLabel: o.id === "paypal" ? "PayPal transaction ID (in your PayPal receipt)" : "Receipt or transaction number" }))
+    : [];
+  const canPay = amount > 0 && (usd ? intl.length > 0 : isValidUpiId(platform.ownerUpiId));
 
-  const uri = canPay
+  const uri = canPay && !usd
     ? buildUpiUri({
         payeeUpiId: platform.ownerUpiId!,
         payeeName: platform.ownerUpiName,
@@ -57,11 +74,11 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
 
       <Card title="Your plan" action={<Badge tone={badge.tone} icon="●">{badge.label}</Badge>}>
         <p className="text-sm text-secondary">
-          {plan.state === "TRIAL" && `Free trial until ${formatDate(plan.until!)} (${plan.daysLeft} days left).`}
-          {plan.state === "ACTIVE" && `Paid up until ${formatDate(plan.until!)} (${plan.daysLeft} days left).`}
+          {plan.state === "TRIAL" && `Free trial until ${fmt.date(plan.until!)} (${plan.daysLeft} days left).`}
+          {plan.state === "ACTIVE" && `Paid up until ${fmt.date(plan.until!)} (${plan.daysLeft} days left).`}
           {plan.state === "EXPIRED" && "You're on Toss Free. Upgrade below to turn the Pro tools back on."}
           {plan.state === "SUSPENDED" && "Toss has suspended this business. Contact support."}{" "}
-          The plan is <span className="text-fg">{formatINR(monthly)}/month</span>
+          The plan is <span className="text-fg">{sub.money(monthly)}/month</span>
           {tenant.parentTenantId ? " (branch price)" : ""}. Paying early adds time on top of
           what you have left
           {platform.discount12m > 0 || platform.discount6m > 0 || platform.discount3m > 0
@@ -76,7 +93,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
         <Card title={plan.state === "EXPIRED" ? "Upgrade to Pro" : "Pay for more months"}>
           {pending ? (
             <p className="rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
-              Your payment of {formatINR(pending.amount)} (ref {pending.paymentRef}) is waiting for Toss to confirm it.
+              Your payment of {moneyIn(pending.amount, pending.currency)} (ref {pending.paymentRef}) is waiting for Toss to confirm it.
             </p>
           ) : !canPay ? (
             <EmptyState>Online subscription payments aren&apos;t set up yet. Contact Toss.</EmptyState>
@@ -98,27 +115,39 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
               </div>
               {credit > 0 && (
                 <p className="rounded-[8px] border border-accent/30 bg-accent/[0.07] px-3 py-2 text-sm text-secondary">
-                  Basket credit from Toss: <span className="font-semibold text-fg">−{formatINR(credit)}</span>. Toss pays back{" "}
+                  Basket credit from Toss: <span className="font-semibold text-fg">−{sub.money(credit)}</span>. Toss pays back{" "}
                   {platform.creditTossSharePct}% of the basket credit your customers use, off your subscription.
                 </p>
               )}
               {pct > 0 && (
                 <p className="rounded-[8px] border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
-                  {pct}% off for paying {months} months at once: <s className="opacity-70">{formatINR(full)}</s>{" "}
-                  <span className="font-semibold">{formatINR(beforeCredit)}</span>. You save {formatINR(saved)}.
+                  {pct}% off for paying {months} months at once: <s className="opacity-70">{sub.money(full)}</s>{" "}
+                  <span className="font-semibold">{sub.money(beforeCredit)}</span>. You save {sub.money(saved)}.
                 </p>
               )}
+              {usd ? (
+                <RegionPay
+                  key={months}
+                  options={intl}
+                  amountLabel={sub.money(amount)}
+                  payeeName="Toss"
+                  action={submitSubscriptionPayment}
+                  hidden={{ months: String(months) }}
+                  startOpen
+                />
+              ) : (
               <UpiPay
                 key={months}
                 uri={uri!}
                 qrSvg={qr!}
-                amountLabel={formatINR(amount)}
+                amountLabel={sub.money(amount)}
                 payeeName={platform.ownerUpiName}
                 payeeUpiId={platform.ownerUpiId!}
                 action={submitSubscriptionPayment}
                 hidden={{ months: String(months) }}
                 startOpen
               />
+              )}
             </div>
           )}
         </Card>
@@ -132,11 +161,11 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
             {history.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
                 <span>
-                  {formatINR(p.amount)} · {p.months} month{p.months > 1 ? "s" : ""}
+                  {moneyIn(p.amount, p.currency)} · {p.months} month{p.months > 1 ? "s" : ""}
                   <span className="ml-2 font-mono text-xs text-muted">{p.paymentRef}</span>
                 </span>
                 <span className="flex items-center gap-2 text-xs text-muted">
-                  {formatDateTime(p.createdAt)}
+                  {fmt.dateTime(p.createdAt)}
                   <Badge tone={p.status === "APPROVED" ? "good" : p.status === "PENDING" ? "warn" : "critical"} icon="●">
                     {p.status === "APPROVED" ? "Confirmed" : p.status === "PENDING" ? "Waiting" : "Rejected"}
                   </Badge>

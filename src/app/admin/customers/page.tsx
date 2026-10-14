@@ -4,12 +4,14 @@ import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { removeCustomer } from "@/lib/actions/manager-ops";
 import { listCustomers, listDevices, listOrders, now } from "@/lib/data";
-import { formatINR, timeAgo } from "@/lib/format";
+import { timeAgo } from "@/lib/format";
 import { requireRole } from "@/lib/session";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Customers" };
 
 export default async function Customers({ searchParams }: PageProps<"/admin/customers">) {
+  const fmt = await myFormat();
   const locked = await planGate();
   if (locked) return locked;
   const session = await requireRole("MANAGER");
@@ -48,7 +50,7 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatTile label="Customers" value={String(all.length)} />
         <StatTile label="Telegram linked" value={`${all.filter((c) => c.telegramId).length} / ${all.length}`} hint="Needed to see their basket's orders" />
-        <StatTile label="Owed to you" value={formatINR(totalOwed)} />
+        <StatTile label="Owed to you" value={fmt.money(totalOwed)} />
       </div>
 
       <Card
@@ -95,8 +97,8 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{baskets}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{n}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">{formatINR(spent)}</td>
-                    <td className={`px-3 py-2.5 text-right tabular-nums ${owed ? "text-critical" : "text-muted"}`}>{formatINR(owed)}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">{fmt.money(spent)}</td>
+                    <td className={`px-3 py-2.5 text-right tabular-nums ${owed ? "text-critical" : "text-muted"}`}>{fmt.money(owed)}</td>
                     <td className="px-3 py-2.5 text-secondary">{lastOrder ? timeAgo(lastOrder, current) : "—"}</td>
                     <td className="px-5 py-2.5 text-right">
                       <ConfirmButton

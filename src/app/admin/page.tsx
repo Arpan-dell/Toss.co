@@ -11,14 +11,16 @@ import { attentionItems, type Attention } from "@/lib/attention";
 import { deviceLabel, getTenantById, isDeviceOnline, listActiveOrders, listDevices, listDrivers, listOrders, listSupplies, now } from "@/lib/data";
 import { planState } from "@/lib/plan";
 import { getSession } from "@/lib/session";
-import { formatINR, formatKg, timeAgo } from "@/lib/format";
+import { timeAgo } from "@/lib/format";
 import { washQueue } from "@/lib/sorting";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Live board" };
 
 const STALE_PENDING_MINS = 15;
 
 export default async function LiveBoard() {
+  const fmt = await myFormat();
   const locked = await planGate();
   if (locked) return locked;
 
@@ -80,7 +82,7 @@ export default async function LiveBoard() {
           label="Baskets online"
           value={`${devices.filter(isDeviceOnline).length} / ${devices.length}`}
         />
-        <StatTile label="Unpaid bills" value={formatINR(outstanding)} />
+        <StatTile label="Unpaid bills" value={fmt.money(outstanding)} />
       </div>
 
       {late.length > 0 && (
@@ -108,15 +110,15 @@ export default async function LiveBoard() {
           <dl className="grid grid-cols-3 gap-4">
             <div className="border-t-2 border-fg pt-3">
               <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Whites</dt>
-              <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatKg(wash.whites)}</dd>
+              <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.weight(wash.whites)}</dd>
             </div>
             <div className="border-t-2 border-fg pt-3">
               <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Coloured</dt>
-              <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatKg(wash.coloured)}</dd>
+              <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.weight(wash.coloured)}</dd>
             </div>
             <div className="border-t-2 border-fg pt-3">
               <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Not sorted</dt>
-              <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatKg(wash.unsorted)}</dd>
+              <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.weight(wash.unsorted)}</dd>
             </div>
           </dl>
         </Card>
@@ -166,7 +168,7 @@ export default async function LiveBoard() {
                     </p>
                     <p className="text-sm text-secondary">{o.address}</p>
                   </div>
-                  <p className="text-sm tabular-nums">{formatKg(o.weightKg)}</p>
+                  <p className="text-sm tabular-nums">{fmt.weight(o.weightKg)}</p>
                   <p className="w-28 text-sm text-secondary">
                     {driverName(o.driverId)}
                     {o.driverId && !o.driverAckAt && <span className="block text-[11px] text-warn">⏳ not confirmed</span>}

@@ -1,3 +1,5 @@
+import { roundMoney } from "./regions";
+
 // Subscription pricing for laundry businesses. Mirrors public.subscription_discount() and
 // submit_subscription_payment() in migration 0010, so the UPI amount shown equals the amount recorded.
 
@@ -14,11 +16,12 @@ export function subscriptionDiscount(d: SubscriptionDiscounts, months: number): 
   return 0;
 }
 
-export function subscriptionQuote(monthlyPrice: number, d: SubscriptionDiscounts, months: number) {
+// Rupees round to whole numbers; US dollars keep cents (public.money_round in migration 0035).
+export function subscriptionQuote(monthlyPrice: number, d: SubscriptionDiscounts, months: number, currency = "INR") {
   const pct = subscriptionDiscount(d, months);
   const full = monthlyPrice * months;
-  const amount = Math.round((full * (100 - pct)) / 100);
-  return { pct, full, amount, saved: full - amount };
+  const amount = roundMoney((full * (100 - pct)) / 100, currency);
+  return { pct, full, amount, saved: roundMoney(full - amount, currency) };
 }
 
 /**

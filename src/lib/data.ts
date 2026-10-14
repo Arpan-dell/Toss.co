@@ -4,7 +4,7 @@ import { cached, KEYS } from "./cache";
 import { createClient } from "./supabase/server";
 import { isSupabaseConfigured, supabaseAdmin } from "./supabase/admin";
 import type { Report } from "./ai/brain";
-import type { AiAction, BusinessAccount, Customer, CustomerOffer, Device, Driver, Order, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
+import type { AiAction, BusinessAccount, Customer, CustomerOffer, Device, Driver, Order, PayMethods, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
 
 // Data access layer. Every query runs as the signed-in user, so Postgres RLS decides what is
 // visible: customers see only their own rows, managers their own business, the owner everything.
@@ -33,6 +33,7 @@ function toOrder(r: Row): Order {
     status: r.status as Order["status"],
     paymentStatus: r.payment_status as Order["paymentStatus"],
     paymentMethod: u(r.payment_method),
+    tip: Number(r.tip ?? 0) || 0,
     paymentRef: u(r.payment_ref),
     paymentReportedAt: u(r.payment_reported_at),
     paymentConfirmedAt: u(r.payment_confirmed_at),
@@ -101,15 +102,24 @@ function orThrow<T>(res: { data: T | null; error: { message: string } | null }):
   return res.data as T;
 }
 
-const TENANT_COLUMNS =
-  "id, name, price_per_kg, currency, join_code, manager_id, upi_id, upi_name, plan_status, trial_ends_at, paid_until, store_address, store_lat, store_lng, service_radius_km, listed, weigh_at_pickup, winback_enabled, winback_days, winback_pct, closure_requested_at, closure_reason, autopilot_enabled, autopilot_staffing, autopilot_winback, autopilot_nudges, autopilot_pricing, ai_max_discount, ai_price_min, ai_price_max, ai_price_step_pct, other_cost_per_kg, driver_pay_per_pickup, driver_pay_per_km, turnaround_hours, google_review_url, parent_tenant_id, sort_whites, delivers";
+// "*": the region columns (country, timezone, weight_unit, pay_methods, tax_*, min_order; migration 0035) are read
+// when present and default to India when not, so this works on either side of that migration.
+const TENANT_COLUMNS = "*";
 
 function toTenant(r: Row): Tenant {
   return {
     id: r.id as string,
     name: r.name as string,
     pricePerKg: r.price_per_kg as number,
-    currency: r.currency as string,
+    currency: (r.currency as string) ?? "INR",
+    country: (r.country as string) ?? "IN",
+    timezone: (r.timezone as string) ?? "Asia/Kolkata",
+    weightUnit: r.weight_unit === "lb" ? "lb" : "kg",
+    payMethods: (r.pay_methods as PayMethods) ?? {},
+    taxLabel: u(r.tax_label),
+    taxPct: Number(r.tax_pct ?? 0) || 0,
+    taxId: u(r.tax_id),
+    minOrder: Number(r.min_order ?? 0) || 0,
     joinCode: r.join_code as string,
     managerId: u(r.manager_id),
     upiId: u(r.upi_id),
@@ -290,7 +300,8 @@ export const getPlatformSettings = cache(async (): Promise<PlatformSettings> => 
 
 async function loadPlatformSettings(supabase: Awaited<ReturnType<typeof db>>): Promise<PlatformSettings> {
   const r = orThrow(
-    await supabase.from("platform_settings").select("monthly_price, trial_days, owner_upi_id, owner_upi_name, discount_3m, discount_6m, discount_12m, basket_price, basket_credit, credit_per_kg, credit_max_pct, credit_toss_share_pct, credit_sub_max_pct, credit_valid_days, branch_price").eq("id", 1).maybeSingle(),
+    // "*": the US dollar prices and PayPal link (migration 0035) are read when present
+    await supabase.from("platform_settings").select("*").eq("id", 1).maybeSingle(),
   ) as Row | null;
   return {
     monthlyPrice: (r?.monthly_price as number) ?? 0,
@@ -308,6 +319,10 @@ async function loadPlatformSettings(supabase: Awaited<ReturnType<typeof db>>): P
     creditSubMaxPct: (r?.credit_sub_max_pct as number) ?? 50,
     creditValidDays: (r?.credit_valid_days as number) ?? 50,
     branchPrice: (r?.branch_price as number) ?? 299,
+    usdMonthlyPrice: Number(r?.usd_monthly_price ?? 19),
+    usdBranchPrice: Number(r?.usd_branch_price ?? 9),
+    ownerPaypal: u(r?.owner_paypal),
+    ownerIntlLink: u(r?.owner_intl_link),
   };
 }
 
@@ -316,6 +331,7 @@ async function loadPlatformSettings(supabase: Awaited<ReturnType<typeof db>>): P
 // owner's UPI ID). Returns null when unavailable so the page still renders.
 export type PublicPlan = {
   monthlyPrice: number;
+  usdMonthlyPrice: number; // for businesses outside India
   trialDays: number;
   discount3m: number;
   discount6m: number;
@@ -339,12 +355,13 @@ export async function getPublicPlan(): Promise<PublicPlan | null> {
 async function loadPublicPlan(): Promise<PublicPlan> {
   const { data, error } = await supabaseAdmin()
     .from("platform_settings")
-    .select("monthly_price, trial_days, discount_3m, discount_6m, discount_12m, basket_price, basket_credit, credit_per_kg, credit_max_pct, credit_valid_days")
+    .select("*") // only the pricing fields below leave this function (never the owner's UPI ID or PayPal)
     .eq("id", 1)
     .maybeSingle();
   if (error || !data) throw new Error("plan unavailable"); // thrown, so a failure is never cached
   return {
     monthlyPrice: Number(data.monthly_price) || 0,
+    usdMonthlyPrice: Number(data.usd_monthly_price ?? 19) || 0,
     trialDays: Number(data.trial_days) || 0,
     discount3m: Number(data.discount_3m) || 0,
     discount6m: Number(data.discount_6m) || 0,
@@ -384,7 +401,7 @@ export async function listSubscriptionPayments(filter?: { tenantId?: string; sta
   const supabase = await db();
   let q = supabase
     .from("subscription_payments")
-    .select("id, tenant_id, months, amount, payment_ref, status, created_at, reviewed_at")
+    .select("*") // currency arrives with migration 0035
     .order("created_at", { ascending: false })
     .limit(200);
   if (filter?.tenantId) q = q.eq("tenant_id", filter.tenantId);
@@ -395,6 +412,7 @@ export async function listSubscriptionPayments(filter?: { tenantId?: string; sta
       tenantId: r.tenant_id as string,
       months: r.months as number,
       amount: r.amount as number,
+      currency: (r.currency as string) ?? "INR",
       paymentRef: r.payment_ref as string,
       status: r.status as SubscriptionPayment["status"],
       createdAt: r.created_at as string,

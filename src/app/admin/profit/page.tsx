@@ -5,16 +5,17 @@ import { proGate } from "@/components/plan-gate";
 import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { updateCosts } from "@/lib/actions/supplies";
 import { getPlatformSettings, getTenantById, listCustomers, listSupplies, now } from "@/lib/data";
-import { formatINR, formatKg } from "@/lib/format";
 import { supplyRates } from "@/lib/profit";
 import { profitReport } from "@/lib/profit-report";
 import { getSession } from "@/lib/session";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Profit" };
 
 // Profit per order and per customer (Pro): what each pickup earned after supplies, running costs and driver pay,
 // over the last 30 days. The maths is lib/profit.ts.
 export default async function Profit() {
+  const fmt = await myFormat();
   const locked = await proGate("Profit", "See what every order and every customer actually earns you after detergent, running costs and driver pay, not just revenue.");
   if (locked) return locked;
 
@@ -63,10 +64,10 @@ export default async function Profit() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Profit" value={formatINR(Math.round(profit))} />
-        <StatTile label="Profit per kg" value={kg > 0 ? formatINR(Math.round((profit / kg) * 100) / 100) : "-"} />
-        <StatTile label="Earned" value={formatINR(Math.round(earned))} />
-        <StatTile label="Costs" value={formatINR(Math.round(costTotal))} />
+        <StatTile label="Profit" value={fmt.money(Math.round(profit))} />
+        <StatTile label="Profit per kg" value={kg > 0 ? fmt.money(Math.round((profit / kg) * 100) / 100) : "-"} />
+        <StatTile label="Earned" value={fmt.money(Math.round(earned))} />
+        <StatTile label="Costs" value={fmt.money(Math.round(costTotal))} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -80,10 +81,10 @@ export default async function Profit() {
                   <span>
                     <span className="font-medium text-fg">{c.name}</span>
                     <span className="block text-xs text-muted">
-                      {c.n} pickups · {formatKg(c.kg)}
+                      {c.n} pickups · {fmt.weight(c.kg)}
                     </span>
                   </span>
-                  <span className={`font-semibold tabular-nums ${c.profit < 0 ? "text-critical" : "text-fg"}`}>{formatINR(Math.round((c.profit / c.kg) * 100) / 100)}/kg</span>
+                  <span className={`font-semibold tabular-nums ${c.profit < 0 ? "text-critical" : "text-fg"}`}>{fmt.money(Math.round((c.profit / c.kg) * 100) / 100)}/kg</span>
                 </li>
               ))}
             </ol>
@@ -105,7 +106,7 @@ export default async function Profit() {
             </div>
           </ActionForm>
           <p className="mt-3 text-xs text-muted">
-            Supplies cost {formatINR(Math.round(rates.perKg * 100) / 100)}/kg + {formatINR(Math.round(rates.perOrder * 100) / 100)}/order, from the Supplies page.
+            Supplies cost {fmt.money(Math.round(rates.perKg * 100) / 100)}/kg + {fmt.money(Math.round(rates.perOrder * 100) / 100)}/order, from the Supplies page.
           </p>
         </Card>
       </div>
@@ -132,11 +133,11 @@ export default async function Profit() {
                   <tr key={o.id}>
                     <td className="px-2 py-2"><OrderLink order={o} /></td>
                     <td className="px-2 py-2">{(o.customerId && names.get(o.customerId)) ?? "-"}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{formatKg(o.weightKg)}</td>
-                    <td className="px-2 py-2 text-right tabular-nums">{formatINR(p.paid + p.tossPayback)}</td>
-                    <td className="px-2 py-2 text-right text-muted tabular-nums">{formatINR(p.supplies + p.other + p.driver)}</td>
-                    <td className={`px-2 py-2 text-right font-semibold tabular-nums ${p.profit < 0 ? "text-critical" : "text-fg"}`}>{formatINR(p.profit)}</td>
-                    <td className="px-2 py-2 text-right text-muted tabular-nums">{p.perKg === null ? "-" : formatINR(p.perKg)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{fmt.weight(o.weightKg)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums">{fmt.money(p.paid + p.tossPayback)}</td>
+                    <td className="px-2 py-2 text-right text-muted tabular-nums">{fmt.money(p.supplies + p.other + p.driver)}</td>
+                    <td className={`px-2 py-2 text-right font-semibold tabular-nums ${p.profit < 0 ? "text-critical" : "text-fg"}`}>{fmt.money(p.profit)}</td>
+                    <td className="px-2 py-2 text-right text-muted tabular-nums">{p.perKg === null ? "-" : fmt.money(p.perKg)}</td>
                   </tr>
                 ))}
               </tbody>

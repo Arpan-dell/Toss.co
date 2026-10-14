@@ -6,12 +6,37 @@ export type PaymentStatus = "UNPAID" | "PENDING" | "PAID" | "REFUNDED";
 export type DriverStatus = "AVAILABLE" | "ON_JOB" | "OFFLINE";
 export type Role = "CUSTOMER" | "MANAGER" | "OWNER";
 
+// Where a business's customers can send money, besides UPI (kept in upi_id). Each is optional.
+export interface PayMethods {
+  paypal?: string; // PayPal.me username
+  venmo?: string; // Venmo username
+  cashapp?: string; // $Cashtag, without the $
+  zelle?: string; // email or phone registered with Zelle
+  interac?: string; // email for Interac e-Transfer
+  sepa?: { iban: string; bic?: string; name: string }; // euro bank transfer (EPC QR)
+  bank?: { name: string; account: string; code?: string; codeLabel?: string }; // any other bank transfer
+  pix?: { key: string; name: string; city: string }; // Brazil
+  paynow?: string; // Singapore UEN or mobile
+  mpesa?: { till: string; account?: string }; // Kenya: till / paybill number
+  gcash?: string; // Philippines mobile
+  link?: { url: string; label?: string }; // any hosted payment link (Stripe, Square, SumUp, Wise…)
+  cash?: boolean; // accepts cash (default true)
+}
+
 // A laundry business. Customers join it by entering its joinCode (the "Business ID").
 export interface Tenant {
   id: string;
   name: string;
-  pricePerKg: number;
-  currency: string;
+  pricePerKg: number; // always per kg; lb businesses see it per lb (lib/region-format.ts)
+  currency: string; // ISO 4217: INR, USD, EUR…
+  country: string; // ISO 3166 alpha-2; decides the defaults below (lib/regions.ts)
+  timezone: string; // IANA, e.g. Asia/Kolkata, America/New_York
+  weightUnit: "kg" | "lb";
+  payMethods: PayMethods; // how customers pay outside UPI (PayPal, Venmo, SEPA, Pix…)
+  taxLabel?: string; // GST, VAT, Sales tax
+  taxPct: number; // included in the price (0 = not shown)
+  taxId?: string; // GSTIN, VAT number, EIN
+  minOrder: number; // every bill is at least this much
   joinCode: string;
   managerId?: string;
   upiId?: string; // where customers pay this business
@@ -93,6 +118,11 @@ export interface PlatformSettings {
   creditSubMaxPct: number; // at most this % of a subscription payment can be covered by it
   creditValidDays: number;
   branchPrice: number; // monthly Pro price of each extra branch (the main business pays monthlyPrice)
+  // businesses outside India pay in US dollars (migration 0035)
+  usdMonthlyPrice: number;
+  usdBranchPrice: number;
+  ownerPaypal?: string; // PayPal.me username they pay to
+  ownerIntlLink?: string; // or any other payment link (Wise, Payoneer, Stripe)
 }
 
 export interface SubscriptionPayment {
@@ -100,6 +130,7 @@ export interface SubscriptionPayment {
   tenantId: string;
   months: number;
   amount: number;
+  currency: string; // INR, or USD outside India
   paymentRef: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: string;
@@ -158,7 +189,8 @@ export interface Order {
   weightKg: number;
   status: OrderStatus;
   paymentStatus: PaymentStatus; // server-owned; device payloads never overwrite it
-  paymentMethod?: "UPI" | "CASH" | "OTHER";
+  paymentMethod?: string; // UPI, CASH, OTHER, or another way to pay (PAYPAL, VENMO, SEPA, PIX…; lib/pay-methods.ts)
+  tip?: number; // added by the customer for the driver (migration 0035)
   paymentRef?: string; // UPI transaction reference the customer submitted
   paymentReportedAt?: string;
   paymentConfirmedAt?: string;

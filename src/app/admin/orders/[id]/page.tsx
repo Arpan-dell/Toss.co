@@ -13,7 +13,7 @@ import { assignDriverForm, autoAssign, setOrderStatus } from "@/lib/actions/mana
 import { deviceLabel, getOrder, getTenantById, listCustomers, listDevices, listDrivers, listOrderEvents, now } from "@/lib/data";
 import { getSession } from "@/lib/session";
 import { bagTag, isSorted } from "@/lib/sorting";
-import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
+import { orderLabel } from "@/lib/format";
 import { AmountForm } from "../../payments/amount-form";
 import { weightGapPct } from "@/lib/dispatch/weighing";
 import type { Order } from "@/lib/types";
@@ -21,6 +21,7 @@ import { dueLabel, isLate } from "@/lib/turnaround";
 import { DeliveryPanel } from "./delivery-panel";
 import { DriverConfirm } from "./driver-confirm";
 import { WeightForm } from "./weight-form";
+import { myFormat } from "@/lib/my-format";
 
 // Where the billed weight came from, as a tag (never color-only).
 function weightTag(source: Order["weightSource"]) {
@@ -40,6 +41,7 @@ const EVENT_LABEL: Record<string, string> = {
 };
 
 export default async function OrderDetail({ params }: PageProps<"/admin/orders/[id]">) {
+  const fmt = await myFormat();
   const locked = await planGate();
   if (locked) return locked;
 
@@ -66,7 +68,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
   return (
     <div className="stagger mx-auto w-full max-w-4xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <PageTitle kicker={`Order ${orderLabel(order)}`}>{formatINR(order.amountDue)}</PageTitle>
+        <PageTitle kicker={`Order ${orderLabel(order)}`}>{fmt.money(order.amountDue)}</PageTitle>
         <div className="flex gap-2">
           <OrderStatusBadge status={order.status} />
           <PaymentBadge status={order.paymentStatus} />
@@ -87,19 +89,19 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
             <dt className="text-muted">Address</dt>
             <dd>{order.address || "—"}</dd>
             <dt className="text-muted">Weight</dt>
-            <dd className="tabular-nums">{formatKg(order.weightKg)}</dd>
+            <dd className="tabular-nums">{fmt.weight(order.weightKg)}</dd>
             {sorted && (
               <>
                 <dt className="text-muted">Bags</dt>
                 <dd className="space-y-0.5 tabular-nums">
                   {(order.whitesKg ?? 0) > 0 && (
                     <span className="block">
-                      Whites {formatKg(order.whitesKg!)} <span className="font-mono text-xs text-muted">{bagTag(order.deviceOrderId, "WHITES")}</span>
+                      Whites {fmt.weight(order.whitesKg!)} <span className="font-mono text-xs text-muted">{bagTag(order.deviceOrderId, "WHITES")}</span>
                     </span>
                   )}
                   {(order.colouredKg ?? 0) > 0 && (
                     <span className="block">
-                      Coloured {formatKg(order.colouredKg!)}{" "}
+                      Coloured {fmt.weight(order.colouredKg!)}{" "}
                       <span className="font-mono text-xs text-muted">{bagTag(order.deviceOrderId, "COLOURED")}</span>
                     </span>
                   )}
@@ -118,11 +120,11 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                 <dt className="text-muted">Ready</dt>
                 <dd className="flex flex-wrap items-center gap-2">
                   {order.readyAt ? (
-                    <span>{formatDateTime(order.readyAt)}</span>
+                    <span>{fmt.dateTime(order.readyAt)}</span>
                   ) : (
                     <>
                       <Badge tone={isLate(order, now()) ? "critical" : "info"}>{dueLabel(order, now())}</Badge>
-                      {order.readyBy && <span className="text-xs text-muted">promised {formatDateTime(order.readyBy)}</span>}
+                      {order.readyBy && <span className="text-xs text-muted">promised {fmt.dateTime(order.readyBy)}</span>}
                     </>
                   )}
                 </dd>
@@ -136,11 +138,11 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                     {/* eslint-disable-next-line @next/next/no-img-element -- private, per-order image streamed from Telegram */}
                     <img
                       src={`/admin/orders/${encodeURIComponent(order.id)}/photo`}
-                      alt={`Bag photographed by the driver at pickup, ${formatDateTime(order.pickupPhotoAt)}`}
+                      alt={`Bag photographed by the driver at pickup, ${fmt.dateTime(order.pickupPhotoAt)}`}
                       loading="lazy"
                       className="h-28 w-28 rounded-[10px] border border-border object-cover transition group-hover:opacity-90"
                     />
-                    <span className="mt-1 block text-xs text-muted">At pickup · {formatDateTime(order.pickupPhotoAt)}</span>
+                    <span className="mt-1 block text-xs text-muted">At pickup · {fmt.dateTime(order.pickupPhotoAt)}</span>
                   </a>
                 </dd>
               </>
@@ -251,8 +253,8 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
           <div className="flex flex-wrap items-center justify-between gap-4 text-sm">
             <div className="space-y-1">
               <p>
-                <span className="text-2xl font-semibold tabular-nums">{formatINR(order.amountDue)}</span>{" "}
-                <span className="text-muted">for {formatKg(order.weightKg)}</span>
+                <span className="text-2xl font-semibold tabular-nums">{fmt.money(order.amountDue)}</span>{" "}
+                <span className="text-muted">for {fmt.weight(order.weightKg)}</span>
               </p>
               {order.paymentStatus === "PAID" && (
                 <p className="text-xs">
@@ -264,22 +266,22 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
               {order.discountPct && (
                 <p className="text-xs text-good">
                   {order.discountPct}% win-back discount applied
-                  {order.amountBeforeDiscount ? ` (was ${formatINR(order.amountBeforeDiscount)})` : ""}
+                  {order.amountBeforeDiscount ? ` (was ${fmt.money(order.amountBeforeDiscount)})` : ""}
                 </p>
               )}
               {order.creditApplied ? (
                 <p className="text-xs text-accent">
-                  Toss basket credit −{formatINR(order.creditApplied)}
-                  {order.amountGross ? ` (bill was ${formatINR(order.amountGross)})` : ""}. Toss pays back its share off your subscription.
+                  Toss basket credit −{fmt.money(order.creditApplied)}
+                  {order.amountGross ? ` (bill was ${fmt.money(order.amountGross)})` : ""}. Toss pays back its share off your subscription.
                 </p>
               ) : null}
               {order.paymentRef && (
                 <p className="text-xs text-muted">
                   {order.paymentMethod ?? "UPI"} ref <span className="font-mono text-fg">{order.paymentRef}</span>
-                  {order.paymentReportedAt ? ` · reported ${formatDateTime(order.paymentReportedAt)}` : ""}
+                  {order.paymentReportedAt ? ` · reported ${fmt.dateTime(order.paymentReportedAt)}` : ""}
                 </p>
               )}
-              {order.paymentConfirmedAt && <p className="text-xs text-good">Confirmed {formatDateTime(order.paymentConfirmedAt)}</p>}
+              {order.paymentConfirmedAt && <p className="text-xs text-good">Confirmed {fmt.dateTime(order.paymentConfirmedAt)}</p>}
             </div>
             <div className="flex flex-wrap items-center gap-3">
               {order.paymentStatus === "PENDING" && (
@@ -312,11 +314,11 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="border-t-2 border-fg pt-3">
             <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Basket said</dt>
-            <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatKg(order.reportedWeightKg ?? order.weightKg)}</dd>
+            <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.weight(order.reportedWeightKg ?? order.weightKg)}</dd>
           </div>
           <div className="border-t-2 border-fg pt-3">
             <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Weighed</dt>
-            <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{order.weighedKg != null ? formatKg(order.weighedKg) : "—"}</dd>
+            <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{order.weighedKg != null ? fmt.weight(order.weighedKg) : "—"}</dd>
           </div>
           <div className="border-t-2 border-fg pt-3">
             <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Difference</dt>
@@ -326,7 +328,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
           </div>
           <div className="border-t-2 border-fg pt-3">
             <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Billed</dt>
-            <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{formatINR(order.amountDue)}</dd>
+            <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.money(order.amountDue)}</dd>
           </div>
         </dl>
         {gap !== null && Math.abs(gap) > 15 && (
@@ -357,7 +359,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
             {events.map((e) => (
               <li key={e.id} className="flex flex-wrap justify-between gap-2 border-b border-border pb-2 last:border-0">
                 <span>{EVENT_LABEL[e.type] ?? e.type}</span>
-                <span className="text-xs text-muted">{formatDateTime(e.at)}</span>
+                <span className="text-xs text-muted">{fmt.dateTime(e.at)}</span>
               </li>
             ))}
           </ol>

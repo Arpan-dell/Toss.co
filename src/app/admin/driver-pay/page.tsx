@@ -5,9 +5,9 @@ import { Badge, Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { setDriverPay, updateCosts } from "@/lib/actions/supplies";
 import { getTenantById, listDrivers, listOrders, now } from "@/lib/data";
 import { earnings, monthStartIST, weekStartIST, type Earnings } from "@/lib/driver-pay";
-import { formatINR } from "@/lib/format";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Driver pay" };
 
@@ -17,6 +17,7 @@ const trips = (n: number) => `${n} trip${n === 1 ? "" : "s"}`;
 // fixed monthly salary. Per-trip pay is counted for this week, last week and this month (IST, Monday to Sunday);
 // for salaried drivers the page shows what each trip costs. Drivers see their own numbers under "My earnings".
 export default async function DriverPay() {
+  const fmt = await myFormat();
   const locked = await proGate(
     "Driver pay",
     "Pay drivers per trip or by salary without a notebook: Toss counts every pickup, delivery and kilometre, and drivers check their own earnings in the bot.",
@@ -93,9 +94,9 @@ export default async function DriverPay() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Trip pay this week" value={formatINR(tripTotal((r) => r.thisWeek))} />
-        <StatTile label="Trip pay last week" value={formatINR(tripTotal((r) => r.lastWeek))} hint="Mon to Sun" />
-        <StatTile label="This month in all" value={formatINR(tripTotal((r) => r.thisMonth) + salaries)} hint={salaries ? `incl. ${formatINR(salaries)} salaries` : undefined} />
+        <StatTile label="Trip pay this week" value={fmt.money(tripTotal((r) => r.thisWeek))} />
+        <StatTile label="Trip pay last week" value={fmt.money(tripTotal((r) => r.lastWeek))} hint="Mon to Sun" />
+        <StatTile label="This month in all" value={fmt.money(tripTotal((r) => r.thisMonth) + salaries)} hint={salaries ? `incl. ${fmt.money(salaries)} salaries` : undefined} />
       </div>
 
       <Card title="By driver">
@@ -119,12 +120,12 @@ export default async function DriverPay() {
                     <td className="px-2 py-2.5">
                       <span className="font-medium text-fg">{r.d.name}</span>
                       <span className="mt-0.5 block">
-                        <Badge tone={r.salaried ? "info" : "neutral"}>{r.salaried ? `Salary ${formatINR(r.d.monthlySalary)}/mo` : "Per trip"}</Badge>
+                        <Badge tone={r.salaried ? "info" : "neutral"}>{r.salaried ? `Salary ${fmt.money(r.d.monthlySalary)}/mo` : "Per trip"}</Badge>
                       </span>
                     </td>
                     {[r.thisWeek, r.lastWeek].map((e, i) => (
                       <td key={i} className="px-2 py-2.5 text-right tabular-nums">
-                        {!r.salaried && <span className="font-semibold text-fg">{formatINR(e.pay)}</span>}
+                        {!r.salaried && <span className="font-semibold text-fg">{fmt.money(e.pay)}</span>}
                         <span className="block text-xs text-muted">
                           {trips(e.pickups)}
                           {e.km ? ` · ${e.km} km` : ""}
@@ -132,10 +133,10 @@ export default async function DriverPay() {
                       </td>
                     ))}
                     <td className="px-2 py-2.5 text-right tabular-nums">
-                      <span className="font-semibold text-fg">{formatINR(r.monthCost)}</span>
+                      <span className="font-semibold text-fg">{fmt.money(r.monthCost)}</span>
                       <span className="block text-xs text-muted">
                         {trips(r.thisMonth.pickups)}
-                        {r.perTrip !== null ? ` · ${formatINR(r.perTrip)} a trip` : ""}
+                        {r.perTrip !== null ? ` · ${fmt.money(r.perTrip)} a trip` : ""}
                       </span>
                     </td>
                     <td className="px-2 py-2.5 text-right text-muted tabular-nums">{r.monthPickups ? `${Math.round((r.photos / r.monthPickups) * 100)}%` : "-"}</td>

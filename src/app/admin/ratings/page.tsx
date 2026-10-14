@@ -5,14 +5,15 @@ import Link from "next/link";
 import { proGate } from "@/components/plan-gate";
 import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { getTenantById, listCustomers, listOrders } from "@/lib/data";
-import { formatDateTime } from "@/lib/format";
 import { getSession } from "@/lib/session";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Ratings" };
 
 // Ratings (Pro): customers rate each paid pickup from the link in their invoice. Low ratings come first so the
 // manager can follow up; happy customers were pointed at the laundry's Google review page.
 export default async function Ratings() {
+  const fmt = await myFormat();
   const locked = await proGate("Ratings", "See how customers rate every pickup, catch unhappy ones early, and send happy ones to your Google reviews.");
   if (locked) return locked;
 
@@ -76,7 +77,7 @@ export default async function Ratings() {
                       <span className="font-medium text-fg">{(o.customerId && names.get(o.customerId)) ?? "Customer"}</span>{" "}
                       <OrderLink order={o} />
                     </span>
-                    {o.ratedAt && <span className="text-xs text-muted">{formatDateTime(o.ratedAt)}</span>}
+                    {o.ratedAt && <span className="text-xs text-muted">{fmt.dateTime(o.ratedAt)}</span>}
                   </div>
                   {o.ratingComment && <p className="mt-1 text-secondary">“{o.ratingComment}”</p>}
                 </li>

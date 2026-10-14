@@ -6,13 +6,14 @@ import { PasswordField } from "@/components/password-field";
 import { Card, PageTitle } from "@/components/ui";
 import { requestClosure } from "@/lib/actions/manager";
 import { getTenantById } from "@/lib/data";
-import { formatDate } from "@/lib/format";
 import { requireRole } from "@/lib/session";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Account & security" };
 
 // Settings → Account & security: the sign-in email, the password, and closing the business (password needed).
 export default async function AccountSettings() {
+  const fmt = await myFormat();
   const session = await requireRole("MANAGER");
   const tenant = await getTenantById(session.tenantId);
   if (!tenant) return <Card>This manager account isn&apos;t linked to a business.</Card>;
@@ -35,7 +36,7 @@ export default async function AccountSettings() {
       <Card title="Close your business">
         {tenant.closureRequestedAt ? (
           <p className="rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
-            You asked Toss to close this business on {formatDate(tenant.closureRequestedAt)}. We&apos;ll contact you by email to complete it.
+            You asked Toss to close this business on {fmt.date(tenant.closureRequestedAt)}. We&apos;ll contact you by email to complete it.
           </p>
         ) : (
           <details className="text-sm">

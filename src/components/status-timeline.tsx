@@ -1,5 +1,5 @@
 import type { Order } from "@/lib/types";
-import { formatDateTime } from "@/lib/format";
+import { myFormat } from "@/lib/my-format";
 
 type Step = { label: string; at?: string; done: boolean };
 
@@ -29,7 +29,8 @@ function steps(order: Order): Step[] {
   ];
 }
 
-export function StatusTimeline({ order }: { order: Order }) {
+export async function StatusTimeline({ order }: { order: Order }) {
+  const fmt = await myFormat();
   const all = steps(order);
   const current = all.findIndex((s) => !s.done);
 
@@ -53,7 +54,7 @@ export function StatusTimeline({ order }: { order: Order }) {
               {s.label}
               {i === current && <span className="ml-2 text-xs text-accent">up next</span>}
             </p>
-            {s.at && <p className="text-xs text-muted">{formatDateTime(s.at)}</p>}
+            {s.at && <p className="text-xs text-muted">{fmt.dateTime(s.at)}</p>}
           </div>
         </li>
       ))}

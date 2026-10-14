@@ -4,10 +4,12 @@ import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { confirmPayment, markPaidCash, rejectPayment } from "@/lib/actions/manager";
 import { listCustomers, listOrders, now } from "@/lib/data";
-import { formatDateTime, formatINR, formatKg, timeAgo } from "@/lib/format";
+import { timeAgo } from "@/lib/format";
 import type { Customer, Order } from "@/lib/types";
 import { AmountForm } from "./amount-form";
 import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
+import { myFormat } from "@/lib/my-format";
+import { methodName } from "@/lib/pay-methods";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -17,6 +19,7 @@ function who(o: Order, customers: Map<string, Customer>) {
 }
 
 export default async function Payments() {
+  const fmt = await myFormat();
   const locked = await planGate();
   if (locked) return locked;
 
@@ -38,11 +41,11 @@ export default async function Payments() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatTile label="To verify" value={String(toVerify.length)} hint="Customer says they paid" />
-        <StatTile label="Outstanding" value={formatINR(outstanding)} hint={`${unpaid.length} unpaid pickups${onAccounts ? ` + ${formatINR(onAccounts)} on monthly accounts` : ""}`} />
-        <StatTile label="Collected" value={formatINR(collected)} hint="All confirmed payments" />
+        <StatTile label="Outstanding" value={fmt.money(outstanding)} hint={`${unpaid.length} unpaid pickups${onAccounts ? ` + ${fmt.money(onAccounts)} on monthly accounts` : ""}`} />
+        <StatTile label="Collected" value={fmt.money(collected)} hint="All confirmed payments" />
       </div>
 
-      <Card title="Check these in your UPI app" action={toVerify.length > 0 ? <Badge tone="warn" live>{toVerify.length} waiting</Badge> : undefined}>
+      <Card title={fmt.region.currency === "INR" ? "Check these in your UPI app" : "Check these in your payment app or bank"} action={toVerify.length > 0 ? <Badge tone="warn" live>{toVerify.length} waiting</Badge> : undefined}>
         {toVerify.length === 0 ? (
           <EmptyState>No payments waiting for confirmation.</EmptyState>
         ) : (
@@ -51,7 +54,7 @@ export default async function Payments() {
               <OptimisticRow key={o.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-[220px] flex-1 text-sm">
                   <p className="font-medium">
-                    {formatINR(o.amountDue)} <OrderLink order={o} />
+                    {fmt.money(o.amountDue)} <OrderLink order={o} />
                   </p>
                   <p className="text-secondary">{who(o, customers)}</p>
                   <p className="text-xs text-muted">
@@ -59,7 +62,8 @@ export default async function Payments() {
                       <span className="text-fg">Cash collected by the driver at delivery</span>
                     ) : (
                       <>
-                        UPI ref <span className="font-mono text-fg">{o.paymentRef}</span>
+                        {methodName(o.paymentMethod ?? "UPI")} ref <span className="font-mono text-fg">{o.paymentRef}</span>
+                        {o.tip ? <span className="text-good"> · +{fmt.money(o.tip)} tip for the driver</span> : null}
                       </>
                     )}
                     {o.paymentReportedAt ? ` · reported ${timeAgo(o.paymentReportedAt, current)}` : ""}
@@ -94,11 +98,11 @@ export default async function Payments() {
               <OptimisticRow key={o.id} className="flex flex-wrap items-center gap-x-6 gap-y-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-[220px] flex-1 text-sm">
                   <p className="font-medium">
-                    {formatINR(o.amountDue)} <OrderLink order={o} />
+                    {fmt.money(o.amountDue)} <OrderLink order={o} />
                   </p>
                   <p className="text-secondary">{who(o, customers)}</p>
                   <p className="text-xs text-muted">
-                    {formatKg(o.weightKg)} · picked up {o.completedAt ? formatDateTime(o.completedAt) : "—"}
+                    {fmt.weight(o.weightKg)} · picked up {o.completedAt ? fmt.dateTime(o.completedAt) : "—"}
                   </p>
                 </div>
                 <AmountForm orderId={o.id} amount={o.amountDue} />
@@ -120,7 +124,7 @@ export default async function Payments() {
             {paid.map((o) => (
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
                 <span>
-                  {formatINR(o.amountDue)} <OrderLink order={o} />
+                  {fmt.money(o.amountDue)} <OrderLink order={o} />
                   <span className="ml-2 text-secondary">{who(o, customers)}</span>
                 </span>
                 <span className="flex items-center gap-2 text-xs text-muted">

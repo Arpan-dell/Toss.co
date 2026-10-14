@@ -1,19 +1,21 @@
 import { OrderLink } from "@/components/order-link";
 import type { Order } from "@/lib/types";
-import { formatDateTime, formatINR, formatKg, orderLabel } from "@/lib/format";
+import { orderLabel } from "@/lib/format";
 import { now } from "@/lib/data";
 import { isLate } from "@/lib/turnaround";
 import { EmptyState, OrderStatusBadge, PaymentBadge } from "./ui";
+import { myFormat } from "@/lib/my-format";
 
 export const invoiceHref = (orderId: string) => `/invoice/${encodeURIComponent(orderId)}`;
 
 // linkToAdmin: each order opens its detail page in the manager portal.
-export function OrderTable({ orders, showAddress = false, emptyText = "No orders yet.", linkToAdmin = false }: {
+export async function OrderTable({ orders, showAddress = false, emptyText = "No orders yet.", linkToAdmin = false }: {
   orders: Order[];
   showAddress?: boolean;
   emptyText?: string;
   linkToAdmin?: boolean;
 }) {
+  const fmt = await myFormat();
   if (orders.length === 0) return <EmptyState>{emptyText}</EmptyState>;
   return (
     <div className="-mx-5 overflow-x-auto">
@@ -39,11 +41,11 @@ export function OrderTable({ orders, showAddress = false, emptyText = "No orders
                   orderLabel(o)
                 )}
               </td>
-              <td className="px-3 py-2.5 text-secondary">{formatDateTime(o.createdAt)}</td>
+              <td className="px-3 py-2.5 text-secondary">{fmt.dateTime(o.createdAt)}</td>
               {showAddress && <td className="max-w-[220px] truncate px-3 py-2.5 text-secondary">{o.address}</td>}
-              <td className="px-3 py-2.5 text-right tabular-nums">{formatKg(o.weightKg)}</td>
+              <td className="px-3 py-2.5 text-right tabular-nums">{fmt.weight(o.weightKg)}</td>
               <td className="px-3 py-2.5 text-right tabular-nums">
-                {formatINR(o.amountDue)}
+                {fmt.money(o.amountDue)}
                 {o.discountPct ? <span className="ml-1.5 rounded-full bg-good-bg px-1.5 py-0.5 text-[10px] text-good">−{o.discountPct}%</span> : null}
               </td>
               <td className="px-3 py-2.5">

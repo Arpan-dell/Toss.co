@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { OrderTable } from "@/components/order-table";
 import { Card, PageTitle, StatTile } from "@/components/ui";
 import { listOrdersForCustomer } from "@/lib/data";
-import { formatINR } from "@/lib/format";
 import { requireRole } from "@/lib/session";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Order history" };
 
 export default async function CustomerOrders() {
+  const fmt = await myFormat();
   const session = await requireRole("CUSTOMER");
   const orders = await listOrdersForCustomer(session.userId);
   const totalKg = orders.reduce((s, o) => s + o.weightKg, 0);
@@ -19,7 +20,7 @@ export default async function CustomerOrders() {
       <div className="grid gap-4 sm:grid-cols-3">
         <StatTile label="Pickups" value={String(orders.length)} />
         <StatTile label="Laundry washed" value={`${totalKg.toFixed(0)} kg`} />
-        <StatTile label="Total paid" value={formatINR(totalPaid)} />
+        <StatTile label="Total paid" value={fmt.money(totalPaid)} />
       </div>
       <Card>
         <OrderTable orders={orders} />

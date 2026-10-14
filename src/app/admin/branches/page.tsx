@@ -6,9 +6,10 @@ import { Badge, Card, PageTitle, StatTile } from "@/components/ui";
 import { addBranch, switchBranch } from "@/lib/actions/branches";
 import { listMyBranches } from "@/lib/branches";
 import { getPlatformSettings, now } from "@/lib/data";
-import { formatINR, formatKg } from "@/lib/format";
 import { requireRole } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { myFormat } from "@/lib/my-format";
+import { subscriptionFormat } from "@/lib/region-format";
 
 export const metadata: Metadata = { title: "Branches" };
 
@@ -18,6 +19,10 @@ const empty = (): Stats => ({ pickups: 0, kg: 0, collected: 0, due: 0, open: 0, 
 // All of a manager's laundries on one screen (Pro on the main business): the last 30 days per branch and in total,
 // with a switch into any branch. Reads use the service role, limited to tenants this manager runs.
 export default async function Branches() {
+  const fmt = await myFormat();
+  // branch prices are the Toss subscription: rupees in India, US dollars elsewhere
+  const sub = subscriptionFormat({ currency: fmt.region.currency });
+  const usd = sub.region.currency === "USD";
   const session = await requireRole("MANAGER");
   const [branches, platform] = await Promise.all([listMyBranches(session.userId), getPlatformSettings()]);
   const main = branches.find((b) => b.main);
@@ -31,8 +36,8 @@ export default async function Branches() {
           <div className="space-y-4 text-sm text-secondary">
             <p>
               Run several laundries from one login: see every branch&apos;s pickups, money and late orders side by side, and switch between them in a tap.
-              Each extra branch has its own Business ID, drivers and baskets, and its Pro plan costs {formatINR(platform.branchPrice)}/month instead of{" "}
-              {formatINR(platform.monthlyPrice)}.
+              Each extra branch has its own Business ID, drivers and baskets, and its Pro plan costs {sub.money(usd ? platform.usdBranchPrice : platform.branchPrice)}/month instead of{" "}
+              {sub.money(usd ? platform.usdMonthlyPrice : platform.monthlyPrice)}.
             </p>
             <Link href="/admin/billing" className="btn-primary inline-flex rounded-full px-5 py-2.5 text-sm font-medium">
               Upgrade to Pro →
@@ -81,9 +86,9 @@ export default async function Branches() {
       <BackLink />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile label="Pickups" value={String(total.pickups)} hint={formatKg(Math.round(total.kg * 10) / 10)} />
-        <StatTile label="Collected" value={formatINR(Math.round(total.collected))} />
-        <StatTile label="To collect" value={formatINR(Math.round(total.due))} />
+        <StatTile label="Pickups" value={String(total.pickups)} hint={fmt.weight(Math.round(total.kg * 10) / 10)} />
+        <StatTile label="Collected" value={fmt.money(Math.round(total.collected))} />
+        <StatTile label="To collect" value={fmt.money(Math.round(total.due))} />
         <StatTile label="Open now" value={String(total.open)} hint={total.late ? `${total.late} late` : `${total.online} drivers online`} />
       </div>
 
@@ -120,10 +125,10 @@ export default async function Branches() {
                     </td>
                     <td className="px-2 py-2.5 text-right tabular-nums">
                       {s.pickups}
-                      <span className="block text-xs text-muted">{formatKg(Math.round(s.kg * 10) / 10)}</span>
+                      <span className="block text-xs text-muted">{fmt.weight(Math.round(s.kg * 10) / 10)}</span>
                     </td>
-                    <td className="px-2 py-2.5 text-right tabular-nums">{formatINR(Math.round(s.collected))}</td>
-                    <td className="px-2 py-2.5 text-right tabular-nums">{formatINR(Math.round(s.due))}</td>
+                    <td className="px-2 py-2.5 text-right tabular-nums">{fmt.money(Math.round(s.collected))}</td>
+                    <td className="px-2 py-2.5 text-right tabular-nums">{fmt.money(Math.round(s.due))}</td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{s.open}</td>
                     <td className={`px-2 py-2.5 text-right tabular-nums ${s.late ? "font-semibold text-critical" : ""}`}>{s.late}</td>
                     <td className="px-2 py-2.5 text-right tabular-nums">{s.online}</td>
@@ -148,7 +153,7 @@ export default async function Branches() {
       <Card title="Add a branch" className="max-w-xl">
         <p className="mb-4 text-sm text-secondary">
           A new branch gets its own Business ID for customers, its own drivers and baskets, and starts on Toss Free with your price and UPI. Pro for a branch is{" "}
-          <span className="font-medium text-fg">{formatINR(platform.branchPrice)}/month</span> (your main business pays {formatINR(platform.monthlyPrice)}): open the branch,
+          <span className="font-medium text-fg">{sub.money(usd ? platform.usdBranchPrice : platform.branchPrice)}/month</span> (your main business pays {sub.money(usd ? platform.usdMonthlyPrice : platform.monthlyPrice)}): open the branch,
           then Billing.
         </p>
         <ActionForm action={addBranch} submitLabel="Add branch">

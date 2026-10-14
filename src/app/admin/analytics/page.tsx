@@ -6,18 +6,19 @@ import { ColumnChart, LineChart } from "@/components/charts";
 import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { computeAggregates } from "@/lib/analytics";
 import { listOrders } from "@/lib/data";
-import { formatDate } from "@/lib/format";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Analytics" };
 
 export default async function Analytics() {
+  const fmt = await myFormat();
   const locked = await proGate("Analytics", "Revenue forecasts, busy-hour heatmaps, churn risk and a driver leaderboard, updated every day.");
   if (locked) return locked;
 
   const agg = computeAggregates(await listOrders());
   // First and current weeks are partial and would read as false dips, so chart complete weeks only.
   const weekly = agg.byWeek.slice(1, -1).map((w) => ({
-    label: formatDate(w.weekStart),
+    label: fmt.date(w.weekStart),
     value: w.kg,
     detail: `${w.orders} pickups`,
   }));
@@ -73,7 +74,7 @@ export default async function Analytics() {
             <tbody>
               {agg.byWeek.map((w) => (
                 <tr key={w.weekStart} className="border-b border-border last:border-0">
-                  <td className="py-2">{formatDate(w.weekStart)}</td>
+                  <td className="py-2">{fmt.date(w.weekStart)}</td>
                   <td className="py-2 text-right tabular-nums">{w.orders}</td>
                   <td className="py-2 text-right tabular-nums">{w.kg}</td>
                 </tr>

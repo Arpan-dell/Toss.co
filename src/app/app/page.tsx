@@ -2,17 +2,23 @@ import Link from "next/link";
 import { OrderTable } from "@/components/order-table";
 import { IdChip } from "@/components/id-chip";
 import { JoinBusiness } from "@/components/join-business";
+import { RegionPay } from "@/components/region-pay";
 import { UpiPay } from "@/components/upi-pay";
 import { StatusTimeline } from "@/components/status-timeline";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, OrderStatusBadge, PageTitle } from "@/components/ui";
 import { reportPayment } from "@/lib/actions/customer";
 import { getCustomer, getCustomerCredit, getDeviceForCustomer, getOpenOffer, getTenantById, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
-import { formatDate, formatINR, formatKg, orderLabel, timeAgo } from "@/lib/format";
+import { orderLabel, timeAgo } from "@/lib/format";
+import { methodName } from "@/lib/pay-methods";
+import { businessPayOptions } from "@/lib/pay-qr";
 import { qrSvg } from "@/lib/qr";
+import { roundMoney } from "@/lib/regions";
 import { requireRole } from "@/lib/session";
 import { buildUpiUri, isValidUpiId } from "@/lib/upi";
+import { myFormat } from "@/lib/my-format";
 
 export default async function CustomerOverview() {
+  const fmt = await myFormat();
   const session = await requireRole("CUSTOMER");
   const [orders, device, customer, credit] = await Promise.all([
     listOrdersForCustomer(session.userId),
@@ -40,14 +46,16 @@ export default async function CustomerOverview() {
   const verifying = orders.filter((o) => o.paymentStatus === "PENDING");
   const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? "there";
   const [business, offer] = await Promise.all([getTenantById(customer?.tenantId), getOpenOffer(session.userId, customer?.tenantId)]);
-  const canPay = !!business && isValidUpiId(business.upiId) && !!business.upiId;
+  // India: UPI, as before. Elsewhere: the business's own methods (PayPal, Venmo, SEPA, Pix…), with a tip option.
+  const upi = !!business && business.currency === "INR" && isValidUpiId(business.upiId);
+  const canPay = !!business && (upi || business.currency !== "INR");
+  const toPay = unpaid.filter((o) => o.amountDue > 0);
 
   // One UPI link + QR per unpaid order, pre-filled with this business's UPI ID and the amount.
-  const payments = canPay
-    ? await Promise.all(
-        unpaid
-          .filter((o) => o.amountDue > 0)
-          .map(async (o) => {
+  const payments =
+    canPay && upi
+      ? await Promise.all(
+          toPay.map(async (o) => {
             const uri = buildUpiUri({
               payeeUpiId: business.upiId!,
               payeeName: business.upiName ?? business.name,
@@ -57,8 +65,24 @@ export default async function CustomerOverview() {
             });
             return { order: o, uri, qr: await qrSvg(uri) };
           }),
-      )
-    : [];
+        )
+      : [];
+  const other =
+    canPay && !upi
+      ? await Promise.all(
+          toPay.map(async (o) => ({
+            order: o,
+            options: await businessPayOptions(business, { amount: o.amountDue, note: `Toss pickup ${orderLabel(o)}`, reference: `TOSS${o.deviceOrderId}` }),
+          })),
+        )
+      : [];
+  const tipFor = (amount: number) => ({
+    symbol: fmt.symbol,
+    suggestions: [10, 15, 20].map((pct) => {
+      const value = roundMoney((amount * pct) / 100, fmt.region.currency);
+      return { value, label: `${pct}% · ${fmt.money(value)}` };
+    }),
+  });
 
   return (
     <div className="stagger space-y-6">
@@ -74,7 +98,7 @@ export default async function CustomerOverview() {
             {offer.percent}% off your next pickup from {business.name}
           </p>
           <p className="mt-1 text-sm text-secondary">
-            Just fill your basket. The discount is applied automatically. Valid until {formatDate(offer.expiresAt)}.
+            Just fill your basket. The discount is applied automatically. Valid until {fmt.date(offer.expiresAt)}.
           </p>
         </div>
       )}
@@ -83,13 +107,13 @@ export default async function CustomerOverview() {
         <div role="status" className="relative rounded-[10px] border border-l-4 border-border border-l-accent bg-surface-solid p-5">
           <p className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">Basket credit</p>
           <p className="mt-1 text-xl font-semibold tabular-nums">
-            {formatINR(credit.left)} left <span className="text-sm font-normal text-muted">of {formatINR(credit.granted)}</span>
+            {fmt.money(credit.left)} left <span className="text-sm font-normal text-muted">of {fmt.money(credit.granted)}</span>
           </p>
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-ink/10" aria-hidden>
             <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (credit.left / Math.max(credit.granted, 1)) * 100)}%` }} />
           </div>
           <p className="mt-2 text-sm text-secondary">
-            Comes off your pickups automatically, a little each time. Valid until {formatDate(credit.expiresAt)}.
+            Comes off your pickups automatically, a little each time. Valid until {fmt.date(credit.expiresAt)}.
           </p>
         </div>
       )}
@@ -189,7 +213,7 @@ export default async function CustomerOverview() {
                 </div>
                 <div>
                   <dt className="text-muted">Weight</dt>
-                  <dd className="tabular-nums">{formatKg(active.weightKg)} · {formatINR(active.amountDue)}</dd>
+                  <dd className="tabular-nums">{fmt.weight(active.weightKg)} · {fmt.money(active.amountDue)}</dd>
                 </div>
                 <div>
                   <dt className="text-muted">Pickup address</dt>
@@ -246,22 +270,32 @@ export default async function CustomerOverview() {
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
                 <div className="text-sm">
                   <p className="font-medium">
-                    Pickup {orderLabel(o)} · {formatDate(o.createdAt)}
+                    Pickup {orderLabel(o)} · {fmt.date(o.createdAt)}
                   </p>
                   <p className="text-muted tabular-nums">
-                    {formatKg(o.weightKg)} · {formatINR(o.amountDue)}
+                    {fmt.weight(o.weightKg)} · {fmt.money(o.amountDue)}
                     {o.creditApplied ? (
                       <span className="ml-1.5 text-accent">
-                        (basket credit −{formatINR(o.creditApplied)})
+                        (basket credit −{fmt.money(o.creditApplied)})
                       </span>
                     ) : null}
                   </p>
                 </div>
+                {business && other.find((p) => p.order.id === o.id) && (
+                  <RegionPay
+                    options={other.find((p) => p.order.id === o.id)!.options}
+                    amountLabel={fmt.money(o.amountDue)}
+                    payeeName={business.upiName ?? business.name}
+                    action={reportPayment}
+                    hidden={{ orderId: o.id }}
+                    tip={tipFor(o.amountDue)}
+                  />
+                )}
                 {pay && business && (
                   <UpiPay
                     uri={pay.uri}
                     qrSvg={pay.qr}
-                    amountLabel={formatINR(o.amountDue)}
+                    amountLabel={fmt.money(o.amountDue)}
                     payeeName={business.upiName ?? business.name}
                     payeeUpiId={business.upiId!}
                     action={reportPayment}
@@ -275,9 +309,11 @@ export default async function CustomerOverview() {
             <li key={o.id} className="flex flex-wrap items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
               <div className="text-sm">
                 <p className="font-medium">
-                  Pickup {orderLabel(o)} · {formatINR(o.amountDue)}
+                  Pickup {orderLabel(o)} · {fmt.money(o.amountDue)}
                 </p>
-                <p className="text-muted">UPI ref <span className="font-mono">{o.paymentRef}</span></p>
+                <p className="text-muted">
+                  {o.paymentMethod && o.paymentMethod !== "UPI" ? methodName(o.paymentMethod) : "UPI"} ref <span className="font-mono">{o.paymentRef}</span>
+                </p>
               </div>
               <Badge tone="warn" icon="…">Awaiting confirmation</Badge>
             </li>

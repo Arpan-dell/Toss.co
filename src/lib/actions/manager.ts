@@ -242,7 +242,8 @@ export async function setOrderAmount(_prev: FormState, formData: FormData): Prom
 export async function submitSubscriptionPayment(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireManager();
   const months = Number(text(formData, "months"));
-  const ref = normalizePaymentRef(text(formData, "ref"));
+  // PayPal and other IDs can contain dashes; UPI references are letters and digits anyway
+  const ref = normalizePaymentRef(text(formData, "ref").replace(/[^A-Za-z0-9]/g, ""));
   if (!ref) return { error: friendlyError({ message: "invalid_reference" }) };
 
   const supabase = await createClient();

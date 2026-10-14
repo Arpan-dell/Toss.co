@@ -7,14 +7,15 @@ import { Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { monthKeyIST, statements } from "@/lib/accounts";
 import { saveAccount } from "@/lib/actions/accounts";
 import { getTenantById, listAccounts, listDevices, listOrders, now } from "@/lib/data";
-import { formatINR, formatKg } from "@/lib/format";
 import { getSession } from "@/lib/session";
+import { myFormat } from "@/lib/my-format";
 
 export const metadata: Metadata = { title: "Business accounts" };
 
 // Business accounts (Pro): PGs, hostels and offices with several baskets, their own price per kg and one bill a
 // month. Each account's page has its baskets and monthly bills.
 export default async function Accounts() {
+  const fmt = await myFormat();
   const locked = await proGate(
     "Business accounts",
     "Win PGs, hostels and offices: put all their baskets on one account with its own price per kg, and send one bill a month instead of collecting every pickup.",
@@ -45,8 +46,8 @@ export default async function Accounts() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatTile label="Accounts" value={String(accounts.length)} hint={`${rows.reduce((s, r) => s + r.baskets, 0)} baskets`} />
-        <StatTile label="Billed this month" value={formatINR(monthAmount)} />
-        <StatTile label="To collect" value={formatINR(unpaid)} hint="all months" />
+        <StatTile label="Billed this month" value={fmt.money(monthAmount)} />
+        <StatTile label="To collect" value={fmt.money(unpaid)} hint="all months" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
@@ -61,14 +62,14 @@ export default async function Accounts() {
                     <span>
                       <span className="font-medium text-fg">{a.name}</span>
                       <span className="block text-xs text-muted">
-                        {baskets} basket{baskets === 1 ? "" : "s"} · {a.pricePerKg ? `${formatINR(a.pricePerKg)}/kg` : `your price (${formatINR(tenant?.pricePerKg ?? 0)}/kg)`}
+                        {baskets} basket{baskets === 1 ? "" : "s"} · {a.pricePerKg ? `${fmt.money(a.pricePerKg)}/kg` : `your price (${fmt.money(tenant?.pricePerKg ?? 0)}/kg)`}
                       </span>
                     </span>
                     <span className="text-right">
-                      <span className="font-semibold text-fg tabular-nums">{formatINR(month?.amount ?? 0)}</span>
+                      <span className="font-semibold text-fg tabular-nums">{fmt.money(month?.amount ?? 0)}</span>
                       <span className="block text-xs text-muted">
-                        this month · {formatKg(month?.kg ?? 0)}
-                        {unpaid > 0 ? ` · ${formatINR(unpaid)} due` : ""}
+                        this month · {fmt.weight(month?.kg ?? 0)}
+                        {unpaid > 0 ? ` · ${fmt.money(unpaid)} due` : ""}
                       </span>
                     </span>
                   </Link>
@@ -83,7 +84,7 @@ export default async function Accounts() {
             <Field label="Name">
               <input name="name" required minLength={2} maxLength={80} placeholder="Sunrise Boys PG" className={fieldClass} />
             </Field>
-            <Field label="Price per kg (₹)" hint={`Leave empty for your normal ${formatINR(tenant?.pricePerKg ?? 0)}/kg.`}>
+            <Field label="Price per kg (₹)" hint={`Leave empty for your normal ${fmt.money(tenant?.pricePerKg ?? 0)}/kg.`}>
               <input name="pricePerKg" type="number" min={1} step="any" className={fieldClass} />
             </Field>
             <Field label="Contact person (optional)">

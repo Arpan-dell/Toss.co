@@ -51,11 +51,17 @@ export async function updatePhone(_prev: FormState, formData: FormData): Promise
 export async function reportPayment(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireCustomer();
   const orderId = text(formData, "orderId");
-  const ref = normalizePaymentRef(text(formData, "ref"));
-  if (!ref) return { error: friendlyError({ message: "invalid_reference" }) };
+  const method = (text(formData, "method") || "UPI").toUpperCase();
+  const tip = Math.max(0, Math.round(Number(text(formData, "tip") || 0) * 100) / 100);
+  // UPI's UTR is 6+ letters/digits; other methods' IDs vary, so only spaces and punctuation are dropped
+  const ref = method === "UPI" ? normalizePaymentRef(text(formData, "ref")) : text(formData, "ref").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 35);
+  if (!ref || ref.length < 4) return { error: friendlyError({ message: "invalid_reference" }) };
+  if (!Number.isFinite(tip) || tip > 100_000) return { error: friendlyError({ message: "invalid_tip" }) };
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("report_payment", { p_order: orderId, p_ref: ref });
+  // UPI without a tip uses the original two arguments, which also work before migration 0035
+  const args = method === "UPI" && !tip ? { p_order: orderId, p_ref: ref } : { p_order: orderId, p_ref: ref, p_method: method, p_tip: tip };
+  const { error } = await supabase.rpc("report_payment", args);
   if (error) return { error: friendlyError(error) };
   revalidatePath("/app", "layout");
   return { message: "Thanks! Your laundry will confirm the payment shortly." };

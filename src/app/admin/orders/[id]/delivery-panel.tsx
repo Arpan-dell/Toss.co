@@ -4,12 +4,13 @@ import { ActionForm } from "@/components/action-form";
 import { DriverConfirm } from "./driver-confirm";
 import { assignDeliveryDriverForm, closeDelivery, sendForDelivery } from "@/lib/actions/delivery";
 import { DELIVERY_LABEL } from "@/lib/dispatch/delivery";
-import { formatDateTime } from "@/lib/format";
 import type { Driver, Order } from "@/lib/types";
+import { myFormat } from "@/lib/my-format";
 
 // Order page: getting a picked-up order back to the customer. Send it to a driver (or choose one), follow it, or
 // close it by hand when the customer collected it at the store.
-export function DeliveryPanel({ order, drivers }: { order: Order; drivers: Driver[] }) {
+export async function DeliveryPanel({ order, drivers }: { order: Order; drivers: Driver[] }) {
+  const fmt = await myFormat();
   const d = order.deliveryStatus;
   const name = (chatId?: string) => (chatId ? (drivers.find((x) => x.telegramChatId === chatId)?.name ?? `Driver …${chatId.slice(-4)}`) : undefined);
   const open = d === "WAITING" || d === "ASSIGNED" || d === "OUT";
@@ -63,7 +64,7 @@ export function DeliveryPanel({ order, drivers }: { order: Order; drivers: Drive
           <>
             <dt className="text-muted">{d === "COLLECTED" ? "Collected" : "Delivered"}</dt>
             <dd>
-              {formatDateTime(order.deliveredAt)}
+              {fmt.dateTime(order.deliveredAt)}
               {d === "DELIVERED" && order.deliveryVerified === true && <span className="ml-2 text-good">code checked ✓</span>}
               {d === "DELIVERED" && order.deliveryVerified === false && <span className="ml-2 text-warn">without the code</span>}
             </dd>

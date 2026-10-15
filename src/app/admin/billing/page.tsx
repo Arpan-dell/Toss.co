@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
+import { GatewayPay } from "@/components/gateway-pay";
 import { RegionPay } from "@/components/region-pay";
 import { UpiPay } from "@/components/upi-pay";
 import { submitSubscriptionPayment } from "@/lib/actions/manager";
+import { paySubscriptionOnline } from "@/lib/actions/gateway";
+import { platformGatewayName, refreshIntent } from "@/lib/gateway-payments";
 import { getPlatformSettings, getTenantById, getTenantCreditBalance, listSubscriptionPayments } from "@/lib/data";
 import { myFormat } from "@/lib/my-format";
 import { payOptions } from "@/lib/pay-methods";
@@ -54,7 +57,11 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
         { amount, currency: "USD", payee: "Toss", note: `Toss ${months} month${months > 1 ? "s" : ""} ${tenant.joinCode}`, reference: `${tenant.joinCode}M${months}` },
       ).map((o) => ({ ...o, refLabel: o.id === "paypal" ? "PayPal transaction ID (in your PayPal receipt)" : "Receipt or transaction number" }))
     : [];
-  const canPay = amount > 0 && (usd ? intl.length > 0 : isValidUpiId(platform.ownerUpiId));
+  // Toss's own gateway (when its keys are set) confirms subscription payments by itself; otherwise UPI/PayPal + approval
+  const online = amount > 0 ? platformGatewayName(sub.region.currency) : null;
+  const canPay = amount > 0 && (!!online || (usd ? intl.length > 0 : isValidUpiId(platform.ownerUpiId)));
+  // back from the gateway: what it confirmed (never what the URL says)
+  const back = typeof params.intent === "string" ? await refreshIntent(params.intent, { tenantId: tenant.id }) : null;
 
   const uri = canPay && !usd
     ? buildUpiUri({
@@ -88,6 +95,19 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
       </Card>
 
       <PlanCompare current={plan.state === "EXPIRED" ? "FREE" : plan.state === "SUSPENDED" ? null : "PRO"} />
+
+      {back && (
+        <p
+          role="status"
+          className={`rounded-[8px] border px-4 py-3 text-sm ${back.status === "paid" ? "border-good/30 bg-good-bg text-good" : back.status === "created" ? "border-warn/30 bg-warn-bg text-warn" : "border-critical/30 bg-critical-bg text-critical"}`}
+        >
+          {back.status === "paid"
+            ? "Payment received. Your plan is extended and a receipt is on its way."
+            : back.status === "created"
+              ? "Waiting for the payment gateway to confirm your payment. Refresh in a moment; your plan extends as soon as it does."
+              : "That payment didn't go through, and you haven't been charged."}
+        </p>
+      )}
 
       {plan.state !== "SUSPENDED" && (
         <Card title={plan.state === "EXPIRED" ? "Upgrade to Pro" : "Pay for more months"}>
@@ -125,7 +145,9 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
                   <span className="font-semibold">{sub.money(beforeCredit)}</span>. You save {sub.money(saved)}.
                 </p>
               )}
-              {usd ? (
+              {online ? (
+                <GatewayPay key={months} start={paySubscriptionOnline.bind(null, months)} amountLabel={sub.money(amount)} gatewayName={online} />
+              ) : usd ? (
                 <RegionPay
                   key={months}
                   options={intl}

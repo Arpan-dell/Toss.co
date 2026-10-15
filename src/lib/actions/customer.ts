@@ -64,6 +64,11 @@ export async function reportPayment(_prev: FormState, formData: FormData): Promi
   if (!Number.isFinite(tip) || tip > 100_000) return { error: friendlyError({ message: "invalid_tip" }) };
 
   const supabase = await createClient();
+  // a laundry with its own gateway takes online payments only through it (confirmed by the gateway itself)
+  const { data: owner } = await supabase.from("orders").select("tenant_id").eq("id", orderId).maybeSingle();
+  if (owner?.tenant_id && (await getTenantById(owner.tenant_id as string))?.onlineGateway) {
+    return { error: "This laundry takes payments online: use the Pay button, and it's confirmed automatically." };
+  }
   // UPI without a tip uses the original two arguments, which also work before migration 0035
   const args = method === "UPI" && !tip ? { p_order: orderId, p_ref: ref } : { p_order: orderId, p_ref: ref, p_method: method, p_tip: tip };
   const { error } = await supabase.rpc("report_payment", args);

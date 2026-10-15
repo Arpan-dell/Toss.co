@@ -43,6 +43,8 @@ export const METHOD_LABEL: Record<PayMethodId, string> = {
 
 /** Label for a stored payment method (orders.payment_method), e.g. "PAYPAL" → "PayPal". */
 export function methodName(db: string | undefined | null): string {
+  if (db === "RAZORPAY") return "Razorpay (confirmed by the gateway)";
+  if (db === "STRIPE") return "Stripe (confirmed by the gateway)";
   const id = (Object.keys(DB_METHOD) as PayMethodId[]).find((k) => DB_METHOD[k] === db);
   return id ? METHOD_LABEL[id] : db === "OTHER" ? "Other" : (db ?? "");
 }

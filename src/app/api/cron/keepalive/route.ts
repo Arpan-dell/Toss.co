@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { runAutopilotAll } from "@/lib/ai/autopilot";
+import { reconcileOpenIntents } from "@/lib/gateway-payments";
 import { runLateAlerts, runLowStockAlerts, runPlanReminders } from "@/lib/email/notify";
 import { runWinback } from "@/lib/offers";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
@@ -40,11 +41,16 @@ export async function GET(request: Request) {
     logError("late-order alerts failed", err);
     return { error: "late alerts failed" };
   });
+  // gateway payments whose webhook never arrived: ask the gateway directly
+  const payments = await reconcileOpenIntents().catch((err) => {
+    logError("payment reconcile failed", err);
+    return { error: "reconcile failed" };
+  });
   const ai = await runAutopilotAll(200_000).catch((err) => {
     logError("Toss AI daily run failed", err);
     return { error: "ai failed" };
   });
-  return Response.json({ ok: true, winback, reminders, stock, late, ai });
+  return Response.json({ ok: true, winback, reminders, stock, late, payments, ai });
 }
 
 // Constant-time check of "Bearer <CRON_SECRET>" (hashing first makes the lengths equal).

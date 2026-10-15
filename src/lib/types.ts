@@ -38,6 +38,7 @@ export interface Tenant {
   taxId?: string; // GSTIN, VAT number, EIN
   minOrder: number; // every bill is at least this much
   regionReady?: boolean; // the database has the region columns (migration 0035)
+  onlineGateway?: "razorpay" | "stripe"; // customers pay through the laundry's own gateway (migration 0036)
   joinCode: string;
   managerId?: string;
   upiId?: string; // where customers pay this business

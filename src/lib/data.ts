@@ -122,6 +122,7 @@ function toTenant(r: Row): Tenant {
     taxId: u(r.tax_id),
     minOrder: Number(r.min_order ?? 0) || 0,
     regionReady: r.country !== undefined,
+    onlineGateway: r.online_gateway === "razorpay" || r.online_gateway === "stripe" ? r.online_gateway : undefined,
     joinCode: r.join_code as string,
     managerId: u(r.manager_id),
     upiId: u(r.upi_id),

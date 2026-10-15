@@ -2,11 +2,13 @@ import Link from "next/link";
 import { OrderTable } from "@/components/order-table";
 import { IdChip } from "@/components/id-chip";
 import { JoinBusiness } from "@/components/join-business";
+import { GatewayPay } from "@/components/gateway-pay";
 import { RegionPay } from "@/components/region-pay";
 import { UpiPay } from "@/components/upi-pay";
 import { StatusTimeline } from "@/components/status-timeline";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, OrderStatusBadge, PageTitle } from "@/components/ui";
 import { reportPayment } from "@/lib/actions/customer";
+import { payBillOnline } from "@/lib/actions/gateway";
 import { getCustomer, getCustomerCredit, getDeviceForCustomer, getOpenOffer, getTenantById, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
 import { orderLabel, timeAgo } from "@/lib/format";
 import { methodName } from "@/lib/pay-methods";
@@ -47,8 +49,10 @@ export default async function CustomerOverview() {
   const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? "there";
   const [business, offer] = await Promise.all([getTenantById(customer?.tenantId), getOpenOffer(session.userId, customer?.tenantId)]);
   // India: UPI, as before. Elsewhere: the business's own methods (PayPal, Venmo, SEPA, Pix…), with a tip option.
-  const upi = !!business && business.currency === "INR" && isValidUpiId(business.upiId);
-  const canPay = !!business && (upi || business.currency !== "INR");
+  // a laundry with its own gateway (Razorpay/Stripe) takes payments only through it: confirmed automatically
+  const gateway = business?.onlineGateway;
+  const upi = !gateway && !!business && business.currency === "INR" && isValidUpiId(business.upiId);
+  const canPay = !gateway && !!business && (upi || business.currency !== "INR");
   const toPay = unpaid.filter((o) => o.amountDue > 0);
 
   // One UPI link + QR per unpaid order, pre-filled with this business's UPI ID and the amount.
@@ -281,6 +285,14 @@ export default async function CustomerOverview() {
                     ) : null}
                   </p>
                 </div>
+                {business && gateway && o.amountDue > 0 && (
+                  <GatewayPay
+                    start={payBillOnline.bind(null, o.id)}
+                    amountLabel={fmt.money(o.amountDue)}
+                    gatewayName={gateway === "razorpay" ? "Razorpay" : "Stripe"}
+                    tip={business.currency !== "INR" ? tipFor(o.amountDue) : undefined}
+                  />
+                )}
                 {business && other.find((p) => p.order.id === o.id) && (
                   <RegionPay
                     options={other.find((p) => p.order.id === o.id)!.options}

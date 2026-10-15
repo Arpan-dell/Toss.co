@@ -7,7 +7,6 @@ import { RegionPay } from "@/components/region-pay";
 import { UpiPay } from "@/components/upi-pay";
 import { StatusTimeline } from "@/components/status-timeline";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, OrderStatusBadge, PageTitle } from "@/components/ui";
-import { reportPayment } from "@/lib/actions/customer";
 import { payBillOnline } from "@/lib/actions/gateway";
 import { getCustomer, getCustomerCredit, getDeviceForCustomer, getOpenOffer, getTenantById, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
 import { orderLabel, timeAgo } from "@/lib/format";
@@ -298,9 +297,7 @@ export default async function CustomerOverview() {
                     options={other.find((p) => p.order.id === o.id)!.options}
                     amountLabel={fmt.money(o.amountDue)}
                     payeeName={business.upiName ?? business.name}
-                    action={reportPayment}
-                    hidden={{ orderId: o.id }}
-                    tip={tipFor(o.amountDue)}
+                    note={`${business.name} marks it paid when the money arrives.`}
                   />
                 )}
                 {pay && business && (
@@ -310,8 +307,7 @@ export default async function CustomerOverview() {
                     amountLabel={fmt.money(o.amountDue)}
                     payeeName={business.upiName ?? business.name}
                     payeeUpiId={business.upiId!}
-                    action={reportPayment}
-                    hidden={{ orderId: o.id }}
+                    note={`${business.name} marks it paid when the money arrives.`}
                   />
                 )}
               </li>

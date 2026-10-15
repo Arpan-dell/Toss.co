@@ -1,26 +1,22 @@
 "use client";
 
-import { useActionState, useState, useSyncExternalStore } from "react";
-import type { FormState } from "@/lib/actions/shared";
+import { useState, useSyncExternalStore } from "react";
 import { burstFromEvent } from "@/lib/fx";
 import { detectUpiPlatform, upiAppLinks, type UpiPlatform } from "@/lib/upi";
 
-const inputClass =
-  "w-full rounded-[8px] border border-border bg-ink/[0.03] px-4 py-2.5 font-mono text-sm tracking-wide transition-shadow placeholder:font-sans placeholder:tracking-normal placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
 
 const noopSubscribe = () => () => {};
 
 // Pay by UPI. On a phone: one button per UPI app, each opening that exact app with the payee's
 // UPI ID and the amount already filled in, so the payer just taps Pay. On a computer: a QR code to
-// scan with any UPI app. Money goes straight to the payee; the payer then submits the UPI reference.
+// scan with any UPI app. Money goes straight to the payee, who confirms it (or the gateway does, when connected).
 export function UpiPay({
   uri,
   qrSvg,
   amountLabel,
   payeeName,
   payeeUpiId,
-  action,
-  hidden,
+  note,
   buttonLabel,
   startOpen = false,
 }: {
@@ -29,15 +25,14 @@ export function UpiPay({
   amountLabel: string;
   payeeName: string;
   payeeUpiId: string;
-  action: (prev: FormState, formData: FormData) => Promise<FormState>;
-  hidden: Record<string, string>;
+  /** what happens next, e.g. "Fresh marks it paid when the money arrives." */
+  note?: string;
   buttonLabel?: string;
   startOpen?: boolean;
 }) {
   const [open, setOpen] = useState(startOpen);
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
 
   // The user agent never changes, so there's nothing to subscribe to. The server renders the
   // desktop layout; the browser then switches to app buttons on phones.
@@ -63,7 +58,6 @@ export function UpiPay({
 
   const apps = upiAppLinks(uri, platform);
   const isPhone = platform !== "desktop";
-  const fieldId = `ref-${hidden.orderId ?? hidden.months}`;
 
   const qr = (
     <div
@@ -140,27 +134,7 @@ export function UpiPay({
         </div>
       )}
 
-      {state.message ? (
-        <p role="status" className="mt-4 rounded-[8px] border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
-          {state.message}
-        </p>
-      ) : (
-        <form action={formAction} className="mt-4 space-y-2 border-t border-border pt-4">
-          {Object.entries(hidden).map(([k, v]) => (
-            <input key={k} type="hidden" name={k} value={v} />
-          ))}
-          <label className="block text-xs text-secondary" htmlFor={fieldId}>
-            After paying, enter the UPI reference / UTR (12 digits, in your app&apos;s payment details)
-          </label>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input id={fieldId} name="ref" inputMode="numeric" autoComplete="off" placeholder="e.g. 412356789012" required className={inputClass} />
-            <button disabled={pending} className="btn-primary shrink-0 rounded-full px-5 py-2 text-sm font-medium disabled:opacity-70">
-              {pending ? "Sending…" : "I've paid"}
-            </button>
-          </div>
-          {state.error && <p role="alert" className="text-sm text-critical">{state.error}</p>}
-        </form>
-      )}
+      {note && <p className="mt-4 border-t border-border pt-3 text-xs text-muted">{note}</p>}
     </div>
   );
 }

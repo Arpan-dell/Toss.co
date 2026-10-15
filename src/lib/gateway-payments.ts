@@ -53,22 +53,45 @@ export async function tenantGateway(tenantId: string): Promise<(GatewayKeys & { 
   };
 }
 
-/** Toss's own gateway for subscriptions: Razorpay for rupees, Stripe for US dollars (when the keys are set). */
-export function platformGateway(currency: string): GatewayKeys | null {
-  if (currency === "INR" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET) {
+/** Rupee subscriptions (Indian businesses) or US dollar ones (everyone else). */
+export const groupOf = (currency: string): "INR" | "USD" => (currency.toUpperCase() === "INR" ? "INR" : "USD");
+/** The webhook token for Toss's own gateway: one per currency group. */
+export const platformToken = (group: "INR" | "USD") => `platform${group.toLowerCase()}`;
+
+/**
+ * Toss's own gateway for subscriptions: what the owner connected in Owner → Plan & payments, or failing that the
+ * environment variables (Razorpay for rupees, Stripe for US dollars).
+ */
+export async function platformGateway(currency: string): Promise<(GatewayKeys & { live?: boolean }) | null> {
+  const group = groupOf(currency);
+  const { data } = await db().from("platform_gateways").select("*").eq("currency_group", group).maybeSingle();
+  if (data?.webhook_secret_enc) {
+    return {
+      provider: data.provider as Provider,
+      keyId: (data.key_id as string) ?? undefined,
+      secret: open(data.secret_enc as string),
+      webhookSecret: open(data.webhook_secret_enc as string),
+      live: data.live === true,
+    };
+  }
+  return envPlatformGateway(group);
+}
+
+function envPlatformGateway(group: "INR" | "USD"): GatewayKeys | null {
+  if (group === "INR" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET) {
     return { provider: "razorpay", keyId: process.env.RAZORPAY_KEY_ID, secret: process.env.RAZORPAY_KEY_SECRET, webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET };
   }
-  if (currency !== "INR" && process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET) {
+  if (group === "USD" && process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET) {
     return { provider: "stripe", secret: process.env.STRIPE_SECRET_KEY, webhookSecret: process.env.STRIPE_WEBHOOK_SECRET };
   }
   return null;
 }
 
 /** Which gateway Toss takes subscriptions through for this currency (no keys leave this file). */
-export const platformGatewayName = (currency: string) => {
-  const g = platformGateway(currency);
+export async function platformGatewayName(currency: string): Promise<string | null> {
+  const g = await platformGateway(currency).catch(() => null);
   return g ? (g.provider === "razorpay" ? "Razorpay" : "Stripe") : null;
-};
+}
 
 export const webhookUrl = (provider: Provider, token: string) => `${APP_URL}/api/pay/webhook/${provider}/${token}`;
 
@@ -115,7 +138,7 @@ export async function startSubscriptionPayment(
   tenantId: string,
   p: { months: number; amount: number; currency: string; discountPct: number; creditUsed: number; business: string; email?: string },
 ): Promise<{ url: string } | { error: string }> {
-  const gw = platformGateway(p.currency);
+  const gw = await platformGateway(p.currency);
   if (!gw) return { error: "Online subscription payments aren't set up yet." };
   const minor = toMinor(p.amount, p.currency);
   if (!(minor > 0)) return { error: "Nothing to pay." };
@@ -168,10 +191,13 @@ async function begin(row: Record<string, unknown>, gw: GatewayKeys, request: (id
 // ---------- 2–3. the gateway tells us ----------
 /** Handles one webhook. Returns the HTTP status to answer with (the gateway retries anything but 2xx). */
 export async function handleWebhook(provider: Provider, token: string, raw: string, headers: Headers): Promise<number> {
-  const platform = token === "platform";
+  // Toss's own gateway: "platforminr" / "platformusd" (connected in the owner dashboard), or "platform" (env keys)
+  const platform = token === "platform" || token === platformToken("INR") || token === platformToken("USD");
   let keys: GatewayKeys | null;
   if (platform) {
-    keys = provider === "razorpay" ? platformGateway("INR") : platformGateway("USD");
+    const group = token === platformToken("INR") ? "INR" : token === platformToken("USD") ? "USD" : provider === "razorpay" ? "INR" : "USD";
+    keys = token === "platform" ? envPlatformGateway(group) : await platformGateway(group);
+    if (token !== "platform") await db().from("platform_gateways").update({ last_event_at: new Date().toISOString() }).eq("currency_group", group);
   } else {
     const { data: row } = await db().from("tenant_gateways").select("tenant_id, provider, webhook_secret_enc").eq("webhook_token", token).maybeSingle();
     keys = row && row.provider === provider && row.webhook_secret_enc ? { provider, secret: "", webhookSecret: open(row.webhook_secret_enc as string) } : null;
@@ -296,7 +322,7 @@ export async function refreshIntent(id: string, owner: { customerId?: string; te
 }
 
 async function check(intent: Intent): Promise<string> {
-  const keys = intent.platform ? platformGateway(intent.currency) : await tenantGateway(intent.tenant_id);
+  const keys = intent.platform ? await platformGateway(intent.currency) : await tenantGateway(intent.tenant_id);
   if (!keys || !intent.provider_ref) return intent.status;
   try {
     return await settle(intent, await checkoutStatus(keys, intent.provider_ref));

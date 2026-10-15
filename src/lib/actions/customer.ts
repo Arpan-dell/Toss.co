@@ -8,7 +8,7 @@ import { notifyBusinessRegistered } from "../email/notify";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
-import { isValidUpiId, normalizePaymentRef, normalizeUpiId } from "../upi";
+import { isValidUpiId, normalizeUpiId } from "../upi";
 import { friendlyError, text, type FormState } from "./shared";
 import { pricePerKgFrom } from "../region-format";
 import { countryOf } from "../regions";
@@ -50,31 +50,6 @@ export async function updatePhone(_prev: FormState, formData: FormData): Promise
   }
   revalidatePath("/app", "layout");
   return { message: `Saved. Your number is now ${formatPhone(phone)}.` };
-}
-
-// After paying in their UPI app, the customer submits the transaction reference for the manager to verify.
-export async function reportPayment(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireCustomer();
-  const orderId = text(formData, "orderId");
-  const method = (text(formData, "method") || "UPI").toUpperCase();
-  const tip = Math.max(0, Math.round(Number(text(formData, "tip") || 0) * 100) / 100);
-  // UPI's UTR is 6+ letters/digits; other methods' IDs vary, so only spaces and punctuation are dropped
-  const ref = method === "UPI" ? normalizePaymentRef(text(formData, "ref")) : text(formData, "ref").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 35);
-  if (!ref || ref.length < 4) return { error: friendlyError({ message: "invalid_reference" }) };
-  if (!Number.isFinite(tip) || tip > 100_000) return { error: friendlyError({ message: "invalid_tip" }) };
-
-  const supabase = await createClient();
-  // a laundry with its own gateway takes online payments only through it (confirmed by the gateway itself)
-  const { data: owner } = await supabase.from("orders").select("tenant_id").eq("id", orderId).maybeSingle();
-  if (owner?.tenant_id && (await getTenantById(owner.tenant_id as string))?.onlineGateway) {
-    return { error: "This laundry takes payments online: use the Pay button, and it's confirmed automatically." };
-  }
-  // UPI without a tip uses the original two arguments, which also work before migration 0035
-  const args = method === "UPI" && !tip ? { p_order: orderId, p_ref: ref } : { p_order: orderId, p_ref: ref, p_method: method, p_tip: tip };
-  const { error } = await supabase.rpc("report_payment", args);
-  if (error) return { error: friendlyError(error) };
-  revalidatePath("/app", "layout");
-  return { message: "Thanks! Your laundry will confirm the payment shortly." };
 }
 
 // Turns this account into the manager of a new laundry business (starts a free trial).

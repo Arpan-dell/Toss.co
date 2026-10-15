@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createStripeWebhook, deleteStripeWebhook, testKeys, type GatewayKeys, type Provider } from "../gateways";
-import { refreshIntent, startOrderPayment, startSubscriptionPayment, webhookUrl } from "../gateway-payments";
+import { platformToken, refreshIntent, startOrderPayment, startSubscriptionPayment, webhookUrl } from "../gateway-payments";
 import { checkPassword } from "../password-check";
 import { getPlatformSettings, getTenantById, getTenantCreditBalance } from "../data";
 import { subscriptionQuote, withBasketCredit } from "../pricing";
@@ -130,4 +130,81 @@ export async function paymentStatus(intentId: string): Promise<{ status: string 
   if (!session) return null;
   const r = await refreshIntent(intentId, { customerId: session.role === "CUSTOMER" ? session.userId : undefined, tenantId: session.role === "MANAGER" ? session.tenantId : undefined });
   return r ? { status: r.status } : null;
+}
+
+// ---------- Toss's own gateway (owner) ----------
+async function requireOwner() {
+  const session = await getSession();
+  if (!session || session.role !== "OWNER") throw new Error("Not the owner");
+  return session;
+}
+
+/**
+ * The owner connects Toss's own Razorpay or Stripe for subscriptions: one for rupees (Indian businesses), one for
+ * US dollars. Same steps as a laundry's: Razorpay needs the webhook secret as a second step, Stripe sets itself up.
+ */
+export async function connectPlatformGateway(_prev: FormState, fd: FormData): Promise<FormState> {
+  const session = await requireOwner();
+  const wrong = await checkPassword(session, String(fd.get("password") ?? ""));
+  if (wrong) return { error: wrong };
+  const group = text(fd, "group") === "USD" ? "USD" : "INR";
+  const provider = text(fd, "provider") as Provider;
+  if (provider !== "razorpay" && provider !== "stripe") return { error: "Choose Razorpay or Stripe." };
+  const db = supabaseAdmin();
+  const { data: existing, error: tableErr } = await db.from("platform_gateways").select("*").eq("currency_group", group).maybeSingle();
+  if (tableErr) return { error: "Run the 0036 database update first (Supabase → SQL Editor)." };
+
+  const webhookSecret = text(fd, "webhookSecret");
+  if (provider === "razorpay" && existing?.provider === "razorpay" && !text(fd, "secret") && webhookSecret) {
+    if (webhookSecret.length < 8) return { error: "Paste the webhook secret you typed in Razorpay." };
+    await db.from("platform_gateways").update({ webhook_secret_enc: seal(webhookSecret) }).eq("currency_group", group);
+    revalidatePath("/owner", "layout");
+    revalidatePath("/admin", "layout");
+    return { message: `Razorpay is connected for ${group === "INR" ? "rupee" : "US dollar"} subscriptions. Businesses now pay with one tap and plans extend by themselves.` };
+  }
+
+  const keys: GatewayKeys = { provider, keyId: text(fd, "keyId") || undefined, secret: text(fd, "secret") };
+  if (!keys.secret) return { error: provider === "razorpay" ? "Paste your Razorpay key secret." : "Paste your Stripe secret key." };
+  let live: boolean;
+  try {
+    ({ live } = await testKeys(keys));
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Those keys didn't work." };
+  }
+  if (existing?.provider === "stripe" && existing.webhook_endpoint_id) {
+    await deleteStripeWebhook({ provider: "stripe", secret: open(existing.secret_enc as string) }, existing.webhook_endpoint_id as string);
+  }
+  const { error } = await db
+    .from("platform_gateways")
+    .upsert(
+      { currency_group: group, provider, key_id: keys.keyId ?? null, secret_enc: seal(keys.secret), webhook_secret_enc: null, webhook_endpoint_id: null, live, connected_at: new Date().toISOString() },
+      { onConflict: "currency_group" },
+    );
+  if (error) return { error: "Couldn't save the connection. Try again." };
+  if (provider === "stripe") {
+    try {
+      const hook = await createStripeWebhook(keys, webhookUrl("stripe", platformToken(group)));
+      await db.from("platform_gateways").update({ webhook_secret_enc: seal(hook.secret), webhook_endpoint_id: hook.id }).eq("currency_group", group);
+    } catch (err) {
+      return { error: `Stripe accepted the key but Toss couldn't add its webhook: ${err instanceof Error ? err.message : "unknown error"}.` };
+    }
+    revalidatePath("/owner", "layout");
+    revalidatePath("/admin", "layout");
+    return { message: `Stripe is connected for ${group === "INR" ? "rupee" : "US dollar"} subscriptions${live ? "" : " (test mode)"}.` };
+  }
+  revalidatePath("/owner", "layout");
+  return { message: "Keys checked. Now add the webhook in Razorpay (steps below) and paste its secret here." };
+}
+
+export async function disconnectPlatformGateway(fd: FormData) {
+  await requireOwner();
+  const group = text(fd, "group") === "USD" ? "USD" : "INR";
+  const db = supabaseAdmin();
+  const { data: row } = await db.from("platform_gateways").select("*").eq("currency_group", group).maybeSingle();
+  if (row?.provider === "stripe" && row.webhook_endpoint_id) {
+    await deleteStripeWebhook({ provider: "stripe", secret: open(row.secret_enc as string) }, row.webhook_endpoint_id as string);
+  }
+  await db.from("platform_gateways").delete().eq("currency_group", group);
+  revalidatePath("/owner", "layout");
+  revalidatePath("/admin", "layout");
 }

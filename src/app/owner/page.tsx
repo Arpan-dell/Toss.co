@@ -10,6 +10,7 @@ import { OptimisticForm } from "@/components/optimistic";
 import { formatPhone } from "@/lib/phone";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { moneyIn } from "@/lib/region-format";
+import { platformGatewayName } from "@/lib/gateway-payments";
 import { countryOf } from "@/lib/regions";
 import { TrialControls } from "./trial-controls";
 
@@ -36,6 +37,7 @@ export default async function OwnerHome() {
     : { data: [] };
   const rows = tenants.map((t) => ({ t, plan: planState(t), s: stats.get(t.id) }));
   const paying = rows.filter((r) => r.plan.state === "ACTIVE").length;
+  const payOnline = await platformGatewayName("INR");
   // rupees from Indian businesses, US dollars from the rest
   const payingUsd = rows.filter((r) => r.plan.state === "ACTIVE" && r.t.currency !== "INR").length;
   const revenue = [
@@ -47,10 +49,10 @@ export default async function OwnerHome() {
     <div className="stagger space-y-6">
       <PageTitle kicker="Toss platform">Businesses</PageTitle>
 
-      {!platform.ownerUpiId && (
+      {!payOnline && (
         <p role="alert" className="rounded-[8px] border border-warn/30 bg-warn-bg px-4 py-3 text-sm text-warn">
-          Add your UPI ID under <Link href="/owner/settings" className="underline">Plan &amp; UPI</Link> so businesses can pay
-          their subscription.
+          Connect Razorpay under <Link href="/owner/settings" className="underline">Plan &amp; payments</Link> so businesses can pay their plan
+          with one tap (it confirms itself).
         </p>
       )}
 

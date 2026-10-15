@@ -4,18 +4,19 @@ import { revalidatePath } from "next/cache";
 import { geocodeStore } from "../dispatch/service";
 import { parseKg, repriceForWeight } from "../dispatch/weighing";
 import { sortedTotal } from "../sorting";
-import { notifyClosureRequested, notifySubscriptionSubmitted } from "../email/notify";
+import { notifyClosureRequested } from "../email/notify";
 import { sendInvoice } from "../invoice/service";
 import { checkPassword } from "../password-check";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { createClient } from "../supabase/server";
-import { isValidUpiId, normalizePaymentRef, normalizeUpiId } from "../upi";
+import { isValidUpiId, normalizeUpiId } from "../upi";
 import { friendlyError, text, type FormState } from "./shared";
 import { isBic, isUsername, isValidIban } from "../pay-methods";
 import { pricePerKgFrom } from "../region-format";
 import { countryOf } from "../regions";
 import type { PayMethods } from "../types";
+import { getTenantById } from "../data";
 
 // All writes run as the manager, so Postgres RLS and column grants confine them to their own
 // business and to the payment/amount fields of its orders.
@@ -323,6 +324,19 @@ export async function rejectPayment(formData: FormData) {
   await updateOrder(text(formData, "orderId"), { payment_status: "UNPAID", payment_method: null, payment_ref: null });
 }
 
+// The money arrived in the laundry's UPI app or bank (no gateway connected): one tap, nothing to type.
+export async function markPaidReceived(formData: FormData) {
+  const session = await requireManager();
+  const orderId = text(formData, "orderId");
+  const t = await getTenantById(session.tenantId);
+  await updateOrder(orderId, {
+    payment_status: "PAID",
+    payment_method: (t?.currency ?? "INR") === "INR" ? "UPI" : "OTHER",
+    payment_confirmed_at: new Date().toISOString(),
+  });
+  await sendInvoice(orderId);
+}
+
 export async function markPaidCash(formData: FormData) {
   const orderId = text(formData, "orderId");
   await updateOrder(orderId, {
@@ -343,22 +357,6 @@ export async function setOrderAmount(_prev: FormState, formData: FormData): Prom
     return { error: friendlyError(err as Error) };
   }
   return { message: "Amount updated." };
-}
-
-// After paying the Toss owner's UPI ID, the manager submits the reference for approval.
-export async function submitSubscriptionPayment(_prev: FormState, formData: FormData): Promise<FormState> {
-  const session = await requireManager();
-  const months = Number(text(formData, "months"));
-  // PayPal and other IDs can contain dashes; UPI references are letters and digits anyway
-  const ref = normalizePaymentRef(text(formData, "ref").replace(/[^A-Za-z0-9]/g, ""));
-  if (!ref) return { error: friendlyError({ message: "invalid_reference" }) };
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("submit_subscription_payment", { p_months: months, p_ref: ref });
-  if (error) return { error: friendlyError(error) };
-  await notifySubscriptionSubmitted(session.tenantId!, ref);
-  done("/admin/billing");
-  return { message: "Payment submitted. Your plan is extended as soon as Toss confirms it. We've emailed you a receipt." };
 }
 
 // The manager asks Toss to close their business. Recorded on the business and emailed to the owner,

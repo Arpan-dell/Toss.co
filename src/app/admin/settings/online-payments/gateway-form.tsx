@@ -4,16 +4,21 @@ import { useState } from "react";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { PasswordField } from "@/components/password-field";
 import { connectGateway } from "@/lib/actions/gateway";
+import type { FormState } from "@/lib/actions/shared";
 
 type Props = {
   suggested: "razorpay" | "stripe";
+  /** who's connecting: a laundry (default) or the owner for Toss's subscriptions */
+  action?: (prev: FormState, fd: FormData) => Promise<FormState>;
+  hidden?: Record<string, string>;
   /** a Razorpay connection waiting for its webhook secret */
   pendingRazorpay?: { webhookUrl: string; live: boolean };
 };
 
 // Connect Razorpay (India) or Stripe (elsewhere). Razorpay takes two steps (keys, then the webhook secret, since
 // Razorpay only shows the secret you type when you create the webhook); Stripe takes one.
-export function GatewayForm({ suggested, pendingRazorpay }: Props) {
+export function GatewayForm({ suggested, pendingRazorpay, action = connectGateway, hidden = {} }: Props) {
+  const extra = Object.entries(hidden).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />);
   const [provider, setProvider] = useState<"razorpay" | "stripe">(pendingRazorpay ? "razorpay" : suggested);
   const [copied, setCopied] = useState(false);
 
@@ -47,7 +52,8 @@ export function GatewayForm({ suggested, pendingRazorpay }: Props) {
           <li>Type a secret of your own (any long password) and tick the events <b className="text-fg">payment_link.paid</b>, <b className="text-fg">payment_link.expired</b> and <b className="text-fg">payment_link.cancelled</b>. Save.</li>
           <li>Paste that same secret below.</li>
         </ol>
-        <ActionForm action={connectGateway} submitLabel="Finish connecting">
+        <ActionForm action={action} submitLabel="Finish connecting">
+          {extra}
           <input type="hidden" name="provider" value="razorpay" />
           <Field label="Webhook secret" hint="The secret you typed in Razorpay. Toss uses it to check every payment message really came from Razorpay.">
             <input name="webhookSecret" required minLength={8} autoComplete="off" className={`${fieldClass} font-mono`} />
@@ -59,7 +65,8 @@ export function GatewayForm({ suggested, pendingRazorpay }: Props) {
   }
 
   return (
-    <ActionForm action={connectGateway} submitLabel="Check and connect">
+    <ActionForm action={action} submitLabel="Check and connect">
+      {extra}
       <fieldset>
         <legend className="mb-1.5 text-sm text-secondary">Gateway</legend>
         <div className="flex flex-wrap gap-2">

@@ -348,7 +348,7 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
       devices,
       drivers,
       lowStock: supplies.filter((s) => s.stock <= s.lowAt),
-      business: { upiId: tenant.upiId, storeAddress: tenant.storeAddress, storeLocated: !!tenant.storeLocated, delivers: tenant.delivers, paidOnline: paidOnline(tenant), india: tenant.currency === "INR" },
+      business: { upiId: tenant.upiId, storeAddress: tenant.storeAddress, storeLocated: !!tenant.storeLocated, delivers: tenant.delivers, paidOnline: paidOnline(tenant), india: tenant.currency === "INR", onlineGateway: !!tenant.onlineGateway },
       money: formatterFor(regionOf(tenant)).money,
       plan: { state: plan.state, daysLeft: plan.daysLeft },
     });

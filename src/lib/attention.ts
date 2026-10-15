@@ -20,7 +20,7 @@ export type AttentionInput = {
   devices: Device[];
   drivers: Driver[];
   lowStock?: { name: string }[]; // Pro: supplies under their alert level
-  business: { upiId?: string; storeAddress?: string; storeLocated: boolean; delivers: boolean; paidOnline?: boolean; india?: boolean };
+  business: { upiId?: string; storeAddress?: string; storeLocated: boolean; delivers: boolean; paidOnline?: boolean; india?: boolean; onlineGateway?: boolean };
   /** money in the business's currency (rupees when missing) */
   money?: (n: number) => string;
   plan: { state: "TRIAL" | "ACTIVE" | "EXPIRED" | "SUSPENDED"; daysLeft?: number };
@@ -161,6 +161,18 @@ export function attentionItems(i: AttentionInput): Attention[] {
       fix: cash ? "Count the cash from drivers and check UPI references in your UPI app, then tap Confirm." : "Check each UPI reference in your UPI app, then tap Confirm.",
       href: "/admin/payments",
       action: "Confirm payments",
+    });
+  }
+  // payments closed by hand: suggest letting the gateway confirm them (once there are bills to collect)
+  const awaiting = i.orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID" && !o.accountId && o.amountDue > 0);
+  if (i.business.onlineGateway === false && awaiting.length >= 3) {
+    items.push({
+      key: "gateway",
+      level: "info",
+      title: "Let payments confirm themselves",
+      fix: "Connect Razorpay or Stripe: customers tap Pay, and every payment is marked paid by itself, with the invoice sent.",
+      href: "/admin/settings/online-payments",
+      action: "Connect online payments",
     });
   }
   const overdue = i.orders.filter(

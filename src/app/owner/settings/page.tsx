@@ -6,6 +6,7 @@ import { Card, PageTitle } from "@/components/ui";
 import { updatePlatformSettings } from "@/lib/actions/owner";
 import { getPlatformSettings } from "@/lib/data";
 import { requireRole } from "@/lib/session";
+import { PlatformGatewayCard } from "./platform-gateway";
 
 export const metadata: Metadata = { title: "Plan & payments" };
 
@@ -26,12 +27,6 @@ export default async function OwnerSettings() {
           <Field label="Free trial (days)" hint="Applies to businesses registered from now on.">
             <input name="trialDays" type="number" min={0} max={365} step="1" required defaultValue={s.trialDays} className={fieldClass} />
           </Field>
-          <Field label="Your UPI ID" hint="Businesses pay their subscription here. You then approve each payment.">
-            <input name="ownerUpiId" required autoComplete="off" defaultValue={s.ownerUpiId ?? ""} placeholder="you@okaxis" className={`${fieldClass} font-mono`} />
-          </Field>
-          <Field label="Name shown in UPI apps">
-            <input name="ownerUpiName" maxLength={50} defaultValue={s.ownerUpiName} className={fieldClass} />
-          </Field>
           <fieldset className="space-y-3 rounded-[10px] border border-border p-3">
             <legend className="px-1 text-xs font-medium text-secondary">Businesses outside India (paid in US dollars)</legend>
             <div className="grid grid-cols-2 gap-3">
@@ -42,12 +37,6 @@ export default async function OwnerSettings() {
                 <input name="usdBranchPrice" type="number" min={0} step="0.01" required defaultValue={s.usdBranchPrice} className={fieldClass} />
               </Field>
             </div>
-            <Field label="Your PayPal.me username" hint="They pay through paypal.me/yourname with the amount filled in. Free to set up; PayPal charges a fee per payment.">
-              <input name="ownerPaypal" autoComplete="off" defaultValue={s.ownerPaypal ?? ""} placeholder="tosslaundry" className={fieldClass} />
-            </Field>
-            <Field label="Or another payment link (optional)" hint="A Wise, Payoneer or Stripe payment page, for paying by card or bank.">
-              <input name="ownerIntlLink" type="url" defaultValue={s.ownerIntlLink ?? ""} placeholder="https://wise.com/pay/me/…" className={fieldClass} />
-            </Field>
           </fieldset>
           <fieldset className="space-y-2">
             <legend className="text-xs font-medium text-secondary">Discount for paying several months at once (%)</legend>
@@ -64,9 +53,10 @@ export default async function OwnerSettings() {
             </div>
             <span className="block text-xs text-muted">Shown on every business&apos;s Billing page. 1 month is always full price.</span>
           </fieldset>
-          <PasswordField hint="Your UPI ID and PayPal receive every subscription, so changes need your password." />
+          <PasswordField hint="Prices decide what every business pays, so changes need your password." />
         </ActionForm>
       </Card>
+      <PlatformGatewayCard />
       <ChangePasswordCard email={session.email} />
     </div>
   );

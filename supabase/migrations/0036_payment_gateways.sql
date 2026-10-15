@@ -26,6 +26,22 @@ revoke all on public.tenant_gateways from anon, authenticated;
 -- what customers and the laundry may know: which gateway (never the keys)
 alter table public.tenants add column if not exists online_gateway text check (online_gateway in ('razorpay', 'stripe'));
 
+-- ---------- Toss's own gateway, for subscriptions (connected from Owner → Plan & payments) ----------
+-- One for rupee subscriptions (Indian businesses) and one for US dollar ones (everyone else).
+create table if not exists public.platform_gateways (
+  currency_group text primary key check (currency_group in ('INR', 'USD')),
+  provider text not null check (provider in ('razorpay', 'stripe')),
+  key_id text,
+  secret_enc text not null,
+  webhook_secret_enc text,
+  webhook_endpoint_id text,
+  live boolean not null default false,
+  connected_at timestamptz not null default now(),
+  last_event_at timestamptz
+);
+alter table public.platform_gateways enable row level security;
+revoke all on public.platform_gateways from anon, authenticated;
+
 -- ---------- one row per payment attempt ----------
 create table if not exists public.payment_intents (
   id uuid primary key default gen_random_uuid(),

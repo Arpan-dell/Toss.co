@@ -2,21 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
 import { GatewayPay } from "@/components/gateway-pay";
-import { RegionPay } from "@/components/region-pay";
-import { UpiPay } from "@/components/upi-pay";
-import { submitSubscriptionPayment } from "@/lib/actions/manager";
 import { paySubscriptionOnline } from "@/lib/actions/gateway";
 import { platformGatewayName, refreshIntent } from "@/lib/gateway-payments";
 import { getPlatformSettings, getTenantById, getTenantCreditBalance, listSubscriptionPayments } from "@/lib/data";
 import { myFormat } from "@/lib/my-format";
-import { payOptions } from "@/lib/pay-methods";
 import { moneyIn, subscriptionFormat } from "@/lib/region-format";
 import { planState } from "@/lib/plan";
 import { subscriptionQuote, withBasketCredit } from "@/lib/pricing";
-import { qrSvg } from "@/lib/qr";
 import { requireRole } from "@/lib/session";
 import { PlanCompare } from "./plan-compare";
-import { buildUpiUri, isValidUpiId } from "@/lib/upi";
 
 export const metadata: Metadata = { title: "Billing" };
 
@@ -36,7 +30,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
   const [history, creditBalance] = await Promise.all([listSubscriptionPayments({ tenantId: tenant.id }), getTenantCreditBalance(tenant.id)]);
   const plan = planState(tenant);
   const fmt = await myFormat();
-  // Indian businesses pay in rupees by UPI; everyone else in US dollars by PayPal or Toss's payment link
+  // Indian businesses pay in rupees; everyone else in US dollars
   const sub = subscriptionFormat(tenant);
   const usd = sub.region.currency === "USD";
   const months = MONTH_OPTIONS.includes(Number(params.months)) ? Number(params.months) : 1;
@@ -50,29 +44,12 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
   // basket credit is in rupees, so only Indian businesses have any
   const { credit, toPay: amount } = usd ? { credit: 0, toPay: beforeCredit } : withBasketCredit(beforeCredit, creditBalance, platform.creditSubMaxPct);
   const pending = history.find((p) => p.status === "PENDING");
-  const intl = usd
-    ? payOptions(
-        { paypal: platform.ownerPaypal, link: platform.ownerIntlLink ? { url: platform.ownerIntlLink, label: "Card or bank" } : undefined, cash: false },
-        ["paypal", "link"],
-        { amount, currency: "USD", payee: "Toss", note: `Toss ${months} month${months > 1 ? "s" : ""} ${tenant.joinCode}`, reference: `${tenant.joinCode}M${months}` },
-      ).map((o) => ({ ...o, refLabel: o.id === "paypal" ? "PayPal transaction ID (in your PayPal receipt)" : "Receipt or transaction number" }))
-    : [];
-  // Toss's own gateway (when its keys are set) confirms subscription payments by itself; otherwise UPI/PayPal + approval
-  const online = amount > 0 ? platformGatewayName(sub.region.currency) : null;
-  const canPay = amount > 0 && (!!online || (usd ? intl.length > 0 : isValidUpiId(platform.ownerUpiId)));
+  // Paid on Toss's own gateway (Razorpay for rupees, Stripe for dollars): the gateway confirms the payment to Toss
+  // and the plan extends by itself. No UPI references to type, nothing for Toss to approve by hand.
+  const online = amount > 0 ? await platformGatewayName(sub.region.currency) : null;
+  const canPay = amount > 0 && !!online;
   // back from the gateway: what it confirmed (never what the URL says)
   const back = typeof params.intent === "string" ? await refreshIntent(params.intent, { tenantId: tenant.id }) : null;
-
-  const uri = canPay && !usd
-    ? buildUpiUri({
-        payeeUpiId: platform.ownerUpiId!,
-        payeeName: platform.ownerUpiName,
-        amount,
-        note: `Toss ${months} month${months > 1 ? "s" : ""} ${tenant.joinCode}`,
-        reference: `${tenant.joinCode}M${months}`,
-      })
-    : undefined;
-  const qr = uri ? await qrSvg(uri) : undefined;
   const badge = STATE_BADGE[plan.state];
 
   return (
@@ -116,7 +93,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
               Your payment of {moneyIn(pending.amount, pending.currency)} (ref {pending.paymentRef}) is waiting for Toss to confirm it.
             </p>
           ) : !canPay ? (
-            <EmptyState>Online subscription payments aren&apos;t set up yet. Contact Toss.</EmptyState>
+            <EmptyState>Online payment for plans is being switched on. Your plan keeps working meanwhile; check back soon.</EmptyState>
           ) : (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-1 rounded-full border border-border bg-ink/[0.03] p-1 text-sm">
@@ -145,31 +122,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
                   <span className="font-semibold">{sub.money(beforeCredit)}</span>. You save {sub.money(saved)}.
                 </p>
               )}
-              {online ? (
-                <GatewayPay key={months} start={paySubscriptionOnline.bind(null, months)} amountLabel={sub.money(amount)} gatewayName={online} />
-              ) : usd ? (
-                <RegionPay
-                  key={months}
-                  options={intl}
-                  amountLabel={sub.money(amount)}
-                  payeeName="Toss"
-                  action={submitSubscriptionPayment}
-                  hidden={{ months: String(months) }}
-                  startOpen
-                />
-              ) : (
-              <UpiPay
-                key={months}
-                uri={uri!}
-                qrSvg={qr!}
-                amountLabel={sub.money(amount)}
-                payeeName={platform.ownerUpiName}
-                payeeUpiId={platform.ownerUpiId!}
-                action={submitSubscriptionPayment}
-                hidden={{ months: String(months) }}
-                startOpen
-              />
-              )}
+              <GatewayPay key={months} start={paySubscriptionOnline.bind(null, months)} amountLabel={sub.money(amount)} gatewayName={online!} />
             </div>
           )}
         </Card>

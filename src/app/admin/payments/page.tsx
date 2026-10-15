@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { OrderLink } from "@/components/order-link";
 import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
-import { confirmPayment, markPaidCash, rejectPayment } from "@/lib/actions/manager";
+import { confirmPayment, markPaidCash, markPaidReceived, rejectPayment } from "@/lib/actions/manager";
 import { listCustomers, listOrders, now } from "@/lib/data";
 import { timeAgo } from "@/lib/format";
 import type { Customer, Order } from "@/lib/types";
@@ -85,8 +85,8 @@ export default async function Payments() {
           </ul>
         )}
         <p className="mt-4 text-xs text-muted">
-          Match the UPI reference with the credit in your bank or UPI app before confirming. &quot;Not received&quot; puts
-          the invoice back to unpaid so the customer can try again.
+          Older payments a customer reported by reference. Match it with your bank or UPI app before confirming. With online
+          payments connected (Settings → Online payments), payments confirm themselves and nothing lands here.
         </p>
       </Card>
 
@@ -107,9 +107,14 @@ export default async function Payments() {
                   </p>
                 </div>
                 <AmountForm orderId={o.id} amount={o.amountDue} symbol={fmt.symbol} cents={hasCents(fmt.region.currency)} />
+                {/* the money is in your UPI app / bank: one tap (with online payments connected, this happens by itself) */}
+                <OptimisticForm action={markPaidReceived} hide>
+                  <input type="hidden" name="orderId" value={o.id} />
+                  <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">Received</button>
+                </OptimisticForm>
                 <OptimisticForm action={markPaidCash} hide>
                   <input type="hidden" name="orderId" value={o.id} />
-                  <button className="btn-ghost rounded-full px-4 py-1.5 text-sm">Mark paid (cash)</button>
+                  <button className="btn-ghost rounded-full px-4 py-1.5 text-sm">Paid in cash</button>
                 </OptimisticForm>
               </OptimisticRow>
             ))}

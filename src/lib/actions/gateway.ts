@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createStripeWebhook, deleteStripeWebhook, testKeys, type GatewayKeys, type Provider } from "../gateways";
-import { platformToken, refreshIntent, startOrderPayment, startSubscriptionPayment, webhookUrl } from "../gateway-payments";
+import { platformToken, refreshIntent, setAutopay, startCardSetup, startOrderPayment, startSubscriptionPayment, webhookUrl } from "../gateway-payments";
 import { checkPassword } from "../password-check";
 import { getPlatformSettings, getTenantById, getTenantCreditBalance } from "../data";
 import { subscriptionQuote, withBasketCredit } from "../pricing";
@@ -207,4 +207,34 @@ export async function disconnectPlatformGateway(fd: FormData) {
   await db.from("platform_gateways").delete().eq("currency_group", group);
   revalidatePath("/owner", "layout");
   revalidatePath("/admin", "layout");
+}
+
+// ---------- pay automatically (customer, Stripe) ----------
+async function requireCustomerTenant() {
+  const session = await getSession();
+  if (!session || session.role !== "CUSTOMER") throw new Error("Please sign in again.");
+  const { data } = await supabaseAdmin().from("customers").select("tenant_id").eq("id", session.userId).maybeSingle();
+  if (!data?.tenant_id) throw new Error("Join a laundry first.");
+  return { customerId: session.userId, tenantId: data.tenant_id as string };
+}
+
+/** Customer: open Stripe's page to save a card / Apple Pay / Google Pay, with the tip to add to every bill. */
+export async function startAutopay(tipPct: number): Promise<{ url?: string; error?: string }> {
+  const me = await requireCustomerTenant();
+  return startCardSetup(me.tenantId, me.customerId, Number.isFinite(tipPct) ? tipPct : 0);
+}
+
+export async function updateAutopay(fd: FormData) {
+  const me = await requireCustomerTenant();
+  const on = text(fd, "on") !== "0";
+  const tip = text(fd, "tip");
+  await setAutopay(me.tenantId, me.customerId, on, tip ? Number(tip) : undefined);
+  revalidatePath("/app", "layout");
+}
+
+// ---------- the laundry: also take UPI / direct payments next to its gateway ----------
+export async function setAlsoDirect(fd: FormData) {
+  const session = await requireManager();
+  await supabaseAdmin().from("tenants").update({ also_direct: text(fd, "on") === "1" }).eq("id", session.tenantId);
+  done();
 }

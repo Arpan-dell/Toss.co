@@ -69,3 +69,13 @@ describe("amounts in the smallest unit", () => {
     expect(fromMinor(2627, "USD")).toBe(26.27);
   });
 });
+
+describe("Stripe saved cards (pay automatically)", () => {
+  it("reads automatic charges, and never treats saving a card as a payment", () => {
+    const ok = stripeEvent("payment_intent.succeeded", { id: "pi_auto_1", object: "payment_intent", amount_received: 3018, currency: "usd", payment_method_types: ["card"] });
+    expect(parseStripe(ok)).toMatchObject({ ref: "pi_auto_1", status: "paid", amountMinor: 3018, currency: "USD" });
+    expect(parseStripe(stripeEvent("payment_intent.payment_failed", { id: "pi_auto_2" })).status).toBe("failed");
+    const setup = parseStripe(stripeEvent("checkout.session.completed", { id: "cs_setup_1", mode: "setup", payment_status: "no_payment_required" }));
+    expect(setup).toMatchObject({ status: "ignore", setup: true, ref: "cs_setup_1" });
+  });
+});

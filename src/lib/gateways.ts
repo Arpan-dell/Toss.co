@@ -25,6 +25,8 @@ export const fromMinor = (minor: number, currency: string) => minor / factor(cur
 // ---------- what a webhook (or a status check) tells us ----------
 export interface GatewayEvent {
   eventId: string;
+  /** a Stripe card-saving session (mode=setup) finished: nothing was paid */
+  setup?: boolean;
   type: string;
   ref?: string; // payment link id / checkout session id (our payment_intents.provider_ref)
   status: "paid" | "failed" | "expired" | "ignore";
@@ -89,7 +91,7 @@ export function verifyStripe(raw: string, header: string | null, secret: string,
   return sigs.some((s) => safeEqualHex(expected, s));
 }
 
-type StripeSession = { id?: string; payment_status?: string; status?: string; amount_total?: number; currency?: string; payment_intent?: string | { id?: string }; payment_method_types?: string[] };
+type StripeSession = { mode?: string; object?: string; amount_received?: number; id?: string; payment_status?: string; status?: string; amount_total?: number; currency?: string; payment_intent?: string | { id?: string }; payment_method_types?: string[] };
 
 function fromSession(o: StripeSession, eventId: string, type: string, status: GatewayEvent["status"]): GatewayEvent {
   const pi = typeof o.payment_intent === "string" ? o.payment_intent : o.payment_intent?.id;
@@ -100,6 +102,20 @@ export function parseStripe(raw: string): GatewayEvent {
   const e = JSON.parse(raw) as { id?: string; type?: string; data?: { object?: StripeSession } };
   const type = e.type ?? "";
   const o = e.data?.object ?? {};
+  if (type === "checkout.session.completed" && o.mode === "setup") return { eventId: e.id ?? "", type, ref: o.id, status: "ignore", setup: true };
+  // automatic charges of a saved card (off-session payment intents)
+  if (type === "payment_intent.succeeded" || type === "payment_intent.payment_failed") {
+    return {
+      eventId: e.id ?? "",
+      type,
+      ref: o.id,
+      status: type === "payment_intent.succeeded" ? "paid" : "failed",
+      paymentId: o.id,
+      amountMinor: o.amount_received ?? o.amount_total,
+      currency: o.currency?.toUpperCase(),
+      method: o.payment_method_types?.[0],
+    };
+  }
   const status =
     type === "checkout.session.completed"
       ? o.payment_status === "paid" || o.payment_status === "no_payment_required"
@@ -200,6 +216,11 @@ export async function checkoutStatus(k: GatewayKeys, ref: string): Promise<Gatew
     const status = l.status === "paid" && p ? "paid" : l.status === "expired" ? "expired" : l.status === "cancelled" ? "failed" : "ignore";
     return { eventId: `check:${ref}`, type: `status.${l.status}`, ref: l.id, status, paymentId: p?.payment_id, amountMinor: p?.amount, currency: l.currency?.toUpperCase(), method: p?.method };
   }
+  if (ref.startsWith("pi_")) {
+    const pi = await stripe<{ id: string; status: string; amount_received?: number; currency?: string; payment_method_types?: string[] }>(k, `/payment_intents/${encodeURIComponent(ref)}`);
+    const st = pi.status === "succeeded" ? "paid" : pi.status === "canceled" || pi.status === "requires_payment_method" ? "failed" : "ignore";
+    return { eventId: `check:${ref}`, type: `status.${pi.status}`, ref, status: st, paymentId: pi.id, amountMinor: pi.amount_received, currency: pi.currency?.toUpperCase(), method: pi.payment_method_types?.[0] };
+  }
   const s = await stripe<StripeSession>(k, `/checkout/sessions/${encodeURIComponent(ref)}`);
   const status = s.payment_status === "paid" ? "paid" : s.status === "expired" ? "expired" : "ignore";
   return fromSession(s, `check:${ref}`, `status.${s.status}`, status);
@@ -219,7 +240,14 @@ export async function testKeys(k: GatewayKeys): Promise<{ live: boolean }> {
 
 /** Stripe only: registers Toss's webhook URL on the laundry's account and returns its signing secret. */
 export async function createStripeWebhook(k: GatewayKeys, url: string): Promise<{ id: string; secret: string }> {
-  const events = ["checkout.session.completed", "checkout.session.async_payment_succeeded", "checkout.session.async_payment_failed", "checkout.session.expired"];
+  const events = [
+    "checkout.session.completed",
+    "checkout.session.async_payment_succeeded",
+    "checkout.session.async_payment_failed",
+    "checkout.session.expired",
+    "payment_intent.succeeded",
+    "payment_intent.payment_failed",
+  ];
   const body: Record<string, string> = { url, description: "Toss: confirms laundry payments automatically" };
   events.forEach((e, i) => (body[`enabled_events[${i}]`] = e));
   const w = await stripe<{ id: string; secret: string }>(k, "/webhook_endpoints", { method: "POST", body });
@@ -228,4 +256,62 @@ export async function createStripeWebhook(k: GatewayKeys, url: string): Promise<
 
 export async function deleteStripeWebhook(k: GatewayKeys, id: string): Promise<void> {
   await stripe(k, `/webhook_endpoints/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+}
+
+// ================= saved cards (Stripe): how laundry apps abroad work =================
+// The customer saves a card (or Apple Pay / Google Pay) once; each bill is then charged automatically when the
+// laundry is ready, with their chosen tip, and they get a receipt. Strong customer authentication (Europe) is
+// handled by Stripe at save time; if a bank still asks for it on a charge, the bill stays open to pay by hand.
+
+/** A Stripe customer on the laundry's account, for one Toss customer. */
+export async function createStripeCustomer(k: GatewayKeys, c: { email?: string; name?: string; tossCustomer: string }): Promise<string> {
+  const r = await stripe<{ id: string }>(k, "/customers", { method: "POST", body: { email: c.email, name: c.name, "metadata[toss_customer]": c.tossCustomer } });
+  return r.id;
+}
+
+/** A Stripe page where the customer saves a card / wallet for later charges. */
+export async function createCardSetup(k: GatewayKeys, r: { customer: string; currency: string; returnUrl: string; cancelUrl: string }): Promise<{ ref: string; url: string }> {
+  const s = await stripe<{ id: string; url: string }>(k, "/checkout/sessions", {
+    method: "POST",
+    body: { mode: "setup", customer: r.customer, currency: r.currency.toLowerCase(), success_url: r.returnUrl, cancel_url: r.cancelUrl },
+  });
+  return { ref: s.id, url: s.url };
+}
+
+/** What the customer saved on a setup page (null until it's done). */
+export async function cardFromSetup(k: GatewayKeys, sessionId: string): Promise<{ paymentMethod: string; brand?: string; last4?: string; exp?: string } | null> {
+  const s = await stripe<{ status?: string; setup_intent?: { status?: string; payment_method?: { id: string; type?: string; card?: { brand?: string; last4?: string; exp_month?: number; exp_year?: number } } } }>(
+    k,
+    `/checkout/sessions/${encodeURIComponent(sessionId)}?expand[]=setup_intent.payment_method`,
+  );
+  const pm = s.setup_intent?.status === "succeeded" ? s.setup_intent.payment_method : undefined;
+  if (!pm) return null;
+  const c = pm.card;
+  return { paymentMethod: pm.id, brand: c?.brand ?? pm.type, last4: c?.last4, exp: c?.exp_month ? `${String(c.exp_month).padStart(2, "0")}/${String(c.exp_year).slice(-2)}` : undefined };
+}
+
+/** Charges a saved card now, without the customer present. Returns the payment intent and its status. */
+export async function chargeSavedCard(
+  k: GatewayKeys,
+  r: { amountMinor: number; currency: string; customer: string; paymentMethod: string; description: string; reference: string },
+): Promise<{ id?: string; status: string; amountMinor?: number; error?: string }> {
+  const res = await fetch(`${STRIPE}/payment_intents`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${k.secret}`, "Content-Type": "application/x-www-form-urlencoded", "Stripe-Version": "2024-06-20", "Idempotency-Key": `toss-${r.reference}` },
+    body: form({
+      amount: r.amountMinor,
+      currency: r.currency.toLowerCase(),
+      customer: r.customer,
+      payment_method: r.paymentMethod,
+      off_session: "true",
+      confirm: "true",
+      description: r.description.slice(0, 500),
+      "metadata[toss_intent]": r.reference,
+    }),
+    signal: AbortSignal.timeout(20_000),
+  });
+  const data = (await res.json().catch(() => ({}))) as { id?: string; status?: string; amount_received?: number; error?: { message?: string; payment_intent?: { id?: string; status?: string } } };
+  if (res.ok) return { id: data.id, status: data.status ?? "unknown", amountMinor: data.amount_received };
+  // declined, or the bank wants the customer to confirm: Stripe still returns the payment intent
+  return { id: data.error?.payment_intent?.id, status: data.error?.payment_intent?.status ?? "failed", error: data.error?.message };
 }

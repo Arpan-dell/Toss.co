@@ -54,6 +54,7 @@ import { codeMatches, deliveryCode, looksLikeCode, tripRouteUrl } from "./delive
 import { logError } from "@/lib/log";
 import { tierOfRow } from "@/lib/plan";
 import { APP_URL, SITE_URL } from "@/lib/site";
+import { autoChargeOrder } from "../gateway-payments";
 
 // Automatic pickup dispatch over the driver bot. Runs server-side with the service role:
 // it crosses customers, baskets and drivers inside one business, and is triggered by trusted events
@@ -260,6 +261,8 @@ const bagNames = (o: Row) =>
  * the customer gets a 4-digit handover code; otherwise the customer is told to collect it. Safe to call twice.
  */
 export async function orderReady(orderId: string, opts: { deliver?: boolean } = {}): Promise<void> {
+  // customers who pay automatically are charged now, with their tip (a saved card; Stripe)
+  await autoChargeOrder(orderId).catch((err) => logError("automatic charge failed", err instanceof Error ? err.message : err));
   const { data: o } = await db().from("orders").select("*").eq("id", orderId).maybeSingle();
   if (!o || o.status !== "COMPLETED" || o.delivery_status) return;
   const { data: t } = await db().from("tenants").select("name, delivers, store_address").eq("id", o.tenant_id as string).maybeSingle();

@@ -39,6 +39,7 @@ export interface Tenant {
   minOrder: number; // every bill is at least this much
   regionReady?: boolean; // the database has the region columns (migration 0035)
   onlineGateway?: "razorpay" | "stripe"; // customers pay through the laundry's own gateway (migration 0036)
+  alsoDirect?: boolean; // with a gateway, still show the UPI ID / payment details too (migration 0037)
   joinCode: string;
   managerId?: string;
   upiId?: string; // where customers pay this business

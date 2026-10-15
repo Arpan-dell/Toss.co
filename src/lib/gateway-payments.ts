@@ -1,9 +1,10 @@
 import "server-only";
-import { createCheckout, checkoutStatus, fromMinor, parseRazorpay, parseStripe, toMinor, verifyRazorpay, verifyStripe, type GatewayEvent, type GatewayKeys, type Provider } from "./gateways";
+import { cardFromSetup, chargeSavedCard, createCardSetup, createCheckout, createStripeCustomer, checkoutStatus, fromMinor, parseRazorpay, parseStripe, toMinor, verifyRazorpay, verifyStripe, type GatewayEvent, type GatewayKeys, type Provider } from "./gateways";
 import { notifySubscriptionReviewed } from "./email/notify";
 import { sendInvoice } from "./invoice/service";
 import { logError } from "./log";
 import { open } from "./secret-box";
+import { roundMoney } from "./regions";
 import { APP_URL } from "./site";
 import { supabaseAdmin } from "./supabase/admin";
 
@@ -217,6 +218,10 @@ export async function handleWebhook(provider: Provider, token: string, raw: stri
   // each event once: gateways may deliver the same one several times
   const { error: dup } = await db().from("payment_events").insert({ provider, event_id: event.eventId, type: event.type });
   if (dup) return 200;
+  if (event.setup && event.ref) {
+    await finishCardSetup(event.ref).catch((err) => logError("card setup finish failed", err instanceof Error ? err.message : err));
+    return 200;
+  }
   if (event.status === "ignore" || !event.ref) return 200;
 
   const { data: intent } = await db().from("payment_intents").select("*").eq("provider_ref", event.ref).eq("provider", provider).maybeSingle();
@@ -368,4 +373,141 @@ export async function reconcileOpenIntents(limit = 50): Promise<{ checked: numbe
   let paid = 0;
   for (const intent of (data ?? []) as Intent[]) if ((await check(intent)) === "paid") paid++;
   return { checked: data?.length ?? 0, paid };
+}
+
+// ================= pay automatically (saved card, Stripe) =================
+export type Autopay = { brand?: string; last4?: string; exp?: string; tipPct: number; on: boolean };
+
+/** A customer's saved card at their laundry, for the dashboard (no secrets). Null when none, or before 0037. */
+export async function getAutopay(tenantId: string, customerId: string): Promise<Autopay | null> {
+  const { data, error } = await db().from("customer_payment_profiles").select("*").eq("tenant_id", tenantId).eq("customer_id", customerId).maybeSingle();
+  if (error || !data?.payment_method_id) return null;
+  return { brand: (data.brand as string) ?? undefined, last4: (data.last4 as string) ?? undefined, exp: (data.exp as string) ?? undefined, tipPct: Number(data.tip_pct) || 0, on: data.autopay === true };
+}
+
+/** Opens Stripe's page to save a card (or Apple Pay / Google Pay) for automatic payments. */
+export async function startCardSetup(tenantId: string, customerId: string, tipPct: number): Promise<{ url: string } | { error: string }> {
+  const gw = await tenantGateway(tenantId);
+  if (!gw || gw.provider !== "stripe") return { error: "Your laundry doesn't take automatic payments." };
+  const { data: t } = await db().from("tenants").select("currency").eq("id", tenantId).maybeSingle();
+  const { data: c } = await db().from("customers").select("name, email, tenant_id").eq("id", customerId).maybeSingle();
+  if (!c || c.tenant_id !== tenantId) return { error: "Customer not found." };
+  const { data: existing, error } = await db().from("customer_payment_profiles").select("provider_customer_id").eq("tenant_id", tenantId).eq("customer_id", customerId).maybeSingle();
+  if (error) return { error: "Automatic payments switch on after the next database update." };
+  try {
+    const stripeCustomer =
+      (existing?.provider_customer_id as string) ?? (await createStripeCustomer(gw, { email: (c.email as string) ?? undefined, name: (c.name as string) ?? undefined, tossCustomer: customerId }));
+    const page = await createCardSetup(gw, {
+      customer: stripeCustomer,
+      currency: ((t?.currency as string) ?? "USD").toLowerCase(),
+      returnUrl: `${APP_URL}/app/autopay?session={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${APP_URL}/app`,
+    });
+    await db()
+      .from("customer_payment_profiles")
+      .upsert(
+        { tenant_id: tenantId, customer_id: customerId, provider_customer_id: stripeCustomer, setup_ref: page.ref, tip_pct: Math.max(0, Math.min(30, Math.round(tipPct))), updated_at: new Date().toISOString() },
+        { onConflict: "tenant_id,customer_id" },
+      );
+    return { url: page.url };
+  } catch (err) {
+    logError("card setup failed", err instanceof Error ? err.message : err);
+    return { error: "Couldn't open the card page. Try again in a minute." };
+  }
+}
+
+/** The customer finished Stripe's card page (their return, or Stripe's webhook): save the card, switch on. */
+export async function finishCardSetup(sessionId: string, customerId?: string): Promise<boolean> {
+  let q = db().from("customer_payment_profiles").select("*").eq("setup_ref", sessionId);
+  if (customerId) q = q.eq("customer_id", customerId);
+  const { data: p } = await q.maybeSingle();
+  if (!p) return false;
+  const gw = await tenantGateway(p.tenant_id as string);
+  if (!gw || gw.provider !== "stripe") return false;
+  const card = await cardFromSetup(gw, sessionId);
+  if (!card) return false;
+  await db()
+    .from("customer_payment_profiles")
+    .update({ payment_method_id: card.paymentMethod, brand: card.brand ?? null, last4: card.last4 ?? null, exp: card.exp ?? null, autopay: true, setup_ref: null, updated_at: new Date().toISOString() })
+    .eq("tenant_id", p.tenant_id)
+    .eq("customer_id", p.customer_id);
+  return true;
+}
+
+export async function setAutopay(tenantId: string, customerId: string, on: boolean, tipPct?: number) {
+  const patch: Record<string, unknown> = { autopay: on, updated_at: new Date().toISOString() };
+  if (tipPct !== undefined) patch.tip_pct = Math.max(0, Math.min(30, Math.round(tipPct)));
+  await db().from("customer_payment_profiles").update(patch).eq("tenant_id", tenantId).eq("customer_id", customerId);
+}
+
+/**
+ * Charges a ready bill to the customer's saved card, if they switched on automatic payments. Called when the
+ * laundry marks an order ready (and daily for any missed). The charge is confirmed like any other gateway payment;
+ * a declined card leaves the bill open for the customer to pay by hand.
+ */
+export async function autoChargeOrder(orderId: string): Promise<"paid" | "skipped" | "failed"> {
+  const { data: o } = await db().from("orders").select("*").eq("id", orderId).maybeSingle();
+  if (!o || o.status !== "COMPLETED" || o.payment_status !== "UNPAID" || o.account_id || !o.customer_id || !(Number(o.amount_due) > 0)) return "skipped";
+  const { data: p, error } = await db().from("customer_payment_profiles").select("*").eq("tenant_id", o.tenant_id).eq("customer_id", o.customer_id).maybeSingle();
+  if (error || !p?.autopay || !p.payment_method_id) return "skipped";
+  const gw = await tenantGateway(o.tenant_id as string);
+  if (!gw || gw.provider !== "stripe") return "skipped";
+  // one automatic try per bill
+  const { data: tried } = await db().from("payment_intents").select("id").eq("order_id", orderId).eq("auto", true).limit(1);
+  if (tried?.length) return "skipped";
+  const { data: t } = await db().from("tenants").select("currency, name").eq("id", o.tenant_id).maybeSingle();
+  const currency = ((t?.currency as string) ?? "USD").toUpperCase();
+  const tip = roundMoney((Number(o.amount_due) * (Number(p.tip_pct) || 0)) / 100, currency);
+  const amount = Number(o.amount_due) + tip;
+  const minor = toMinor(amount, currency);
+  const { data: intent } = await db()
+    .from("payment_intents")
+    .insert({ kind: "order", tenant_id: o.tenant_id, order_id: orderId, customer_id: o.customer_id, provider: "stripe", platform: false, amount_minor: minor, currency, tip, auto: true })
+    .select("*")
+    .single();
+  if (!intent) return "failed";
+  const r = await chargeSavedCard(gw, {
+    amountMinor: minor,
+    currency,
+    customer: p.provider_customer_id as string,
+    paymentMethod: p.payment_method_id as string,
+    description: `Laundry pickup #${o.device_order_id} · ${(t?.name as string) ?? "Toss"}`,
+    reference: intent.id as string,
+  });
+  if (r.id) await db().from("payment_intents").update({ provider_ref: r.id }).eq("id", intent.id);
+  if (r.status === "succeeded") {
+    await settle(
+      { ...(intent as Intent), provider_ref: r.id ?? null },
+      { eventId: `auto:${r.id}`, type: "auto.charge", ref: r.id, status: "paid", paymentId: r.id, amountMinor: r.amountMinor ?? minor, currency, method: "card" },
+    );
+    return "paid";
+  }
+  if (r.status === "processing") return "skipped"; // a bank debit clearing: the webhook / daily check settles it
+  await db().from("payment_intents").update({ status: "failed" }).eq("id", intent.id).eq("status", "created");
+  logError("automatic charge declined", { order: orderId, status: r.status, error: r.error });
+  return "failed";
+}
+
+/** Daily: ready, unpaid bills of customers with automatic payments on (in case marking ready didn't charge). */
+export async function autoChargeDue(limit = 30): Promise<number> {
+  const { data: profiles, error } = await db().from("customer_payment_profiles").select("tenant_id, customer_id").eq("autopay", true).not("payment_method_id", "is", null).limit(500);
+  if (error || !profiles?.length) return 0;
+  let paid = 0;
+  for (const p of profiles) {
+    const { data: due } = await db()
+      .from("orders")
+      .select("id")
+      .eq("tenant_id", p.tenant_id)
+      .eq("customer_id", p.customer_id)
+      .eq("status", "COMPLETED")
+      .eq("payment_status", "UNPAID")
+      .not("ready_at", "is", null)
+      .is("account_id", null)
+      .limit(5);
+    for (const o of due ?? []) {
+      if ((await autoChargeOrder(o.id as string)) === "paid") paid++;
+      if (--limit <= 0) return paid;
+    }
+  }
+  return paid;
 }

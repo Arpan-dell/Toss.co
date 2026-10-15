@@ -2,12 +2,14 @@ import Link from "next/link";
 import { OrderTable } from "@/components/order-table";
 import { IdChip } from "@/components/id-chip";
 import { JoinBusiness } from "@/components/join-business";
+import { AutopayCard } from "@/components/autopay-card";
 import { GatewayPay } from "@/components/gateway-pay";
 import { RegionPay } from "@/components/region-pay";
 import { UpiPay } from "@/components/upi-pay";
 import { StatusTimeline } from "@/components/status-timeline";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, OrderStatusBadge, PageTitle } from "@/components/ui";
-import { payBillOnline } from "@/lib/actions/gateway";
+import { payBillOnline, startAutopay, updateAutopay } from "@/lib/actions/gateway";
+import { getAutopay } from "@/lib/gateway-payments";
 import { getCustomer, getCustomerCredit, getDeviceForCustomer, getOpenOffer, getTenantById, isDeviceOnline, listOrdersForCustomer, now } from "@/lib/data";
 import { orderLabel, timeAgo } from "@/lib/format";
 import { methodName } from "@/lib/pay-methods";
@@ -54,8 +56,12 @@ export default async function CustomerOverview() {
   // India: UPI, as before. Elsewhere: the business's own methods (PayPal, Venmo, SEPA, Pix…), with a tip option.
   // a laundry with its own gateway (Razorpay/Stripe) takes payments only through it: confirmed automatically
   const gateway = business?.onlineGateway;
-  const upi = !gateway && !!business && business.currency === "INR" && isValidUpiId(business.upiId);
-  const canPay = !gateway && !!business && (upi || business.currency !== "INR");
+  // with a gateway, the laundry can still show its UPI ID / details for customers who prefer paying directly
+  const direct = !gateway || business?.alsoDirect === true;
+  const upi = direct && !!business && business.currency === "INR" && isValidUpiId(business.upiId);
+  const canPay = direct && !!business && (upi || business.currency !== "INR");
+  // abroad (Stripe): save a card once and every bill is charged when it's ready, with a tip
+  const autopay = business && gateway === "stripe" ? await getAutopay(business.id, session.userId) : null;
   const toPay = unpaid.filter((o) => o.amountDue > 0);
 
   // One UPI link + QR per unpaid order, pre-filled with this business's UPI ID and the amount.
@@ -261,9 +267,20 @@ export default async function CustomerOverview() {
         </Card>
       </div>
 
+      {business && gateway === "stripe" && (
+        <Card title="Pay automatically">
+          <AutopayCard
+            status={autopay}
+            start={startAutopay}
+            update={updateAutopay}
+            business={business.name}
+          />
+        </Card>
+      )}
+
       <Card title="Invoices due">
         {unpaid.length === 0 && verifying.length === 0 && <EmptyState>You&apos;re all paid up.</EmptyState>}
-        {unpaid.length > 0 && !canPay && (
+        {unpaid.length > 0 && !canPay && !gateway && (
           <p className="mb-4 rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
             {business
               ? `${business.name} hasn't set up UPI payments yet. Pay them directly, and they'll mark it paid.`

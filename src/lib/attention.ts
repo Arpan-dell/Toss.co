@@ -169,10 +169,10 @@ export function attentionItems(i: AttentionInput): Attention[] {
     items.push({
       key: "gateway",
       level: "info",
-      title: "Let payments confirm themselves",
-      fix: "Connect Razorpay or Stripe: customers tap Pay, and every payment is marked paid by itself, with the invoice sent.",
+      title: "Let customers' payments confirm themselves",
+      fix: "Optional: connect your own Razorpay or Stripe, and customers' bills are marked paid by themselves, with the invoice sent.",
       href: "/admin/settings/online-payments",
-      action: "Connect online payments",
+      action: "Set up customer payments",
     });
   }
   const overdue = i.orders.filter(

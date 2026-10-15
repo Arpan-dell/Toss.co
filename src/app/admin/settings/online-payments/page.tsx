@@ -10,7 +10,7 @@ import { requireRole } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { GatewayForm } from "./gateway-form";
 
-export const metadata: Metadata = { title: "Online payments" };
+export const metadata: Metadata = { title: "Customer payments" };
 
 // Settings → Online payments: the laundry connects its own Razorpay or Stripe account. Customers then pay on the
 // gateway's page and the gateway confirms each payment to Toss directly, so nobody types references and nobody
@@ -32,8 +32,13 @@ export default async function OnlinePayments() {
 
   return (
     <div className="stagger mx-auto w-full max-w-2xl space-y-6">
-      <PageTitle kicker="Settings · protected">Online payments</PageTitle>
+      <PageTitle kicker="Settings · protected">Customer payments</PageTitle>
       <BackLink />
+
+      <p className="rounded-[8px] border border-border bg-ink/[0.03] px-4 py-3 text-sm text-secondary">
+        This is optional, and only for <b className="text-fg">your customers&apos; laundry bills</b>, paid into your own Razorpay or Stripe
+        account. Your Toss plan is paid on <a href="/admin/billing" className="text-accent hover:text-accent-2">Billing</a>, with no setup.
+      </p>
 
       <Card title="How it works">
         <ul className="space-y-1.5 text-sm text-secondary">

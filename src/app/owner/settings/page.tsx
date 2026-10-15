@@ -16,6 +16,7 @@ export default async function OwnerSettings() {
   return (
     <div className="stagger mx-auto w-full max-w-xl space-y-6">
       <PageTitle kicker="Toss platform">Plan &amp; payments</PageTitle>
+      <PlatformGatewayCard />
       <Card title="Subscription for laundry businesses">
         <ActionForm action={updatePlatformSettings} submitLabel="Save settings">
           <Field label="Monthly price (₹)">
@@ -56,7 +57,6 @@ export default async function OwnerSettings() {
           <PasswordField hint="Prices decide what every business pays, so changes need your password." />
         </ActionForm>
       </Card>
-      <PlatformGatewayCard />
       <ChangePasswordCard email={session.email} />
     </div>
   );

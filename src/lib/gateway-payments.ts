@@ -78,11 +78,11 @@ export async function platformGateway(currency: string): Promise<(GatewayKeys & 
 }
 
 function envPlatformGateway(group: "INR" | "USD"): GatewayKeys | null {
-  if (group === "INR" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET && process.env.RAZORPAY_WEBHOOK_SECRET) {
-    return { provider: "razorpay", keyId: process.env.RAZORPAY_KEY_ID, secret: process.env.RAZORPAY_KEY_SECRET, webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET };
+  if (group === "INR" && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+    return { provider: "razorpay", keyId: process.env.RAZORPAY_KEY_ID, secret: process.env.RAZORPAY_KEY_SECRET, webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || undefined };
   }
-  if (group === "USD" && process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET) {
-    return { provider: "stripe", secret: process.env.STRIPE_SECRET_KEY, webhookSecret: process.env.STRIPE_WEBHOOK_SECRET };
+  if (group === "USD" && process.env.STRIPE_SECRET_KEY) {
+    return { provider: "stripe", secret: process.env.STRIPE_SECRET_KEY, webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || undefined };
   }
   return null;
 }

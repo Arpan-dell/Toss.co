@@ -29,7 +29,7 @@ const GROUPS: { title: string; tiles: Tile[] }[] = [
     tiles: [
       { href: "/admin/business", title: "Business", text: "Name, Business ID, store address and the area you pick up from.", icon: Storefront },
       { href: "/admin/settings/payments", title: "Price & payments", text: "Your country and currency, price, minimum order, tax, and how customers pay you.", icon: CurrencyInr, locked: true },
-      { href: "/admin/settings/online-payments", title: "Online payments", text: "Connect Razorpay or Stripe: customers pay online and payments confirm themselves.", icon: CreditCard, locked: true },
+      { href: "/admin/settings/online-payments", title: "Customer payments", text: "Optional: your customers pay their bills into your own Razorpay or Stripe, confirmed automatically.", icon: CreditCard, locked: true },
       {
         href: "/admin/settings/operations",
         title: "How you work",

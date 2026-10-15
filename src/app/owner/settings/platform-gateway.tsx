@@ -16,7 +16,7 @@ const GROUPS = [
 export async function PlatformGatewayCard() {
   const { data, error } = await supabaseAdmin().from("platform_gateways").select("currency_group, provider, key_id, live, webhook_secret_enc, connected_at, last_event_at");
   return (
-    <Card title="Subscription payments">
+    <Card title="Razorpay for Billing (businesses paying their Toss plan)">
       <p className="mb-4 text-sm text-secondary">
         Businesses pay their plan on your gateway&apos;s page, and it&apos;s confirmed to Toss automatically. The money goes to your gateway account.
       </p>

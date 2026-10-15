@@ -25,8 +25,9 @@ export default async function OnlinePayments() {
     .eq("tenant_id", tenant.id)
     .maybeSingle();
   const ready = !error; // the gateway tables exist (migration 0036)
-  const connected = row?.webhook_secret_enc ? row : null;
-  const pending = row && !row.webhook_secret_enc && row.provider === "razorpay" ? row : null;
+  const connected = row ?? null;
+  // Razorpay works with the keys alone; a webhook (optional) makes confirmation instant
+  const noHook = row && !row.webhook_secret_enc && row.provider === "razorpay" ? row : null;
   const name = (p: string) => (p === "razorpay" ? "Razorpay" : "Stripe");
 
   return (
@@ -75,6 +76,16 @@ export default async function OnlinePayments() {
               Test mode: payments are pretend. Try one from a customer account, then connect your live keys.
             </p>
           )}
+          {noHook && (
+            <details className="mt-5 rounded-[8px] border border-border px-4 py-3">
+              <summary className="cursor-pointer text-sm font-medium text-fg">Add a webhook (optional)</summary>
+              <p className="mt-2 mb-4 text-xs text-muted">
+                Optional, makes it instant: without a webhook, Toss asks Razorpay about each payment when the customer comes back
+                  or the dashboard is opened. With one, it&apos;s confirmed the second it&apos;s paid.
+              </p>
+              <GatewayForm suggested="razorpay" pendingRazorpay={{ webhookUrl: webhookUrl("razorpay", noHook.webhook_token as string), live: noHook.live === true }} />
+            </details>
+          )}
           <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4">
             <details className="text-sm">
               <summary className="cursor-pointer text-accent">Change keys</summary>
@@ -91,11 +102,8 @@ export default async function OnlinePayments() {
           </div>
         </Card>
       ) : (
-        <Card title={pending ? "Step 2 of 2: add the webhook in Razorpay" : "Connect your gateway"}>
-          <GatewayForm
-            suggested={tenant.currency === "INR" ? "razorpay" : "stripe"}
-            pendingRazorpay={pending ? { webhookUrl: webhookUrl("razorpay", pending.webhook_token as string), live: pending.live === true } : undefined}
-          />
+        <Card title="Connect your gateway">
+          <GatewayForm suggested={tenant.currency === "INR" ? "razorpay" : "stripe"} />
           <p className="mt-4 text-xs text-muted">
             Don&apos;t have an account? Sign up free at {tenant.currency === "INR" ? "razorpay.com (business PAN and a bank account needed to go live)" : "stripe.com"}.
             Test mode works straight away.

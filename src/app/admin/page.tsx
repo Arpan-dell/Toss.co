@@ -16,6 +16,8 @@ import { washQueue } from "@/lib/sorting";
 import { myFormat } from "@/lib/my-format";
 import { paidOnline } from "@/lib/pay-methods";
 import { formatterFor, regionOf } from "@/lib/region-format";
+import { after } from "next/server";
+import { reconcileFor } from "@/lib/gateway-payments";
 
 export const metadata: Metadata = { title: "Live board" };
 
@@ -27,6 +29,8 @@ export default async function LiveBoard() {
   if (locked) return locked;
 
   const session = await getSession();
+  // open gateway payments: ask the gateway after this page is sent (the live updates show the result)
+  if (session?.tenantId) after(() => reconcileFor({ tenantId: session.tenantId }).catch(() => 0));
   const [active, devices, drivers, all, tier, tenant] = await Promise.all([
     listActiveOrders(),
     listDevices(),

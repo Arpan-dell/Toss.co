@@ -11,6 +11,9 @@ import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
 import { myFormat } from "@/lib/my-format";
 import { hasCents } from "@/lib/regions";
 import { methodName } from "@/lib/pay-methods";
+import { after } from "next/server";
+import { reconcileFor } from "@/lib/gateway-payments";
+import { getSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Payments" };
 
@@ -21,6 +24,8 @@ function who(o: Order, customers: Map<string, Customer>) {
 
 export default async function Payments() {
   const fmt = await myFormat();
+  const session = await getSession();
+  if (session?.tenantId) after(() => reconcileFor({ tenantId: session.tenantId }).catch(() => 0));
   const locked = await planGate();
   if (locked) return locked;
 

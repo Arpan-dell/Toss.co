@@ -43,9 +43,8 @@ export async function connectGateway(_prev: FormState, fd: FormData): Promise<Fo
   if (provider === "razorpay" && existing?.provider === "razorpay" && !text(fd, "secret") && webhookSecret) {
     if (webhookSecret.length < 8) return { error: "Paste the webhook secret you typed in Razorpay." };
     await db.from("tenant_gateways").update({ webhook_secret_enc: seal(webhookSecret) }).eq("tenant_id", session.tenantId);
-    await db.from("tenants").update({ online_gateway: "razorpay" }).eq("id", session.tenantId);
     done();
-    return { message: "Razorpay is connected. Customers now pay online and payments confirm themselves." };
+    return { message: "Webhook added. Payments now confirm the moment they're made, even if the customer closes the page." };
   }
 
   const keys: GatewayKeys = { provider, keyId: text(fd, "keyId") || undefined, secret: text(fd, "secret") };
@@ -82,10 +81,10 @@ export async function connectGateway(_prev: FormState, fd: FormData): Promise<Fo
     done();
     return { message: `Stripe is connected${live ? "" : " in test mode (no real money)"}. Customers now pay online and payments confirm themselves.` };
   }
-  // Razorpay: not live for customers until the webhook secret is in
-  await db.from("tenants").update({ online_gateway: null }).eq("id", session.tenantId);
+  // Razorpay: live straight away. Toss asks Razorpay about each payment; the webhook (optional) makes it instant
+  await db.from("tenants").update({ online_gateway: "razorpay" }).eq("id", session.tenantId);
   done();
-  return { message: "Keys checked. Now add the webhook in Razorpay (steps below) and paste its secret here." };
+  return { message: `Razorpay is connected${live ? "" : " in test mode (no real money)"}. Customers now pay online and payments confirm themselves.` };
 }
 
 export async function disconnectGateway(fd: FormData) {
@@ -160,7 +159,7 @@ export async function connectPlatformGateway(_prev: FormState, fd: FormData): Pr
     await db.from("platform_gateways").update({ webhook_secret_enc: seal(webhookSecret) }).eq("currency_group", group);
     revalidatePath("/owner", "layout");
     revalidatePath("/admin", "layout");
-    return { message: `Razorpay is connected for ${group === "INR" ? "rupee" : "US dollar"} subscriptions. Businesses now pay with one tap and plans extend by themselves.` };
+    return { message: "Webhook added. Plan payments now confirm the moment they're made." };
   }
 
   const keys: GatewayKeys = { provider, keyId: text(fd, "keyId") || undefined, secret: text(fd, "secret") };
@@ -193,7 +192,8 @@ export async function connectPlatformGateway(_prev: FormState, fd: FormData): Pr
     return { message: `Stripe is connected for ${group === "INR" ? "rupee" : "US dollar"} subscriptions${live ? "" : " (test mode)"}.` };
   }
   revalidatePath("/owner", "layout");
-  return { message: "Keys checked. Now add the webhook in Razorpay (steps below) and paste its secret here." };
+  revalidatePath("/admin", "layout");
+  return { message: `Razorpay is connected for ${group === "INR" ? "rupee" : "US dollar"} plans${live ? "" : " (test mode)"}. Businesses now pay with one tap and plans extend by themselves.` };
 }
 
 export async function disconnectPlatformGateway(fd: FormData) {

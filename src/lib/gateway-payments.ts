@@ -42,12 +42,12 @@ type Intent = {
 /** The laundry's own gateway, decrypted, or null if it hasn't connected one (or hasn't finished connecting). */
 export async function tenantGateway(tenantId: string): Promise<(GatewayKeys & { token: string; live: boolean }) | null> {
   const { data, error } = await db().from("tenant_gateways").select("*").eq("tenant_id", tenantId).maybeSingle();
-  if (error || !data || !data.webhook_secret_enc) return null;
+  if (error || !data) return null;
   return {
     provider: data.provider as Provider,
     keyId: (data.key_id as string) ?? undefined,
     secret: open(data.secret_enc as string),
-    webhookSecret: open(data.webhook_secret_enc as string),
+    webhookSecret: data.webhook_secret_enc ? open(data.webhook_secret_enc as string) : undefined,
     token: data.webhook_token as string,
     live: data.live === true,
   };
@@ -65,12 +65,12 @@ export const platformToken = (group: "INR" | "USD") => `platform${group.toLowerC
 export async function platformGateway(currency: string): Promise<(GatewayKeys & { live?: boolean }) | null> {
   const group = groupOf(currency);
   const { data } = await db().from("platform_gateways").select("*").eq("currency_group", group).maybeSingle();
-  if (data?.webhook_secret_enc) {
+  if (data) {
     return {
       provider: data.provider as Provider,
       keyId: (data.key_id as string) ?? undefined,
       secret: open(data.secret_enc as string),
-      webhookSecret: open(data.webhook_secret_enc as string),
+      webhookSecret: data.webhook_secret_enc ? open(data.webhook_secret_enc as string) : undefined,
       live: data.live === true,
     };
   }
@@ -330,6 +330,29 @@ async function check(intent: Intent): Promise<string> {
     logError("gateway status check failed", err instanceof Error ? err.message : err);
     return intent.status;
   }
+}
+
+/**
+ * Payments still open for one laundry (or one customer): asked straight from the gateway. Pages call this after
+ * they've been sent (next/server's after()), so a payment confirms within moments even without a webhook, e.g.
+ * when the customer paid and closed the tab before coming back.
+ */
+export async function reconcileFor(who: { tenantId?: string; customerId?: string }, limit = 10): Promise<number> {
+  if (!who.tenantId && !who.customerId) return 0;
+  let q = db()
+    .from("payment_intents")
+    .select("*")
+    .eq("status", "created")
+    .not("provider_ref", "is", null)
+    .lt("created_at", new Date(Date.now() - 20_000).toISOString())
+    .gt("created_at", new Date(Date.now() - 3 * 86_400_000).toISOString())
+    .limit(limit);
+  q = who.customerId ? q.eq("customer_id", who.customerId) : q.eq("tenant_id", who.tenantId!);
+  const { data, error } = await q;
+  if (error) return 0; // before migration 0036
+  let paid = 0;
+  for (const intent of (data ?? []) as Intent[]) if ((await check(intent)) === "paid") paid++;
+  return paid;
 }
 
 /** Daily: payments still open from the last 3 days, in case a webhook was lost. */

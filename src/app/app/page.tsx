@@ -17,10 +17,14 @@ import { roundMoney } from "@/lib/regions";
 import { requireRole } from "@/lib/session";
 import { buildUpiUri, isValidUpiId } from "@/lib/upi";
 import { myFormat } from "@/lib/my-format";
+import { after } from "next/server";
+import { reconcileFor } from "@/lib/gateway-payments";
 
 export default async function CustomerOverview() {
   const fmt = await myFormat();
   const session = await requireRole("CUSTOMER");
+  // a payment made and closed without coming back: ask the gateway after this page is sent (shows on next view)
+  after(() => reconcileFor({ customerId: session.userId }).catch(() => 0));
   const [orders, device, customer, credit] = await Promise.all([
     listOrdersForCustomer(session.userId),
     getDeviceForCustomer(session.userId),

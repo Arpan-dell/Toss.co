@@ -28,8 +28,9 @@ export async function PlatformGatewayCard() {
         <div className="space-y-6">
           {GROUPS.map((g) => {
             const row = data?.find((r) => r.currency_group === g.group);
-            const connected = row?.webhook_secret_enc ? row : null;
-            const pending = row && !row.webhook_secret_enc && row.provider === "razorpay" ? row : null;
+            const connected = row ?? null;
+            // Razorpay works with the keys alone; a webhook (optional) makes confirmation instant
+            const noHook = row && !row.webhook_secret_enc && row.provider === "razorpay" ? row : null;
             return (
               <section key={g.group} className="space-y-3 border-t border-border pt-4 first:border-0 first:pt-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -43,6 +44,21 @@ export async function PlatformGatewayCard() {
                   )}
                 </div>
                 <p className="text-xs text-muted">{g.note}</p>
+                {noHook && (
+                  <details className="rounded-[8px] border border-border px-4 py-3">
+                    <summary className="cursor-pointer text-sm font-medium text-fg">Add a webhook (optional)</summary>
+                    <p className="mt-2 mb-4 text-xs text-muted">
+                      Optional, makes it instant: without a webhook, Toss asks Razorpay about each payment when the customer comes back
+                  or the dashboard is opened. With one, it&apos;s confirmed the second it&apos;s paid.
+                    </p>
+                    <GatewayForm
+                      suggested="razorpay"
+                      action={connectPlatformGateway}
+                      hidden={{ group: g.group }}
+                      pendingRazorpay={{ webhookUrl: webhookUrl("razorpay", platformToken(g.group)), live: noHook.live === true }}
+                    />
+                  </details>
+                )}
                 {connected ? (
                   <div className="flex flex-wrap items-center gap-4 text-sm text-secondary">
                     <span>
@@ -57,12 +73,7 @@ export async function PlatformGatewayCard() {
                     />
                   </div>
                 ) : (
-                  <GatewayForm
-                    suggested={g.suggested}
-                    action={connectPlatformGateway}
-                    hidden={{ group: g.group }}
-                    pendingRazorpay={pending ? { webhookUrl: webhookUrl("razorpay", platformToken(g.group)), live: pending.live === true } : undefined}
-                  />
+                  <GatewayForm suggested={g.suggested} action={connectPlatformGateway} hidden={{ group: g.group }} />
                 )}
               </section>
             );

@@ -11,7 +11,7 @@ type Props = {
   /** who's connecting: a laundry (default) or the owner for Toss's subscriptions */
   action?: (prev: FormState, fd: FormData) => Promise<FormState>;
   hidden?: Record<string, string>;
-  /** a Razorpay connection waiting for its webhook secret */
+  /** a Razorpay connection without a webhook yet: show how to add one (optional, makes confirmation instant) */
   pendingRazorpay?: { webhookUrl: string; live: boolean };
 };
 
@@ -49,10 +49,13 @@ export function GatewayForm({ suggested, pendingRazorpay, action = connectGatewa
               </button>
             </span>
           </li>
-          <li>Type a secret of your own (any long password) and tick the events <b className="text-fg">payment_link.paid</b>, <b className="text-fg">payment_link.expired</b> and <b className="text-fg">payment_link.cancelled</b>. Save.</li>
+          <li>
+            Type a secret of your own (any long password) and tick the events <b className="text-fg">payment_link.paid</b>,{" "}
+            <b className="text-fg">payment_link.expired</b> and <b className="text-fg">payment_link.cancelled</b>. Save.
+          </li>
           <li>Paste that same secret below.</li>
         </ol>
-        <ActionForm action={action} submitLabel="Finish connecting">
+        <ActionForm action={action} submitLabel="Add webhook">
           {extra}
           <input type="hidden" name="provider" value="razorpay" />
           <Field label="Webhook secret" hint="The secret you typed in Razorpay. Toss uses it to check every payment message really came from Razorpay.">

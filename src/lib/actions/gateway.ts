@@ -120,7 +120,9 @@ export async function paySubscriptionOnline(months: number): Promise<{ url?: str
   const monthly = usd ? (tenant.parentTenantId ? platform.usdBranchPrice : platform.usdMonthlyPrice) : tenant.parentTenantId ? platform.branchPrice : platform.monthlyPrice;
   const { amount: before, pct } = subscriptionQuote(monthly, platform, months, currency);
   const { credit, toPay } = usd ? { credit: 0, toPay: before } : withBasketCredit(before, await getTenantCreditBalance(tenant.id), platform.creditSubMaxPct);
-  return startSubscriptionPayment(tenant.id, { months, amount: toPay, currency, discountPct: pct, creditUsed: credit, business: tenant.name, email: session.email });
+  // the payer's mobile number, so the gateway doesn't ask for it (Indian gateways must collect one)
+  const { data: me } = await supabaseAdmin().from("customers").select("phone").eq("id", session.userId).maybeSingle();
+  return startSubscriptionPayment(tenant.id, { months, amount: toPay, currency, discountPct: pct, creditUsed: credit, business: tenant.name, email: session.email, phone: (me?.phone as string) ?? undefined });
 }
 
 /** The page the customer or manager returns to asks this (Toss checks with the gateway if needed). */

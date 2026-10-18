@@ -137,7 +137,7 @@ export async function startOrderPayment(orderId: string, customerId: string, tip
 /** A payment page for the Toss subscription, through Toss's own gateway. Amount, discount and credit are worked out by the caller (Billing). */
 export async function startSubscriptionPayment(
   tenantId: string,
-  p: { months: number; amount: number; currency: string; discountPct: number; creditUsed: number; business: string; email?: string },
+  p: { months: number; amount: number; currency: string; discountPct: number; creditUsed: number; business: string; email?: string; phone?: string },
 ): Promise<{ url: string } | { error: string }> {
   const gw = await platformGateway(p.currency);
   if (!gw) return { error: "Online subscription payments aren't set up yet." };
@@ -153,7 +153,7 @@ export async function startSubscriptionPayment(
       reference: id,
       returnUrl: `${APP_URL}/admin/billing?intent=${id}`,
       cancelUrl: `${APP_URL}/admin/billing`,
-      customer: { name: p.business, email: p.email },
+      customer: { name: p.business, email: p.email, phone: p.phone },
     }),
   );
 }

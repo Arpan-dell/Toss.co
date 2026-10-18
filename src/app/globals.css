@@ -476,3 +476,12 @@ dialog.portal-menu[open]::backdrop { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   dialog.portal-menu, dialog.portal-menu::backdrop { transition: none; }
 }
+
+/* Dropdown lists: the open list is drawn by the browser, and on Windows it keeps a white background while the
+   options inherit the page's (light, in dark mode) text colour, so options were unreadable. Give them the theme's
+   own surface and text colours. */
+select option,
+select optgroup {
+  background-color: var(--surface-solid);
+  color: var(--text);
+}

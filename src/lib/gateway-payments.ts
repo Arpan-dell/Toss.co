@@ -184,7 +184,12 @@ async function begin(row: Record<string, unknown>, gw: GatewayKeys, request: (id
     return { url: page.url };
   } catch (err) {
     await db().from("payment_intents").update({ status: "failed" }).eq("id", intent.id);
-    logError("gateway checkout failed", err instanceof Error ? err.message : err);
+    const msg = err instanceof Error ? err.message : String(err);
+    logError("gateway checkout failed", msg);
+    // revoked or wrong keys: retrying won't help, whoever set up the gateway has to update them
+    if (/authentication|unauthori[sz]ed|invalid api key|api key provided/i.test(msg)) {
+      return { error: row.platform ? "Toss's payment setup needs updating (the gateway rejected its keys). Please try again later." : "This laundry's payment setup needs updating. Please pay another way for now." };
+    }
     return { error: "The payment page couldn't be opened. Try again in a minute." };
   }
 }

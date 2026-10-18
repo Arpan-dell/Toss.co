@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Crosshair } from "@phosphor-icons/react";
 import { AreaMap } from "@/components/area-map";
 import { updateServiceArea } from "@/lib/actions/manager";
 import type { FormState } from "@/lib/actions/shared";
 
-const DELHI: [number, number] = [28.6139, 77.209];
+const WORLD: [number, number] = [20, 0];
 
 // Where the business works: the store pin (click the map or use this device's location) and a pickup radius
 // of 1-20 km, drawn live on the map. Listing puts the business in the public "Find a laundry" directory.
@@ -17,7 +17,7 @@ export function ServiceAreaEditor({ lat, lng, radiusKm, listed }: { lat?: number
   const [locating, setLocating] = useState(false);
   const [geoError, setGeoError] = useState<string>();
 
-  const useMyLocation = () => {
+  const locateMe = () => {
     if (!navigator.geolocation) return setGeoError("This browser can't share its location. Click the map instead.");
     setLocating(true);
     setGeoError(undefined);
@@ -34,6 +34,14 @@ export function ServiceAreaEditor({ lat, lng, radiusKm, listed }: { lat?: number
     );
   };
 
+  // no store pin yet: find where this device is, once, so the map opens on the right city
+  const asked = useRef(false);
+  useEffect(() => {
+    if (pin || asked.current || !navigator.geolocation) return;
+    asked.current = true;
+    locateMe();
+  });
+
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="lat" value={pin?.[0] ?? ""} />
@@ -42,8 +50,8 @@ export function ServiceAreaEditor({ lat, lng, radiusKm, listed }: { lat?: number
       <div className="grid gap-5 lg:grid-cols-[1fr_17rem]">
         <div className="space-y-2">
           <AreaMap
-            center={pin ?? DELHI}
-            zoom={pin ? 12 : 11}
+            center={pin ?? WORLD}
+            zoom={pin ? 12 : 2}
             pins={pin ? [{ lat: pin[0], lng: pin[1], label: "Your store", radiusKm: radius, active: true }] : []}
             onPick={(a, b) => setPin([Number(a.toFixed(6)), Number(b.toFixed(6))])}
             className="h-80"
@@ -53,7 +61,7 @@ export function ServiceAreaEditor({ lat, lng, radiusKm, listed }: { lat?: number
 
         <div className="space-y-5">
           <div>
-            <button type="button" onClick={useMyLocation} disabled={locating} className="btn-ghost inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm disabled:opacity-60">
+            <button type="button" onClick={locateMe} disabled={locating} className="btn-ghost inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm disabled:opacity-60">
               <Crosshair size={16} weight="bold" aria-hidden />
               {locating ? "Finding you…" : "Use my current location"}
             </button>

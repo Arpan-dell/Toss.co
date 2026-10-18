@@ -74,17 +74,18 @@ const DELIVERING = ["ASSIGNED", "OUT"];
 // ---------- geocoding (cached on the row) ----------
 
 async function basketPoint(deviceId: string): Promise<LatLng | undefined> {
-  const { data: d } = await db().from("devices").select("address, lat, lng, geocoded_address").eq("device_id", deviceId).maybeSingle();
+  const { data: d } = await db().from("devices").select("address, lat, lng, geocoded_address, tenant_id").eq("device_id", deviceId).maybeSingle();
   if (!d?.address) return undefined;
   if (d.geocoded_address === d.address && d.lat != null) return { lat: d.lat as number, lng: d.lng as number };
-  const p = await geocode(d.address as string);
+  const { data: t } = d.tenant_id ? await db().from("tenants").select("*").eq("id", d.tenant_id as string).maybeSingle() : { data: null };
+  const p = await geocode(d.address as string, (t?.country as string) ?? "IN");
   await db().from("devices").update({ lat: p?.lat ?? null, lng: p?.lng ?? null, geocoded_address: d.address }).eq("device_id", deviceId);
   return p ?? undefined;
 }
 
 export async function geocodeStore(tenantId: string): Promise<LatLng | null> {
-  const { data: t } = await db().from("tenants").select("store_address").eq("id", tenantId).maybeSingle();
-  const p = t?.store_address ? await geocode(t.store_address as string) : null;
+  const { data: t } = await db().from("tenants").select("*").eq("id", tenantId).maybeSingle();
+  const p = t?.store_address ? await geocode(t.store_address as string, (t.country as string) ?? "IN") : null;
   await db().from("tenants").update({ store_lat: p?.lat ?? null, store_lng: p?.lng ?? null }).eq("id", tenantId);
   return p;
 }

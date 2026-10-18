@@ -39,13 +39,13 @@ export async function updateBusiness(_prev: FormState, formData: FormData): Prom
   if (storeAddress.length > 300) return { error: "That store address is too long." };
 
   const supabase = await createClient();
-  const { data: before } = await supabase.from("tenants").select("store_address").eq("id", session.tenantId).maybeSingle();
+  const { data: before } = await supabase.from("tenants").select("store_address, store_lat").eq("id", session.tenantId).maybeSingle();
   const { error } = await supabase.from("tenants").update({ name, store_address: storeAddress || null }).eq("id", session.tenantId);
   if (error) return { error: friendlyError(error) };
 
   // Find the store on the map once per address change; drivers' routes end there.
   let located = true;
-  if ((before?.store_address ?? "") !== storeAddress) located = !storeAddress || !!(await geocodeStore(session.tenantId!));
+  if ((before?.store_address ?? "") !== storeAddress || (storeAddress && before?.store_lat == null)) located = !storeAddress || !!(await geocodeStore(session.tenantId!));
   done();
   return located
     ? { message: "Saved." }

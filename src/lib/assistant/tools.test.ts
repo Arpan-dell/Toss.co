@@ -30,7 +30,7 @@ vi.mock("../profit-report", () => ({ profitReport: async () => report }));
 let plan = "ACTIVE";
 vi.mock("../plan", async (orig) => ({ ...(await orig<typeof import("../plan")>()), planState: () => ({ state: plan }) }));
 
-const { runIntent, periodRange } = await import("./tools");
+const { runIntent, periodRange, aliases } = await import("./tools");
 const manager = { userId: "u1", role: "MANAGER" as const, tenantId: "t1" };
 const customer = { userId: "c1", role: "CUSTOMER" as const };
 
@@ -111,5 +111,14 @@ describe("money", () => {
     expect(periodRange({ key: "week" }, NOW).from.toISOString()).toBe("2026-10-04T18:30:00.000Z");
     expect(periodRange({ key: "today" }, NOW).from.toISOString()).toBe("2026-10-10T18:30:00.000Z");
     expect(periodRange({ key: "lastmonth" }, NOW).from.toISOString()).toBe("2026-08-31T18:30:00.000Z");
+  });
+});
+
+describe("names hidden from the AI", () => {
+  it("swaps names for labels in the question and back in the answer", () => {
+    const a = aliases(["Arpan Ailawadi", "Ravi Kumar"], "Driver");
+    expect(a.hide("distance travelled by arpan this month vs Ravi Kumar")).toBe("distance travelled by Driver 1 this month vs Driver 2");
+    expect(a.show("Driver 1 drove 42 km, Driver 2 drove 10 km.")).toBe("Arpan drove 42 km, Ravi drove 10 km.");
+    expect(a.show("Driver 9 is unknown")).toBe("Driver 9 is unknown");
   });
 });

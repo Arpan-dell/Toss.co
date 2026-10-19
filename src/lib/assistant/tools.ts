@@ -21,7 +21,8 @@ import { planState, tierOf } from "../plan";
 import type { Session } from "../session";
 import type { Driver, Order, Tenant } from "../types";
 import { endTrialNow, extendTrialBy } from "../trial";
-import { geminiEnabled, geminiText } from "../ai/gemini";
+import { geminiEnabled, geminiJson } from "../ai/gemini";
+import { ABOUT_TOSS } from "./about";
 import { customerSnapshot, factSheet, managerSnapshot, ownerSnapshot, type Snapshot } from "./analyze";
 import { profitReport } from "../profit-report";
 import { nowText, type Intent, type Period } from "./intents";
@@ -542,15 +543,43 @@ function inCurrency(snap: Snapshot, currency: string): Snapshot {
 async function analyze(question: string, session: Session): Promise<AssistantReply> {
   let snap: Snapshot;
   let who: string;
+  let names: string[] = []; // real names behind "Driver 1, 2 …" / "Business 1, 2 …"
+  let label = "Driver";
   if (session.role === "MANAGER") {
-    const [orders, drivers, tenant] = await Promise.all([listOrders(), listDrivers(), getTenantById(session.tenantId)]);
+    const [orders, drivers, tenant, devices] = await Promise.all([listOrders(), listDrivers(), getTenantById(session.tenantId), listDevices().catch(() => [])]);
     if (!tenant) return { text: "This account isn't linked to a business yet." };
     snap = inCurrency(managerSnapshot(orders, drivers, tenant, now()), tenant.currency);
+    names = drivers.map((d) => d.name);
+    // more of the business, so most questions have their numbers: kilometres, area, plan, baskets
+    const t = now();
+    const [kmMonth, kmWeek] = await Promise.all([
+      driverRouteKm(orders, tenant, periodRange({ key: "month" }, t).from.toISOString()).catch(() => new Map<string, number>()),
+      driverRouteKm(orders, tenant, periodRange({ key: "week" }, t).from.toISOString()).catch(() => new Map<string, number>()),
+    ]);
+    drivers.forEach((d, i) => {
+      const key = `Driver ${i + 1}`;
+      if (snap.facts[key] != null && d.telegramChatId) {
+        snap.facts[key] += `; km driven on jobs this week ≈ ${kmWeek.get(d.telegramChatId) ?? 0}, this month ≈ ${kmMonth.get(d.telegramChatId) ?? 0}; location ${d.locationAt ? `last shared ${timeAgo(d.locationAt, t)}` : "never shared"}; paid ${d.payType === "SALARY" ? "a monthly salary" : "per trip"}`;
+      }
+    });
+    const plan = planState(tenant);
+    snap.facts["plan"] = `${plan.state.toLowerCase()}${plan.daysLeft != null ? `, ${plan.daysLeft} days left` : ""}`;
+    snap.facts["pickup area (km around the store)"] = tenant.serviceRadiusKm;
+    snap.facts["store placed on the map"] = tenant.storeLat != null ? "yes" : "no";
+    const online = devices.filter((d) => d.lastSeenAt && t.getTime() - new Date(d.lastSeenAt).getTime() < 15 * 60_000).length;
+    snap.facts["smart baskets"] = `${devices.length} in total, ${online} online now`;
+    const filled = devices.filter((d) => d.targetKg && d.lastWeightKg != null).map((d) => (d.lastWeightKg! / d.targetKg!) * 100);
+    if (filled.length) snap.facts["average basket fill (%)"] = Math.round(filled.reduce((x, y) => x + y, 0) / filled.length);
+    snap.facts["customers who ordered in the last 30 days"] = new Set(orders.filter((o) => t.getTime() - new Date(o.createdAt).getTime() < 30 * 86_400_000).map((o) => o.customerId ?? o.deviceId)).size;
     who = `the manager of a laundry business${tenant.country !== "IN" ? ` in ${countryOf(tenant.country).name}` : " in India"}`;
   } else if (session.role === "CUSTOMER") {
     const [orders, customer, credit] = await Promise.all([listOrdersForCustomer(session.userId), getCustomer(session.userId), getCustomerCredit(session.userId)]);
     const tenant = customer?.tenantId ? await getTenantById(customer.tenantId) : undefined;
     snap = inCurrency(customerSnapshot(orders, tenant?.pricePerKg, credit), tenant?.currency ?? "INR");
+    if (tenant) {
+      snap.facts["laundry turnaround promise (hours)"] = tenant.turnaroundHours;
+      snap.facts["laundry delivers back"] = tenant.delivers ? "yes" : "no, collect from the store";
+    }
     who = "a customer of a laundry";
   } else {
     const [tenants, orders, pending] = await Promise.all([listTenants(), listOrders(), listSubscriptionPayments({ status: "PENDING" })]);
@@ -560,17 +589,43 @@ async function analyze(question: string, session: Session): Promise<AssistantRep
       tenants.map((t) => ({ name: t.name, state: planState(t).state, orders30: count(t.id, 0, 30 * 86_400_000), ordersPrev30: count(t.id, 30 * 86_400_000, 60 * 86_400_000) })),
       pending.length,
     );
+    names = tenants.map((t) => t.name);
+    label = "Business";
     who = "the owner of the Toss platform";
   }
-  if (!geminiEnabled()) return { text: "I can't give advice right now, but here are the numbers that matter:", rows: snap.rows };
-  const { text } = await geminiText({
-    system: `You are the assistant inside Toss, a smart laundry service in India, talking to ${who}. Answer their question using ONLY the numbers below. Be direct and practical: start with a clear answer (yes / no / it depends), give the 1-2 numbers that decide it, then one concrete next step. Use simple English that someone with basic English understands. At most 4 short sentences, no headings, no lists, no markdown. Refer to drivers and businesses exactly as they are labelled ("Driver 1", "Business 2"). If the numbers can't answer it, say what is missing. Never invent numbers.
+  if (!geminiEnabled()) return { text: "I can't answer that right now, but here are the numbers that matter:", rows: snap.rows };
+  const alias = aliases(names, label);
+  try {
+    const { data } = await geminiJson<{ answer: string; uses_numbers: boolean }>({
+      system: `You are the assistant inside Toss, a smart laundry service, talking to ${who}. Answer ANY sensible question: about their account, their business, laundry, running a small business, or general knowledge.
+For facts about their account use ONLY the numbers below and never invent any; if a number isn't there, say plainly what you can't see and where in the app to look. For advice, give a clear answer first (yes / no when it's a yes-or-no question), the 1-2 numbers that decide it, then one concrete next step. For general questions, answer from general knowledge.
+Write simple, friendly English that someone with basic English understands; if they wrote in Hindi or Hinglish, reply in the same simple Hinglish. At most 5 short sentences, no headings, no markdown. Refer to people exactly as labelled ("${label} 1", "${label} 2"). Set uses_numbers to true only if your answer relies on the account numbers below.
+Facts about Toss: ${ABOUT_TOSS}
 
 Numbers:
 ${factSheet(snap.facts)}`,
-    prompt: question,
-    temperature: 0.3,
-    timeoutMs: 20_000,
-  });
-  return { text: text.trim(), rows: snap.rows };
+      prompt: alias.hide(question),
+      schema: { type: "object", properties: { answer: { type: "string" }, uses_numbers: { type: "boolean" } }, required: ["answer", "uses_numbers"] },
+      temperature: 0.3,
+      timeoutMs: 20_000,
+    });
+    const answer = alias.show(data.answer.trim());
+    return data.uses_numbers ? { text: answer, rows: snap.rows } : { text: answer };
+  } catch {
+    return { text: "I couldn't think that through just now. Here are the numbers that matter; ask again in a moment:", rows: snap.rows };
+  }
+}
+
+/**
+ * Real names → "Driver 1, 2 …" before a question goes to the AI, and back to first names in its answer, so the
+ * AI never sees who anyone is but "how far did Arpan drive" still works.
+ */
+export function aliases(names: string[], label: string): { hide: (s: string) => string; show: (s: string) => string } {
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = names.flatMap((n, i) => [n, ...n.split(/\s+/).filter((p) => p.length > 2)].map((p) => [p, i] as const));
+  parts.sort((x, y) => y[0].length - x[0].length);
+  return {
+    hide: (s) => parts.reduce((acc, [p, i]) => acc.replace(new RegExp(`\\b${esc(p)}\\b`, "gi"), `${label} ${i + 1}`), s),
+    show: (s) => s.replace(new RegExp(`\\b${label} (\\d+)\\b`, "g"), (m, k) => names[Number(k) - 1]?.split(/\s+/)[0] ?? m),
+  };
 }

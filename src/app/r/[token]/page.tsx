@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AreaMap } from "@/components/area-map";
+import { LiveLocation } from "@/components/live-location";
 import { MAX_WAYPOINTS } from "@/lib/dispatch/core";
 import { planByToken } from "@/lib/dispatch/service";
 
@@ -26,6 +27,7 @@ export default async function DriverRoute({ params }: { params: Promise<{ token:
         <p className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">Toss Handy · {plan.name}</p>
         <h1 className="mt-1 text-2xl font-black tracking-tight">{jobs ? `My route · ${jobs} stop${jobs > 1 ? "s" : ""}` : "No open jobs"}</h1>
       </div>
+      <LiveLocation token={token} />
 
       {!jobs ? (
         <p className="rounded-[10px] border border-border p-5 text-sm text-secondary">🧺 Nothing open right now. New pickups and deliveries arrive in your Telegram bot.</p>

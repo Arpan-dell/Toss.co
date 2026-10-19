@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chooseDriver, directionsUrl, distanceKm, orderStops, routeUrl, type DriverCandidate } from "./core";
+import { LIVE_FOREVER, liveUntil, locationState } from "./core";
 
 const NOW = new Date("2026-10-01T10:00:00Z");
 const fresh = new Date(NOW.getTime() - 5 * 60_000).toISOString();
@@ -100,5 +101,27 @@ describe("routes", () => {
   it("caps waypoints at Google's limit of 9", () => {
     const url = new URL(directionsUrl({ destination: SAKET, waypoints: Array.from({ length: 12 }, () => HAUZ_KHAS) }));
     expect(url.searchParams.get("waypoints")!.split("|")).toHaveLength(9);
+  });
+});
+
+describe("driver location freshness", () => {
+  const now = Date.UTC(2026, 9, 19, 10);
+  const ago = (min: number) => new Date(now - min * 60_000).toISOString();
+
+  it("live location stays live through a quiet spell, until it runs out", () => {
+    expect(locationState({ locationAt: ago(40), liveUntil: liveUntil(LIVE_FOREVER, now) }, now)).toBe("live");
+    expect(locationState({ locationAt: ago(40), liveUntil: ago(5) }, now)).toBe("stale");
+    expect(locationState({ locationAt: ago(90), liveUntil: liveUntil(LIVE_FOREVER, now) }, now)).toBe("stale");
+  });
+
+  it("a one-off point counts for 20 minutes; nothing at all is stale", () => {
+    expect(locationState({ locationAt: ago(10) }, now)).toBe("recent");
+    expect(locationState({ locationAt: ago(25) }, now)).toBe("stale");
+    expect(locationState({}, now)).toBe("stale");
+  });
+
+  it("works out when a live location ends", () => {
+    expect(liveUntil(3600, now)).toBe(new Date(now + 3_600_000).toISOString());
+    expect(liveUntil(LIVE_FOREVER, now).startsWith("2100-")).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
-import { dispatchEnabled, dispatchOrder } from "@/lib/dispatch/service";
+import { after } from "next/server";
+import { dispatchEnabled, dispatchOrder, nudgeStaleDrivers } from "@/lib/dispatch/service";
 import { handleIngest } from "@/lib/ingest/handle";
 import { SupabaseStore } from "@/lib/ingest/supabase-store";
 import { applyOfferToOrder } from "@/lib/offers";
@@ -12,6 +13,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "Ingest not configured" }, { status: 503 });
   }
 
+  // baskets ping every few minutes: a free clock for reminding online drivers whose location stopped
+  after(() => nudgeStaleDrivers().catch((err) => logError("location reminders failed", err)));
   try {
     const res = await handleIngest(
       { method: "POST", deviceKey: request.headers.get("x-device-key"), bodyText: await request.text() },

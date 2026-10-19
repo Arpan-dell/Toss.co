@@ -85,6 +85,27 @@ export type Place = LatLng | string; // coordinates, or an address Google can se
 
 const place = (p: Place) => (typeof p === "string" ? p : fmt(p));
 
+// ---------- is the driver's location up to date? ----------
+
+/** Telegram's live_period for "Until I turn it off". */
+export const LIVE_FOREVER = 0x7fffffff;
+
+/** When a live location shared now for `livePeriod` seconds stops (ISO). "Until I turn it off" -> 2100. */
+export function liveUntil(livePeriod: number, now = Date.now()): string {
+  return new Date(livePeriod >= LIVE_FOREVER ? Date.UTC(2100, 0, 1) : now + livePeriod * 1000).toISOString();
+}
+
+/**
+ * "live": sharing live location (Telegram only sends a new point when they move, so a quiet hour still counts);
+ * "recent": a point from the last 20 minutes; "stale": nothing usable, so the driver should be reminded.
+ */
+export function locationState(d: { locationAt?: string | null; liveUntil?: string | null }, now = Date.now()): "live" | "recent" | "stale" {
+  const at = d.locationAt ? new Date(d.locationAt).getTime() : 0;
+  if (!at) return "stale";
+  if (d.liveUntil && new Date(d.liveUntil).getTime() > now && now - at < 60 * 60_000) return "live";
+  return now - at < 20 * 60_000 ? "recent" : "stale";
+}
+
 // Google Maps directions link (no API key): https://developers.google.com/maps/documentation/urls/get-started
 // Google Maps supports at most 9 waypoints in a link.
 export const MAX_WAYPOINTS = 9;

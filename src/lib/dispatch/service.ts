@@ -44,7 +44,7 @@ export async function withdrawJob(orderId: string, kind: "pickup" | "delivery", 
   await db().from("drivers").update({ delivering_order_id: null }).eq("telegram_chat_id", chatId).eq("delivering_order_id", orderId);
   if (token && note) await sendMessage(token, chatId, note);
 }
-import { chooseDriver, directionsUrl, searchUrl, type DriverCandidate, type LatLng } from "./core";
+import { chooseDriver, directionsUrl, liveUntil, locationState, searchUrl, type DriverCandidate, type LatLng } from "./core";
 import { geocode } from "./geocode";
 import { MAX_KG, MIN_KG, parseWeight, repriceForWeight } from "./weighing";
 import { formatterFor, INDIA_FORMAT, regionOf, type Formatter } from "../region-format";
@@ -205,6 +205,63 @@ const routeLink = (d: Row) => `${APP_URL}/r/${d.route_token as string}`;
  * Where the driver was when they were given this job (if their live location is recent), so the distance they
  * cover is counted from their real starting point. Never fails the assignment (and does nothing before 0038).
  */
+const LIVE_STEPS = "📎 → <b>Location</b> → <b>Share My Live Location</b> → <b>Until I turn it off</b>";
+
+/** live / recent / stale for one driver (stale before migration 0038 adds live_until). */
+async function isLive(driverId: string) {
+  const { data } = await db().from("drivers").select("location_at, live_until").eq("id", driverId).maybeSingle();
+  return locationState({ locationAt: data?.location_at as string | null, liveUntil: data?.live_until as string | null });
+}
+
+let lastSweep = 0;
+
+/**
+ * Online drivers whose location stopped updating (live location ended, or never turned on) get a reminder in
+ * Toss Handy, at most every 30 minutes. Runs on basket pings and from the cron endpoints, so no paid scheduler
+ * is needed; `force` skips this server instance's 2-minute throttle.
+ */
+export async function nudgeStaleDrivers(opts: { tenantId?: string; force?: boolean } = {}): Promise<number> {
+  const token = driverToken();
+  if (!token || (!opts.force && Date.now() - lastSweep < 2 * 60_000)) return 0;
+  lastSweep = Date.now();
+  let q = db().from("drivers").select("id, telegram_chat_id, location_at, live_until").neq("status", "OFFLINE").not("telegram_chat_id", "is", null);
+  if (opts.tenantId) q = q.eq("tenant_id", opts.tenantId);
+  const { data, error } = await q;
+  if (error || !data) return 0; // before 0038
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - 30 * 60_000).toISOString();
+  let sent = 0;
+  for (const d of data) {
+    if (locationState({ locationAt: d.location_at as string | null, liveUntil: d.live_until as string | null }, now.getTime()) !== "stale") continue;
+    // claim the reminder first, so two sweeps at once send it only once
+    const { data: claimed } = await db()
+      .from("drivers")
+      .update({ location_nudged_at: now.toISOString() })
+      .eq("id", d.id as string)
+      .or(`location_nudged_at.is.null,location_nudged_at.lt.${cutoff}`)
+      .select("id");
+    if (!claimed?.length) continue;
+    await sendMessage(
+      token,
+      d.telegram_chat_id as string,
+      `📍 <b>Your location isn't updating</b>\n${LINE}\nYou're online, but Toss can't see where you are, so nearby jobs may go to someone else.\n\nTurn it on once for the whole shift:\n${LIVE_STEPS}\n\n<i>Finished for the day? Tap 🔴 Offline.</i>`,
+      { keyboard: MENU },
+    ).catch((e) => logError("location reminder failed", e));
+    sent++;
+  }
+  return sent;
+}
+
+/** A point from the route page (browser location while it's open), found by the driver's secret route token. */
+export async function locationByToken(token: string, lat: number, lng: number): Promise<boolean> {
+  const { data } = await db()
+    .from("drivers")
+    .update({ last_lat: lat, last_lng: lng, location_at: new Date().toISOString() })
+    .eq("route_token", token)
+    .select("id");
+  return !!data?.length;
+}
+
 export async function noteStart(orderId: string, chatId: string, kind: "pickup" | "delivery"): Promise<void> {
   try {
     const { data: d } = await db().from("drivers").select("last_lat, last_lng, location_at").eq("telegram_chat_id", chatId).maybeSingle();
@@ -620,6 +677,7 @@ const MENU = {
     [{ text: "🟢 Online" }, { text: "🔴 Offline" }],
     [{ text: "📋 My jobs" }, { text: "🛣 My route" }],
     [{ text: "👤 My status" }, { text: "💰 My earnings" }],
+    [{ text: "📍 Send my location", request_location: true }],
   ],
   resize_keyboard: true,
   is_persistent: true,
@@ -832,12 +890,17 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
       .eq("id", driver.id as string);
     if (update.message) {
       const live = !!msg.location.live_period;
+      // when this live location runs out; a fresh point also clears the reminder (no-op before 0038)
+      await db()
+        .from("drivers")
+        .update({ live_until: live ? liveUntil(msg.location.live_period!) : null, location_nudged_at: null })
+        .eq("id", driver.id as string);
       await sendMessage(
         token,
         chatId,
         live
-          ? "📍 <b>Live location on</b>\nYou'll get the pickups nearest to you."
-          : "📍 <b>Got it</b>\nFor automatic nearest pickups, share your <b>live</b> location: 📎 → Location → <i>Share live location</i>.",
+          ? "📍 <b>Live location on</b>\nYour location now updates by itself while you work, and you'll get the pickups nearest to you."
+          : `📍 <b>Got it</b>\nThis was one point. So it updates by itself all shift:\n${LIVE_STEPS}`,
         { keyboard: MENU },
       );
       if (driver.status !== "OFFLINE") await dispatchWaiting(driver.tenant_id as string);
@@ -913,15 +976,18 @@ export async function handleDriverUpdate(update: TgUpdate): Promise<void> {
   } else if (text === "🟢 Online" || text === "/online") {
     await db().from("drivers").update({ status: "AVAILABLE" }).eq("id", driver.id as string);
     const placed = await dispatchWaiting(driver.tenant_id as string);
+    const live = (await isLive(driver.id as string)) === "live";
     await sendMessage(
       token,
       chatId,
-      `🟢 <b>You're online</b>\n${LINE}\n${placed ? `🧺 ${placed} waiting pickup${placed > 1 ? "s" : ""} assigned to you.` : "New pickups will come here."}${driver.location_at ? "" : "\n\n📍 Share your <b>live location</b> so you get the nearest ones."}`,
+      `🟢 <b>You're online</b>\n${LINE}\n${placed ? `🧺 ${placed} waiting pickup${placed > 1 ? "s" : ""} assigned to you.` : "New pickups will come here."}${
+        live ? "\n📍 Live location is on." : `\n\n📍 <b>Now turn on live location</b>, once for the whole shift:\n${LIVE_STEPS}`
+      }`,
       { keyboard: MENU },
     );
   } else if (text === "🔴 Offline" || text === "/offline") {
     await db().from("drivers").update({ status: "OFFLINE" }).eq("id", driver.id as string);
-    await sendMessage(token, chatId, `🔴 <b>You're offline</b>\n${LINE}\nNo new pickups until you go online.\nFinish any open ones from 📋 <b>My pickups</b>.`, { keyboard: MENU });
+    await sendMessage(token, chatId, `🔴 <b>You're offline</b>\n${LINE}\nNo new pickups until you go online.\nFinish any open ones from 📋 <b>My pickups</b>.\n<i>You can stop sharing your live location now.</i>`, { keyboard: MENU });
   } else if (text === "👤 My status" || text === "/status") {
     await sendMessage(token, chatId, await statusCard(driver), { keyboard: MENU });
   } else if (text === "💰 My earnings" || text === "/earnings") {

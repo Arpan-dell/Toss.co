@@ -11,6 +11,7 @@ import { AddDriverForm, BasketEditor, DriverStatusControl } from "./forms";
 import { getSession } from "@/lib/session";
 import { driverRouteKm } from "@/lib/driver-routes";
 import { startOfDay } from "@/lib/route-distance";
+import type { Order } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Fleet" };
 
@@ -32,11 +33,18 @@ export default async function Fleet() {
     listCustomers(),
   ]);
   const current = now();
-  const todayKey = current.toISOString().slice(0, 10);
-  // kilometres each driver covered on today's jobs (stop to stop, from where they started)
+  // kilometres each driver covered on jobs (stop to stop, from where they started): today, yesterday, this month
   const session = await getSession();
   const tenant = await getTenantById(session?.tenantId);
-  const kmToday = tenant ? await driverRouteKm(all, tenant, startOfDay(current, tenant.timezone || "Asia/Kolkata")) : new Map<string, number>();
+  const tz = tenant?.timezone || "Asia/Kolkata";
+  const dayStart = startOfDay(current, tz);
+  const yesterdayStart = startOfDay(new Date(new Date(dayStart).getTime() - 12 * 3_600_000), tz);
+  const dayOfMonth = Number(new Intl.DateTimeFormat("en-US", { timeZone: tz, day: "numeric" }).format(current));
+  const monthStart = startOfDay(new Date(new Date(dayStart).getTime() - (dayOfMonth - 1) * 86_400_000 + 12 * 3_600_000), tz);
+  const none = new Map<string, number>();
+  const [kmToday, kmYesterday, kmMonth] = tenant
+    ? await Promise.all([driverRouteKm(all, tenant, dayStart), driverRouteKm(all, tenant, yesterdayStart, dayStart), driverRouteKm(all, tenant, monthStart)])
+    : [none, none, none];
   const owner = new Map(customers.map((c) => [c.id, c]));
   const botUsername = process.env.TELEGRAM_DRIVER_BOT_USERNAME;
 
@@ -68,86 +76,100 @@ export default async function Fleet() {
         {drivers.length === 0 ? (
           <EmptyState>No drivers yet. Add your first one above.</EmptyState>
         ) : (
-          <div className="-mx-5 overflow-x-auto">
-            <table className="w-full min-w-[860px] text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-[11px] tracking-[0.12em] text-muted uppercase">
-                  <th className="px-5 py-2 font-medium">Driver</th>
-                  <th className="px-3 py-2 font-medium">Status</th>
-                  <th className="px-3 py-2 font-medium">Location</th>
-                  <th className="px-3 py-2 font-medium">Current job</th>
-                  <th className="px-3 py-2 text-right font-medium">Today</th>
-                  <th className="px-3 py-2 text-right font-medium" title="Stop to stop from where they started; detours don't count">Km today</th>
-                  <th className="px-3 py-2 font-medium">Max at once</th>
-                  <th className="px-5 py-2 font-medium" />
-                </tr>
-              </thead>
-              <tbody>
-                {drivers.map((drv) => {
-                  const mine = (o: { driverId?: string }) => !!drv.telegramChatId && o.driverId === drv.telegramChatId;
-                  const job = active.find((o) => mine(o) && o.status === "ACCEPTED");
-                  const today = all.filter((o) => mine(o) && o.completedAt?.startsWith(todayKey)).length;
-                  return (
-                    <tr key={drv.id} className="border-b border-border transition-colors last:border-0 hover:bg-ink/[0.03]">
-                      <td className="px-5 py-2.5">
-                        <p className="font-medium">{drv.name}</p>
+          <>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {drivers.map((drv) => {
+                const chat = drv.telegramChatId;
+                const pickedUp = (o: Order) => !!chat && o.driverId === chat;
+                const delivered = (o: Order) => !!chat && o.deliveryDriverId === chat;
+                const job = active.find((o) => pickedUp(o) && o.status === "ACCEPTED");
+                const jobsToday =
+                  all.filter((o) => pickedUp(o) && !!o.completedAt && o.completedAt >= dayStart).length +
+                  all.filter((o) => delivered(o) && o.deliveryStatus === "DELIVERED" && !!o.deliveredAt && o.deliveredAt >= dayStart).length;
+                const km = (m: Map<string, number>) => (chat && m.get(chat) ? `≈ ${m.get(chat)}` : "0");
+                const age = drv.locationAt ? current.getTime() - new Date(drv.locationAt).getTime() : Infinity;
+                const live = age < 30 * 60_000;
+                const mapUrl = drv.location ? `https://www.google.com/maps/search/?api=1&query=${drv.location.lat},${drv.location.lng}` : null;
+                return (
+                  <article key={drv.id} className="space-y-4 rounded-[12px] border border-border bg-surface-solid p-4 sm:p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold text-fg">{drv.name}</p>
                         {drv.phone ? (
-                          <a href={`tel:${drv.phone}`} className="text-xs text-muted tabular-nums hover:text-fg">
-                            {formatPhone(drv.phone)}
+                          <a href={`tel:${drv.phone}`} className="text-sm text-secondary tabular-nums hover:text-fg">
+                            📞 {formatPhone(drv.phone)}
                           </a>
                         ) : (
-                          <p className="font-mono text-xs text-muted">{drv.telegramChatId}</p>
+                          <p className="font-mono text-xs text-muted">{chat}</p>
                         )}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        {!drv.telegramChatId ? (
-                          <Badge tone="warn" icon="!">Not connected to Telegram yet</Badge>
-                        ) : (
-                          <DriverStatusControl driverId={drv.id} name={drv.name} status={drv.status} />
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 text-xs">
-                        {drv.location && drv.locationAt ? (
-                          <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${drv.location.lat},${drv.location.lng}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={current.getTime() - new Date(drv.locationAt).getTime() < 30 * 60_000 ? "text-good" : "text-muted"}
-                          >
-                            Seen {timeAgo(drv.locationAt, current)}
-                          </a>
-                        ) : (
-                          <span className="text-muted">Not shared</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 text-secondary">{job ? `${orderLabel(job)} · ${job.address}` : "—"}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{today}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{drv.telegramChatId && kmToday.get(drv.telegramChatId) ? `≈ ${kmToday.get(drv.telegramChatId)}` : "—"}</td>
-                      <td className="px-3 py-2.5">
-                        <form action={setDriverMaxJobs} className="flex items-center gap-1.5">
-                          <input type="hidden" name="driverId" value={drv.id} />
-                          <select name="maxJobs" defaultValue={drv.maxJobs} aria-label={`Max pickups at once for ${drv.name}`} className="rounded-lg border border-border bg-surface-solid px-2 py-1 text-xs">
-                            {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
-                              <option key={n} value={n}>{n}</option>
-                            ))}
-                          </select>
-                          <button className="text-xs text-accent hover:text-accent-2">Set</button>
-                        </form>
-                      </td>
-                      <td className="px-5 py-2.5 text-right">
-                        <ConfirmButton
-                          action={deleteDriver}
-                          fields={{ driverId: drv.id }}
-                          label="Remove"
-                          confirm={`Remove ${drv.name}? Their past pickups stay in your history.`}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                      {!chat ? <Badge tone="warn">Not connected to Telegram yet</Badge> : <DriverStatusControl driverId={drv.id} name={drv.name} status={drv.status} />}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      {mapUrl ? (
+                        <a
+                          href={mapUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-medium transition-colors ${
+                            live ? "border-good/40 bg-good-bg text-good hover:border-good" : "border-border-strong text-fg hover:border-accent hover:text-accent"
+                          }`}
+                        >
+                          📍 {live ? "Live" : `Last seen ${timeAgo(drv.locationAt!, current)}`} · See on map ↗
+                        </a>
+                      ) : (
+                        <span className="rounded-full border border-border px-3 py-1.5 text-muted">📍 Location not shared yet</span>
+                      )}
+                      {!live && chat && drv.status !== "OFFLINE" && <span className="text-xs text-warn">Old location: the bot is reminding them to share live location.</span>}
+                    </div>
+
+                    <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      {[
+                        ["Jobs today", String(jobsToday)],
+                        ["Km today", km(kmToday)],
+                        ["Km yesterday", km(kmYesterday)],
+                        ["Km this month", km(kmMonth)],
+                      ].map(([label, value]) => (
+                        <div key={label} className="rounded-[8px] border border-border px-3 py-2">
+                          <dt className="text-[11px] tracking-[0.08em] text-muted uppercase">{label}</dt>
+                          <dd className="mt-0.5 text-lg font-semibold text-fg tabular-nums">{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+
+                    <p className="text-sm text-secondary">
+                      <span className="text-muted">Now: </span>
+                      {job ? `${orderLabel(job)} · ${job.address}` : "no job"}
+                    </p>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
+                      <form action={setDriverMaxJobs} className="flex items-center gap-2 text-sm">
+                        <input type="hidden" name="driverId" value={drv.id} />
+                        <label htmlFor={`max-${drv.id}`} className="text-secondary">Jobs at once</label>
+                        <select id={`max-${drv.id}`} name="maxJobs" defaultValue={drv.maxJobs} className="rounded-lg border border-border bg-surface-solid px-2 py-1 text-sm">
+                          {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                            <option key={n} value={n}>{n}</option>
+                          ))}
+                        </select>
+                        <button className="text-sm text-accent hover:text-accent-2">Save</button>
+                      </form>
+                      <ConfirmButton
+                        action={deleteDriver}
+                        fields={{ driverId: drv.id }}
+                        label="Remove"
+                        confirm={`Remove ${drv.name}? Their past pickups stay in your history.`}
+                      />
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            <p className="mt-4 text-xs text-muted">
+              Km is counted stop to stop on jobs, from where the driver was when given the job: pickups, the store and deliveries. Detours and
+              trips home don&apos;t count.
+            </p>
+          </>
         )}
       </Card>
 

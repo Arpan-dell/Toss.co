@@ -14,6 +14,8 @@ export type Intent =
   | { tool: "order"; number: number }
   | { tool: "driver"; name: string }
   | { tool: "drivers" }
+  | { tool: "distance"; who: string; period: Period }
+  | { tool: "area"; op: "show" | "set" | "change"; km?: number }
   | { tool: "attention" }
   | { tool: "basket" }
   | { tool: "credit" }
@@ -128,6 +130,16 @@ export function matchIntent(raw: string, role: AssistantRole): Intent | null {
   if (num) return { tool: "order", number: Number(num[1]) };
 
   if (role === "MANAGER") {
+    // pickup area: "decrease my area of work by 1 km", "set my radius to 5 km", "what is my service area"
+    const area = areaIntent(t);
+    if (area) return area;
+    // kilometres driven on jobs: "distance travelled by arpan this month", "how many km did ravi drive today"
+    if (/\b(distance|kms?|kilomet\w*|travell?ed|travel|drove|driven|covered|mileage)\b/.test(t) && !/\bhow far (is|are)\b/.test(t)) {
+      return { tool: "distance", who: t, period: periodFrom(t) };
+    }
+  }
+
+  if (role === "MANAGER") {
     // where is a driver: "where is ravi", "ravi's location", "locate vikram"
     const where = t.match(/\bwhere(?:'s| is| are)\s+(?:the\s+)?(?:driver\s+)?([a-z][a-z .'-]{1,40}?)(?:\s+(?:now|right now|currently|at the moment|today))?$/);
     const locate = t.match(/\b(?:locate|track|location of|position of)\s+(?:the\s+)?(?:driver\s+)?([a-z][a-z .'-]{1,40}?)$/);
@@ -165,6 +177,25 @@ export function matchIntent(raw: string, role: AssistantRole): Intent | null {
     if (hit) return { tool: "go", href: hit.href, label: hit.label };
   }
   return null;
+}
+
+// ---------- manager: the pickup area around the store ----------
+const AREA = /\b(area|radius|range|zone|coverage|service area|pickup area|delivery area|ilaka|ilaaka)\b/;
+const SHRINK = /\b(decrease|reduce|shrink|lower|cut|smaller|less|kam|ghatao|ghata)\b/;
+const GROW = /\b(increase|expand|extend|grow|raise|bigger|more|wider|badha\w*|zyada)\b/;
+
+/** "decrease my area of work by 1 km" → change by -1; "set my radius to 5 km" → 5; "what's my area" → show. */
+export function areaIntent(t: string): Intent | null {
+  if (!AREA.test(t) || /\b(driver|order|basket|password|theme)\b/.test(t)) return null;
+  const n = t.match(/(\d{1,2}(?:\.\d)?)\s*(?:km|kms|kilomet\w*)?\b/);
+  const km = n ? Math.round(Number(n[1])) : undefined;
+  const asking = GENERAL.test(t);
+  const shrink = SHRINK.test(t), grow = GROW.test(t);
+  if (!asking && km != null && (shrink || grow) && shrink !== grow && /\bby\b/.test(t)) return { tool: "area", op: "change", km: shrink ? -km : km };
+  if (!asking && km != null && /\b(set|make|change|to|keep|rakho|kar do|karo)\b/.test(t) && !shrink && !grow) return { tool: "area", op: "set", km };
+  if (!asking && km != null && (shrink || grow) && shrink !== grow) return { tool: "area", op: "set", km };
+  if (!asking && km == null && (shrink || grow) && shrink !== grow) return { tool: "area", op: "change", km: shrink ? -1 : 1 };
+  return { tool: "area", op: "show" };
 }
 
 // ---------- owner: change a business's free trial ----------
@@ -223,6 +254,8 @@ const HINGLISH: [RegExp, string][] = [
   [/\b(?:mera|meri|mere)\s+(?:basket|tokri)\s+(?:kitna|kitni|kitne)\s+(?:bhara|bhari|full)\b/, "how full is my basket"],
   [/\b(?:order|pickup)\s+(?:dikha do|dikhao|batao)\b/, "show my orders"],
   [/\b(\d{1,3})\s*din\b/, "$1 days"],
+  [/\b(?:bulao|bula do|bula lo|bulaao|call karo|call kar do|phone karo|phone lagao)\b/, "call"],
+  [/\b(?:usko|unko|unhe)\b/, ""],
   [/\b(?:badha do|badhao|badha de|badha dijiye|aur de do)\b/, "extend"],
   [/\b(?:khatam|khtm|band)\s+(?:kar do|kardo|karo|kar de|kar dijiye)\b/, "end"],
 ];
@@ -276,7 +309,7 @@ export const differs = (a: string, b: string) => a.toLowerCase().replace(/[^a-z0
 
 const EXAMPLES: Record<AssistantRole, string[]> = {
   CUSTOMER: ["How full is my basket?", "Where is my pickup?", "What do I owe?", "How much credit do I have?", "Show my recent orders", "Switch to dark mode", "Change my password"],
-  MANAGER: ["Today's summary", "What needs attention?", "Where are my drivers?", "Show unpaid bills", "Orders waiting for a driver", "Orders out for delivery", "Open payments", "Switch to dark mode", "Change my password"],
+  MANAGER: ["Today's summary", "What needs attention?", "Where are my drivers?", "Km driven by drivers this month", "What is my pickup area?", "Show unpaid bills", "Orders waiting for a driver", "Orders out for delivery", "Open payments", "Switch to dark mode", "Change my password"],
   OWNER: ["Platform summary", "Pending subscription payments", "Extend a trial by 7 days", "Open basket credits", "Switch to dark mode", "Change my password"],
 };
 

@@ -141,3 +141,25 @@ describe("owner trial commands", () => {
     expect(matchIntent(understand("fresh ka trial khatam kar do"), "OWNER")).toMatchObject({ tool: "trial", op: "end", confirmed: false });
   });
 });
+
+describe("driver distance, pickup area and Hinglish driver names", () => {
+  it("routes distance questions with their period", () => {
+    expect(matchIntent("distance travelled by arpan this month", "MANAGER")).toMatchObject({ tool: "distance", period: { key: "month" } });
+    expect(matchIntent("how many km did ravi drive today", "MANAGER")).toMatchObject({ tool: "distance", period: { key: "today" } });
+    expect(matchIntent("distance travelled by arpan this month", "CUSTOMER")?.tool).not.toBe("distance");
+  });
+
+  it("changes, sets or shows the pickup area", () => {
+    expect(matchIntent("decrease my area of work by 1 km", "MANAGER")).toEqual({ tool: "area", op: "change", km: -1 });
+    expect(matchIntent("increase service area by 2 km", "MANAGER")).toEqual({ tool: "area", op: "change", km: 2 });
+    expect(matchIntent("set my radius to 5 km", "MANAGER")).toEqual({ tool: "area", op: "set", km: 5 });
+    expect(matchIntent("what is my pickup area", "MANAGER")).toEqual({ tool: "area", op: "show" });
+    expect(matchIntent("can I decrease my area of work by 1 km", "MANAGER")).toEqual({ tool: "area", op: "show" });
+  });
+
+  it("understands 'arpan kahan hai bulao usko'", () => {
+    const fixed = understand("arpan kahan hai bulao usko", ["arpan"]);
+    expect(matchIntent(fixed, "MANAGER")).toMatchObject({ tool: "driver" });
+    expect((matchIntent(fixed, "MANAGER") as { name: string }).name).toContain("arpan");
+  });
+});

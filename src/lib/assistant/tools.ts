@@ -27,6 +27,8 @@ import { profitReport } from "../profit-report";
 import { nowText, type Intent, type Period } from "./intents";
 import { paidOnline } from "../pay-methods";
 import { countryOf } from "../regions";
+import { driverRouteKm } from "../driver-routes";
+import { supabaseAdmin } from "../supabase/admin";
 
 // What the assistant does for each request. Every read goes through the signed-in user's own database client, so
 // row-level security decides what they see: a customer only their own pickups, a manager only their business.
@@ -139,6 +141,52 @@ async function customerTool(intent: Intent, session: Session): Promise<Assistant
   const owed = orders.filter(unpaid);
   const owedSum = owed.reduce((s, o) => s + o.amountDue, 0);
 
+  if (intent.tool === "distance") {
+    const { from, to, label } = periodRange(intent.period, now());
+    const [drivers, orders, tenant] = await Promise.all([listDrivers(), listOrders(), getTenantById(session.tenantId)]);
+    if (!tenant) return { text: "This account isn't linked to a business yet." };
+    if (!drivers.length) return { text: "You haven't added any drivers yet.", links: [{ label: "Fleet", href: "/admin/fleet" }] };
+    const km = await driverRouteKm(orders, tenant, from.toISOString(), to.toISOString());
+    const named = namedIn(drivers, intent.who);
+    const list = named.length ? named : drivers;
+    const of = (d: Driver) => (d.telegramChatId ? (km.get(d.telegramChatId) ?? 0) : 0);
+    const rows: [string, string][] = list.map((d) => [d.name, `≈ ${of(d)} km`]);
+    const how = "Counted stop to stop from where they started: pickups, the store and deliveries. Detours don't count.";
+    if (named.length === 1) {
+      const d = named[0];
+      return {
+        text: of(d) ? `${d.name} drove about ${of(d)} km on jobs ${label}. ${how}` : `${d.name} has no finished pickups or deliveries ${label}, so 0 km.`,
+        rows: [["Distance", `≈ ${of(d)} km`]],
+        links: [{ label: "Driver pay", href: "/admin/driver-pay" }],
+      };
+    }
+    const total = Math.round(list.reduce((s, d) => s + of(d), 0) * 10) / 10;
+    return { text: `Your drivers drove about ${total} km on jobs ${label}. ${how}`, rows, links: [{ label: "Fleet", href: "/admin/fleet" }] };
+  }
+
+  if (intent.tool === "area") {
+    const tenant = await getTenantById(session.tenantId);
+    if (!tenant) return { text: "This account isn't linked to a business yet." };
+    const cur = tenant.serviceRadiusKm;
+    const links = [{ label: "Business details", href: "/admin/business" }];
+    if (intent.op === "show") {
+      return {
+        text: `You pick up within ${cur} km of your store.${tenant.storeLat == null ? " Place your store on the map under Business details so this works." : ""}`,
+        links,
+        chips: [cur < 20 ? "Increase my area by 1 km" : "", cur > 1 ? "Decrease my area by 1 km" : ""].filter(Boolean),
+      };
+    }
+    const next = intent.op === "change" ? cur + (intent.km ?? 0) : (intent.km ?? cur);
+    if (next < 1 || next > 20) return { text: `The pickup area can be 1 to 20 km. It's ${cur} km now.`, links };
+    if (next === cur) return { text: `Your pickup area is already ${cur} km.`, links };
+    // not in the manager's column grants: written here, after the manager check, like Business details does
+    const { error } = await supabaseAdmin().from("tenants").update({ service_radius_km: next }).eq("id", session.tenantId);
+    if (error) return { text: "I couldn't change it just now. Try again, or change it under Business details.", links };
+    revalidatePath("/admin", "layout");
+    revalidatePath("/laundries");
+    return { text: `Done. You now pick up within ${next} km of your store (it was ${cur} km).`, links, chips: [`Set my area to ${cur} km`] };
+  }
+
   if (intent.tool === "money") {
     const { from, to, label } = periodRange(intent.period, now());
     const done = orders.filter((o) => o.status === "COMPLETED" && new Date(o.completedAt ?? o.createdAt) >= from && new Date(o.completedAt ?? o.createdAt) < to);
@@ -216,6 +264,15 @@ async function customerTool(intent: Intent, session: Session): Promise<Assistant
 }
 
 // ---------- laundry managers ----------
+/** Drivers whose name (or first name) appears as a word in free text: "arpan kahan hai bulao usko" → Arpan. */
+function namedIn(drivers: Driver[], text: string): Driver[] {
+  const words = new Set(text.toLowerCase().split(/[^a-z\u0900-\u097f]+/).filter(Boolean));
+  const full = drivers.filter((d) => text.toLowerCase().includes(d.name.toLowerCase()));
+  if (full.length) return full;
+  return drivers.filter((d) => d.name.toLowerCase().split(/\s+/).some((p) => p.length > 2 && words.has(p)));
+}
+
+// ---------- laundry managers ----------
 async function managerTool(intent: Intent, session: Session): Promise<AssistantReply> {
   const fmt = await formatFor(session);
   if (intent.tool === "driver" || intent.tool === "drivers") {
@@ -241,7 +298,9 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
       drivers.find((d) => d.name.toLowerCase() === want) ??
       drivers.find((d) => d.name.toLowerCase().split(/\s+/).some((p) => p === want)) ??
       drivers.find((d) => d.name.toLowerCase().startsWith(want)) ??
-      drivers.find((d) => d.name.toLowerCase().includes(want));
+      drivers.find((d) => d.name.toLowerCase().includes(want)) ??
+      namedIn(drivers, want)[0];
+    const call: { label: string; href: string; external?: boolean }[] = match?.phone ? [{ label: `📞 Call ${match.name.split(" ")[0]}`, href: `tel:${match.phone}`, external: true }] : [];
     if (!match) {
       return { text: `I can't find a driver called "${intent.name}".`, rows: drivers.slice(0, 8).map((d) => [d.name, DRIVER_STATUS[d.status]]), links: [{ label: "Fleet", href: "/admin/fleet" }] };
     }
@@ -255,7 +314,7 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
       return {
         text: `${match.name} hasn't shared a location yet. They can share live location with the Toss Handy bot.`,
         rows,
-        links: [{ label: "Fleet", href: "/admin/fleet" }],
+        links: [...call, { label: "Fleet", href: "/admin/fleet" }],
       };
     }
     rows.unshift(["Last location", match.locationAt ? `${timeAgo(match.locationAt, now())} (${fmt.dateTime(match.locationAt)})` : "time unknown"]);
@@ -264,6 +323,7 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
       text: stale ? `${match.name}'s last shared location is from ${match.locationAt ? timeAgo(match.locationAt, now()) : "a while ago"}, so they may have moved since.` : `Here's where ${match.name} is now:`,
       rows,
       links: [
+        ...call,
         { label: "Open in Google Maps", href: `https://www.google.com/maps?q=${match.location.lat},${match.location.lng}`, external: true },
         { label: "Fleet", href: "/admin/fleet" },
       ],

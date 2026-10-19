@@ -61,7 +61,7 @@ export async function askAssistant(message: string, history: Turn[] = []): Promi
 
 const TOOLS: Record<AssistantRole, string> = {
   CUSTOMER: `money (how much I spent; set period), overview (everything about my account), basket (how full the basket is), credit (basket credit), orders (filter: active | unpaid | recent), order (number), go (page), theme (mode), password, analyze (a question that needs judgement or an explanation from their numbers: why a bill is higher, should I, is it worth, compare, trends), help (how the app works, how to do something, what a feature means)`,
-  MANAGER: `money (profit, revenue, earnings, costs or sales; set period), overview (today's summary of the business), attention (the live list of problems: only when they ask what is wrong or what needs attention), orders (filter: active | waiting | unpaid | recent | delivery), order (number), driver (name: where a driver is), drivers (list of drivers and their status), go (page), theme (mode), password, analyze (any question that needs judgement, advice, a comparison or an explanation from the business numbers: should I hire or add a driver, are drivers overworked or idle, is business growing, busiest days or hours, why are pickups late, how to earn more, pricing), help (how the app works, how to do something, what a feature or term means)`,
+  MANAGER: `money (profit, revenue, earnings, costs or sales; set period), overview (today's summary of the business), attention (the live list of problems: only when they ask what is wrong or what needs attention), orders (filter: active | waiting | unpaid | recent | delivery), order (number), driver (name: where a driver is, or to call them), drivers (list of drivers and their status), distance (kilometres driven by a driver or all drivers on their jobs; set name if one driver, and period), area (the pickup or service area radius around the store), go (page), theme (mode), password, analyze (any question that needs judgement, advice, a comparison or an explanation from the business numbers: should I hire or add a driver, are drivers overworked or idle, is business growing, busiest days or hours, why are pickups late, how to earn more, pricing), help (how the app works, how to do something, what a feature or term means)`,
   OWNER: `overview (platform summary), orders (filter: unpaid = subscription payments to check), go (page), theme (mode), password, analyze (questions that need judgement from the numbers: which business is growing or shrinking, who might stop paying), help (how the app works)`,
 };
 
@@ -82,7 +82,7 @@ async function aiRoute(text: string, history: Turn[], role: AssistantRole): Prom
     schema: {
       type: "object",
       properties: {
-        tool: { type: "string", enum: ["money", "overview", "basket", "credit", "orders", "order", "driver", "drivers", "attention", "go", "theme", "password", "analyze", "help"] },
+        tool: { type: "string", enum: ["money", "overview", "basket", "credit", "orders", "order", "driver", "drivers", "distance", "area", "attention", "go", "theme", "password", "analyze", "help"] },
         period: { type: "string", enum: ["today", "yesterday", "week", "lastweek", "month", "lastmonth", "days"] },
         days: { type: "integer" },
         rephrased: { type: "string" },
@@ -125,6 +125,14 @@ function toIntent(data: { tool: string; rephrased?: string; name?: string; numbe
       return { tool: "password" };
     case "driver":
       return data.name ? { tool: "driver", name: data.name } : { tool: "drivers" };
+    case "distance": {
+      const keys = ["today", "yesterday", "week", "lastweek", "month", "lastmonth", "days"] as const;
+      const key = keys.find((k) => k === data.period) ?? "month";
+      return { tool: "distance", who: (data.name ?? "").toLowerCase(), period: key === "days" ? { key, days: Math.min(365, Math.max(1, data.days ?? 30)) } : { key } };
+    }
+    case "area":
+      // changing the area only from a clear typed command (the rules above), never from the AI's guess
+      return { tool: "area", op: "show" };
     case "order":
       return data.number ? { tool: "order", number: data.number } : { tool: "orders", filter: "recent" };
     case "orders": {

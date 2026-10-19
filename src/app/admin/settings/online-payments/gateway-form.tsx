@@ -51,7 +51,9 @@ export function GatewayForm({ suggested, pendingRazorpay, action = connectGatewa
           </li>
           <li>
             Type a secret of your own (any long password) and tick the events <b className="text-fg">payment_link.paid</b>,{" "}
-            <b className="text-fg">payment_link.expired</b> and <b className="text-fg">payment_link.cancelled</b>. Save.
+            <b className="text-fg">payment_link.expired</b> and <b className="text-fg">payment_link.cancelled</b>. For automatic payments also tick{" "}
+            <b className="text-fg">payment.captured</b>, <b className="text-fg">payment.failed</b>, <b className="text-fg">invoice.paid</b> and every{" "}
+            <b className="text-fg">subscription.*</b> event. Save.
           </li>
           <li>Paste that same secret below.</li>
         </ol>

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { dispatchOrder, notifyAssignment, withdrawJob } from "../dispatch/service";
+import { dispatchOrder, notifyAssignment, withdrawJob, noteStart } from "../dispatch/service";
 import { getTenantById } from "../data";
 import { formatPhone, normalizePhone } from "../phone";
 import { planState, tierOf } from "../plan";
@@ -69,7 +69,7 @@ export async function addDriver(_prev: FormState, formData: FormData): Promise<F
 export async function setDriverMaxJobs(formData: FormData) {
   await requireManager();
   const maxJobs = Number(text(formData, "maxJobs"));
-  if (!(Number.isInteger(maxJobs) && maxJobs >= 1 && maxJobs <= 9)) throw new Error("Pick 1–9 pickups");
+  if (!(Number.isInteger(maxJobs) && maxJobs >= 1 && maxJobs <= 20)) throw new Error("Pick 1–20 jobs");
   const supabase = await createClient();
   const { error } = await supabase.from("drivers").update({ max_jobs: maxJobs }).eq("id", text(formData, "driverId"));
   if (error) throw new Error(friendlyError(error));
@@ -141,6 +141,7 @@ async function setPickupDriver(formData: FormData): Promise<"same" | "assigned" 
   if (chatId && order.status === "PENDING") Object.assign(patch, { status: "ACCEPTED", accepted_at: new Date().toISOString() });
   const { data: updated, error } = await supabase.from("orders").update(patch).eq("id", orderId).select("id");
   if (error || !updated?.length) throw new Error(friendlyError(error));
+  if (chatId) await noteStart(orderId, chatId, "pickup");
   // the new driver hasn't confirmed yet (server-only columns)
   await supabaseAdmin().from("orders").update({ driver_ack_at: null, assigned_at: chatId ? new Date().toISOString() : null }).eq("id", orderId);
   if (previous) {

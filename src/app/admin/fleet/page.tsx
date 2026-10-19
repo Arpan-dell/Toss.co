@@ -3,11 +3,14 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { planGate } from "@/components/plan-gate";
 import { Badge, Card, EmptyState, FillBar, OnlineBadge, PageTitle } from "@/components/ui";
 import { deleteDriver, setDriverMaxJobs } from "@/lib/actions/manager-ops";
-import { deviceLabel, isDeviceOnline, listActiveOrders, listCustomers, listDevices, listDrivers, listOrders, now } from "@/lib/data";
+import { deviceLabel, isDeviceOnline, listActiveOrders, listCustomers, listDevices, listDrivers, listOrders, now, getTenantById } from "@/lib/data";
 import { orderLabel, timeAgo } from "@/lib/format";
 import { formatPhone } from "@/lib/phone";
 import { DriverBotQr } from "./driver-qr";
 import { AddDriverForm, BasketEditor, DriverStatusControl } from "./forms";
+import { getSession } from "@/lib/session";
+import { driverRouteKm } from "@/lib/driver-routes";
+import { startOfDay } from "@/lib/route-distance";
 
 export const metadata: Metadata = { title: "Fleet" };
 
@@ -30,6 +33,10 @@ export default async function Fleet() {
   ]);
   const current = now();
   const todayKey = current.toISOString().slice(0, 10);
+  // kilometres each driver covered on today's jobs (stop to stop, from where they started)
+  const session = await getSession();
+  const tenant = await getTenantById(session?.tenantId);
+  const kmToday = tenant ? await driverRouteKm(all, tenant, startOfDay(current, tenant.timezone || "Asia/Kolkata")) : new Map<string, number>();
   const owner = new Map(customers.map((c) => [c.id, c]));
   const botUsername = process.env.TELEGRAM_DRIVER_BOT_USERNAME;
 
@@ -70,6 +77,7 @@ export default async function Fleet() {
                   <th className="px-3 py-2 font-medium">Location</th>
                   <th className="px-3 py-2 font-medium">Current job</th>
                   <th className="px-3 py-2 text-right font-medium">Today</th>
+                  <th className="px-3 py-2 text-right font-medium" title="Stop to stop from where they started; detours don't count">Km today</th>
                   <th className="px-3 py-2 font-medium">Max at once</th>
                   <th className="px-5 py-2 font-medium" />
                 </tr>
@@ -114,11 +122,12 @@ export default async function Fleet() {
                       </td>
                       <td className="px-3 py-2.5 text-secondary">{job ? `${orderLabel(job)} · ${job.address}` : "—"}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{today}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">{drv.telegramChatId && kmToday.get(drv.telegramChatId) ? `≈ ${kmToday.get(drv.telegramChatId)}` : "—"}</td>
                       <td className="px-3 py-2.5">
                         <form action={setDriverMaxJobs} className="flex items-center gap-1.5">
                           <input type="hidden" name="driverId" value={drv.id} />
                           <select name="maxJobs" defaultValue={drv.maxJobs} aria-label={`Max pickups at once for ${drv.name}`} className="rounded-lg border border-border bg-surface-solid px-2 py-1 text-xs">
-                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                            {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
                               <option key={n} value={n}>{n}</option>
                             ))}
                           </select>

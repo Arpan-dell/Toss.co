@@ -175,7 +175,7 @@ export function analyze(input: EngineInput): Analysis {
   }
   const peak = Math.max(0, ...forecast.map((d) => d.expectedOrders));
   if (connected > 0 && peak > connected * PICKUPS_PER_DRIVER_PER_DAY * 0.75) {
-    for (const drv of input.drivers.filter((d) => d.connected && d.maxJobs < 6)) {
+    for (const drv of input.drivers.filter((d) => d.connected && d.maxJobs < 12)) {
       if (cooling.has(`set_max_jobs:${drv.id}`)) continue;
       cands.push({
         type: "set_max_jobs",

@@ -8,6 +8,7 @@ import { earnings, monthStartIST, weekStartIST, type Earnings } from "@/lib/driv
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { myFormat } from "@/lib/my-format";
+import { driverRouteKm } from "@/lib/driver-routes";
 
 export const metadata: Metadata = { title: "Driver pay" };
 
@@ -56,6 +57,8 @@ export default async function DriverPay() {
       (id) => where.get(id),
     );
 
+  // kilometres actually driven on jobs this month (stop to stop from where they started)
+  const routeMonth = await driverRouteKm(orders, tenant, month);
   const rows = drivers
     .filter((d) => d.telegramChatId)
     .map((d) => {
@@ -137,6 +140,7 @@ export default async function DriverPay() {
                       <span className="block text-xs text-muted">
                         {trips(r.thisMonth.pickups)}
                         {r.perTrip !== null ? ` · ${fmt.money(r.perTrip)} a trip` : ""}
+                        {r.d.telegramChatId && routeMonth.get(r.d.telegramChatId) ? ` · ≈ ${routeMonth.get(r.d.telegramChatId)} km driven` : ""}
                       </span>
                     </td>
                     <td className="px-2 py-2.5 text-right text-muted tabular-nums">{r.monthPickups ? `${Math.round((r.photos / r.monthPickups) * 100)}%` : "-"}</td>

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { dispatchDelivery, notifyAssignment, notifyDelivery, orderReady, withdrawJob } from "../dispatch/service";
+import { dispatchDelivery, notifyAssignment, notifyDelivery, orderReady, withdrawJob, noteStart } from "../dispatch/service";
 import { logError } from "../log";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
@@ -67,6 +67,7 @@ export async function assignDeliveryDriver(fd: FormData) {
   // a new driver collects it from the store; keep OUT only when it's the same driver
   const status = o.delivery_status === "OUT" && o.delivery_driver_id === chatId ? "OUT" : "ASSIGNED";
   await db.from("orders").update({ delivery_driver_id: chatId, delivery_status: status, delivery_assigned_at: new Date().toISOString(), delivery_ack_at: null }).eq("id", orderId);
+  await noteStart(orderId, chatId, "delivery");
   if (previous) await withdrawJob(orderId, "delivery", previous, `↪️ Delivery #${n} was moved to another driver. Nothing to do.`).catch((e) => logError("withdraw failed", e));
   await db.from("drivers").update({ status: "ON_JOB" }).eq("id", driver.id as string).neq("status", "OFFLINE");
   const { data: full } = await db.from("orders").select("*").eq("id", orderId).maybeSingle();

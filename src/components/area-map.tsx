@@ -4,7 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useRef } from "react";
 import type * as Leaflet from "leaflet";
 
-export type MapPin = { lat: number; lng: number; label: string; radiusKm?: number; active?: boolean };
+export type MapPin = { lat: number; lng: number; label: string; radiusKm?: number; active?: boolean; n?: number; tone?: "pickup" | "delivery" | "store" };
 
 type View = { center: [number, number]; zoom: number; pins: MapPin[]; you?: [number, number] };
 
@@ -26,7 +26,10 @@ function render(mod: typeof Leaflet, map: Leaflet.Map, g: Leaflet.LayerGroup, { 
     }
     mod
       .marker([p.lat, p.lng], {
-        icon: mod.divIcon({ className: "", html: `<span class="map-pin${p.active ? " is-active" : ""}"></span>`, iconSize: [14, 14], iconAnchor: [7, 7] }),
+        icon:
+          p.n != null || p.tone
+            ? mod.divIcon({ className: "", html: `<span class="map-num tone-${p.tone ?? "pickup"}">${p.n ?? ""}</span>`, iconSize: [26, 26], iconAnchor: [13, 13] })
+            : mod.divIcon({ className: "", html: `<span class="map-pin${p.active ? " is-active" : ""}"></span>`, iconSize: [14, 14], iconAnchor: [7, 7] }),
         title: p.label,
         keyboard: false,
       })

@@ -30,6 +30,27 @@ export const looksLikeCode = (typed: string) => /^\d{4}$/.test(typed.replace(/[\
 
 type Stop = { point?: LatLng; address: string };
 
+export type TripStop<T extends Stop = Stop> = (T & { kind: "pickup" | "delivery" }) | { kind: "store"; point?: LatLng; address: string };
+
+/**
+ * The stops of a driver's trip in order: pickups (nearest first) → the store (to drop pickups and/or collect
+ * deliveries) → deliveries (nearest first). Shared by the Google Maps link and the route page.
+ */
+export function tripStops<T extends Stop>(o: { driver?: LatLng; pickups: T[]; deliveries: T[]; collectFirst: boolean; store?: Place }): TripStop<T>[] {
+  const pickups = orderStops(o.driver, o.pickups);
+  const viaStore = !!o.store && (pickups.length > 0 || o.collectFirst || (!o.deliveries.length && pickups.length > 0));
+  const storePoint = o.store && typeof o.store !== "string" ? o.store : undefined;
+  const storeStop = { kind: "store" as const, point: storePoint, address: typeof o.store === "string" ? o.store : "The store" };
+  const lastPickup = pickups.length ? pickups[pickups.length - 1].point : undefined;
+  const from = viaStore ? (storePoint ?? lastPickup) : (lastPickup ?? o.driver);
+  const drops = orderStops(from, o.deliveries);
+  return [
+    ...pickups.map((p) => ({ ...p, kind: "pickup" as const })),
+    ...(viaStore ? [storeStop] : []),
+    ...drops.map((d) => ({ ...d, kind: "delivery" as const })),
+  ];
+}
+
 /**
  * A driver's whole trip as one Google Maps link:
  *   pickups (nearest first) → the store (to drop pickups and/or collect deliveries) → deliveries (nearest first).

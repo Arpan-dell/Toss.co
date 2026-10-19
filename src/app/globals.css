@@ -485,3 +485,9 @@ select optgroup {
   background-color: var(--surface-solid);
   color: var(--text);
 }
+
+/* numbered stops on a driver's route (components/area-map.tsx) */
+.map-num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 999px; font: 700 12px/1 var(--font-sans), sans-serif; color: #fff; border: 2px solid #fff; box-shadow: 0 2px 8px rgb(0 0 0 / 0.4); }
+.map-num.tone-pickup { background: #f97316; }
+.map-num.tone-delivery { background: #16a34a; }
+.map-num.tone-store { background: #2563eb; }

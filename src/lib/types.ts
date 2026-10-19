@@ -218,6 +218,8 @@ export interface Order {
   deliveryAckAt?: string; // the delivery driver confirmed ("Got it" or Collected)
   outForDeliveryAt?: string;
   deliveredAt?: string;
+  pickupStart?: { lat: number; lng: number }; // where the driver was when given the pickup (migration 0038)
+  deliveryStart?: { lat: number; lng: number }; // …and the delivery
   deliveryCode?: string; // 4 digits the customer reads to the driver at the door
   deliveryVerified?: boolean;
   deliveryAttempts?: number; // "customer not home" count

@@ -50,7 +50,7 @@ import { MAX_KG, MIN_KG, parseWeight, repriceForWeight } from "./weighing";
 import { formatterFor, INDIA_FORMAT, regionOf, type Formatter } from "../region-format";
 import { earnings, monthStartIST, weekStartIST } from "../driver-pay";
 import { bagTag, bagsLine, isSorted, sortedTotal } from "../sorting";
-import { codeMatches, deliveryCode, looksLikeCode, tripRouteUrl } from "./delivery";
+import { codeMatches, deliveryCode, looksLikeCode, tripRouteUrl, tripStops } from "./delivery";
 import { logError } from "@/lib/log";
 import { tierOfRow } from "@/lib/plan";
 import { APP_URL, SITE_URL } from "@/lib/site";
@@ -159,12 +159,62 @@ export async function currentRoute(driver: Row): Promise<{ url: string | null; s
   return { url: tripRouteUrl({ driver: here, pickups, deliveries, collectFirst, store: store.place }), stops: pickups.length + deliveries.length };
 }
 
+export type RoutePlanStop = { n: number; kind: "pickup" | "delivery" | "store"; title: string; address: string; point?: LatLng; navigate: string };
+
+/** Every stop of the driver's open trip, in order, each with its own Navigate link; plus the whole route as one link. */
+export async function routePlan(driver: Row): Promise<{ stops: RoutePlanStop[]; url: string | null; here?: LatLng; name: string }> {
+  const chatId = driver.telegram_chat_id as string;
+  const [{ data: jobs }, { data: drops }] = await Promise.all([
+    db().from("orders").select("device_id, device_order_id, address").eq("driver_id", chatId).in("status", ACTIVE),
+    db().from("orders").select("device_id, device_order_id, address, delivery_status").eq("delivery_driver_id", chatId).in("delivery_status", DELIVERING),
+  ]);
+  const stop = async (j: Row) => ({ point: await basketPoint(j.device_id as string), address: (j.address as string) || "Address not set", no: j.device_order_id as number });
+  const pickups = await Promise.all((jobs ?? []).map(stop));
+  const deliveries = await Promise.all((drops ?? []).map(stop));
+  const store = await storeOf(driver.tenant_id as string);
+  const here = driver.last_lat != null ? { lat: driver.last_lat as number, lng: driver.last_lng as number } : undefined;
+  const collectFirst = (drops ?? []).some((d) => d.delivery_status === "ASSIGNED");
+  const ordered = pickups.length || deliveries.length ? tripStops({ driver: here, pickups, deliveries, collectFirst, store: store.place }) : [];
+  const stops = ordered.map((s, i): RoutePlanStop => {
+    const target = s.point ?? s.address;
+    return {
+      n: i + 1,
+      kind: s.kind,
+      title: s.kind === "store" ? `Store: ${store.name}` : `${s.kind === "pickup" ? "Pick up" : "Deliver"} #${(s as { no: number }).no}`,
+      address: s.kind === "store" ? (typeof store.place === "string" ? store.place : store.name) : s.address,
+      point: s.point,
+      navigate: directionsUrl({ origin: here, destination: target }),
+    };
+  });
+  return { stops, url: tripRouteUrl({ driver: here, pickups, deliveries, collectFirst, store: store.place }), here, name: (driver.name as string) ?? "Driver" };
+}
+
+export async function planByToken(token: string) {
+  const { data } = await db().from("drivers").select("tenant_id, name, telegram_chat_id, last_lat, last_lng").eq("route_token", token).maybeSingle();
+  return data ? routePlan(data as Row) : null;
+}
+
 export async function routeByToken(token: string) {
   const { data } = await db().from("drivers").select("tenant_id, name, telegram_chat_id, last_lat, last_lng").eq("route_token", token).maybeSingle();
   return data ? { driver: data as Row, ...(await currentRoute(data as Row)) } : null;
 }
 
 const routeLink = (d: Row) => `${APP_URL}/r/${d.route_token as string}`;
+
+/**
+ * Where the driver was when they were given this job (if their live location is recent), so the distance they
+ * cover is counted from their real starting point. Never fails the assignment (and does nothing before 0038).
+ */
+export async function noteStart(orderId: string, chatId: string, kind: "pickup" | "delivery"): Promise<void> {
+  try {
+    const { data: d } = await db().from("drivers").select("last_lat, last_lng, location_at").eq("telegram_chat_id", chatId).maybeSingle();
+    if (d?.last_lat == null || !d.location_at || Date.now() - new Date(d.location_at as string).getTime() > 45 * 60_000) return;
+    const patch = kind === "pickup" ? { pickup_start_lat: d.last_lat, pickup_start_lng: d.last_lng } : { delivery_start_lat: d.last_lat, delivery_start_lng: d.last_lng };
+    await db().from("orders").update(patch).eq("id", orderId);
+  } catch {
+    /* the columns arrive with migration 0038 */
+  }
+}
 
 // ---------- assignment ----------
 
@@ -193,6 +243,7 @@ export async function dispatchOrder(orderId: string): Promise<DispatchResult> {
     .select("id");
   if (!won?.length) return { assigned: false, reason: "assigned concurrently" };
   await db().from("drivers").update({ status: "ON_JOB" }).eq("id", choice.driver.id);
+  await noteStart(orderId, choice.driver.chatId, "pickup");
 
   await notifyAssignment(o as Row, choice.driver.chatId, pickup).catch((e) => logError("driver notify failed", e));
   await notifyCustomer(o as Row, `🚚 <b>${esc(choice.driver.name)}</b> is on the way to pick up your laundry (order #${o.device_order_id}).`).catch(
@@ -314,6 +365,7 @@ export async function dispatchDelivery(orderId: string): Promise<DispatchResult>
     .select("id");
   if (!won?.length) return { assigned: false, reason: "assigned concurrently" };
   await db().from("drivers").update({ status: "ON_JOB" }).eq("id", choice.driver.id);
+  await noteStart(orderId, choice.driver.chatId, "delivery");
   await notifyDelivery(o as Row, choice.driver.chatId).catch((e) => logError("driver notify failed", e));
   return { assigned: true, driver: choice.driver.name, distanceKm: choice.distanceKm };
 }

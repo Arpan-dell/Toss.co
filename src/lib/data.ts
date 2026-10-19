@@ -58,6 +58,8 @@ function toOrder(r: Row): Order {
     deliveryAckAt: u(r.delivery_ack_at),
     outForDeliveryAt: u(r.out_for_delivery_at),
     deliveredAt: u(r.delivered_at),
+    pickupStart: r.pickup_start_lat != null && r.pickup_start_lng != null ? { lat: Number(r.pickup_start_lat), lng: Number(r.pickup_start_lng) } : undefined,
+    deliveryStart: r.delivery_start_lat != null && r.delivery_start_lng != null ? { lat: Number(r.delivery_start_lat), lng: Number(r.delivery_start_lng) } : undefined,
     deliveryCode: u(r.delivery_code),
     deliveryVerified: u(r.delivery_verified),
     deliveryAttempts: (r.delivery_attempts as number) ?? 0,

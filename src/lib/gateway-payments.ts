@@ -1,5 +1,28 @@
 import "server-only";
-import { cardFromSetup, chargeSavedCard, createCardSetup, createCheckout, createStripeCustomer, checkoutStatus, fromMinor, parseRazorpay, parseStripe, toMinor, verifyRazorpay, verifyStripe, type GatewayEvent, type GatewayKeys, type Provider } from "./gateways";
+import {
+  cancelRenewal,
+  cardFromSetup,
+  chargeRazorpayToken,
+  chargeSavedCard,
+  createCardSetup,
+  createCheckout,
+  createRazorpayMandate,
+  createRenewal,
+  createStripeCustomer,
+  checkoutStatus,
+  fromMinor,
+  parseRazorpay,
+  parseStripe,
+  razorpayMandateResult,
+  renewalStatus,
+  RZP_MANDATE_MAX_MINOR,
+  toMinor,
+  verifyRazorpay,
+  verifyStripe,
+  type GatewayEvent,
+  type GatewayKeys,
+  type Provider,
+} from "./gateways";
 import { notifySubscriptionReviewed } from "./email/notify";
 import { sendInvoice } from "./invoice/service";
 import { logError } from "./log";
@@ -227,6 +250,10 @@ export async function handleWebhook(provider: Provider, token: string, raw: stri
     await finishCardSetup(event.ref).catch((err) => logError("card setup finish failed", err instanceof Error ? err.message : err));
     return 200;
   }
+  if (event.renewal) {
+    if (platform) await onRenewal(provider, event).catch((err) => logError("plan renewal event failed", err instanceof Error ? err.message : err));
+    return 200;
+  }
   if (event.status === "ignore" || !event.ref) return 200;
 
   const { data: intent } = await db().from("payment_intents").select("*").eq("provider_ref", event.ref).eq("provider", provider).maybeSingle();
@@ -393,12 +420,34 @@ export async function getAutopay(tenantId: string, customerId: string): Promise<
 /** Opens Stripe's page to save a card (or Apple Pay / Google Pay) for automatic payments. */
 export async function startCardSetup(tenantId: string, customerId: string, tipPct: number): Promise<{ url: string } | { error: string }> {
   const gw = await tenantGateway(tenantId);
-  if (!gw || gw.provider !== "stripe") return { error: "Your laundry doesn't take automatic payments." };
-  const { data: t } = await db().from("tenants").select("currency").eq("id", tenantId).maybeSingle();
-  const { data: c } = await db().from("customers").select("name, email, tenant_id").eq("id", customerId).maybeSingle();
+  const { data: t } = await db().from("tenants").select("currency, name").eq("id", tenantId).maybeSingle();
+  if (!gw || (gw.provider === "razorpay" && t?.currency !== "INR")) return { error: "Your laundry doesn't take automatic payments." };
+  const { data: c } = await db().from("customers").select("name, email, phone, tenant_id").eq("id", customerId).maybeSingle();
   if (!c || c.tenant_id !== tenantId) return { error: "Customer not found." };
-  const { data: existing, error } = await db().from("customer_payment_profiles").select("provider_customer_id").eq("tenant_id", tenantId).eq("customer_id", customerId).maybeSingle();
+  const { data: existing, error } = await db().from("customer_payment_profiles").select("provider_customer_id, provider").eq("tenant_id", tenantId).eq("customer_id", customerId).maybeSingle();
   if (error) return { error: "Automatic payments switch on after the next database update." };
+  const tip = Math.max(0, Math.min(30, Math.round(tipPct)));
+  if (gw.provider === "razorpay") {
+    try {
+      const page = await createRazorpayMandate(gw, {
+        who: { name: (c.name as string) ?? undefined, email: (c.email as string) ?? undefined, phone: (c.phone as string) ?? undefined },
+        description: `Automatic laundry payments · ${(t?.name as string) ?? "Toss"}`,
+        reference: `${tenantId}-${customerId}`.slice(0, 40),
+        returnUrl: `${APP_URL}/app/autopay`,
+      });
+      await db()
+        .from("customer_payment_profiles")
+        .upsert(
+          { tenant_id: tenantId, customer_id: customerId, provider: "razorpay", provider_customer_id: existing?.provider === "razorpay" ? existing.provider_customer_id : "pending", setup_ref: page.ref, tip_pct: tip, updated_at: new Date().toISOString() },
+          { onConflict: "tenant_id,customer_id" },
+        );
+      return { url: page.url };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      logError("razorpay mandate failed", msg);
+      return { error: /recurring|not enabled|not allowed|feature/i.test(msg) ? "Your laundry hasn't switched on automatic card payments with Razorpay yet." : "Couldn't open the card page. Try again in a minute." };
+    }
+  }
   try {
     const stripeCustomer =
       (existing?.provider_customer_id as string) ?? (await createStripeCustomer(gw, { email: (c.email as string) ?? undefined, name: (c.name as string) ?? undefined, tossCustomer: customerId }));
@@ -411,7 +460,7 @@ export async function startCardSetup(tenantId: string, customerId: string, tipPc
     await db()
       .from("customer_payment_profiles")
       .upsert(
-        { tenant_id: tenantId, customer_id: customerId, provider_customer_id: stripeCustomer, setup_ref: page.ref, tip_pct: Math.max(0, Math.min(30, Math.round(tipPct))), updated_at: new Date().toISOString() },
+        { tenant_id: tenantId, customer_id: customerId, provider: "stripe", provider_customer_id: stripeCustomer, setup_ref: page.ref, tip_pct: tip, updated_at: new Date().toISOString() },
         { onConflict: "tenant_id,customer_id" },
       );
     return { url: page.url };
@@ -428,12 +477,28 @@ export async function finishCardSetup(sessionId: string, customerId?: string): P
   const { data: p } = await q.maybeSingle();
   if (!p) return false;
   const gw = await tenantGateway(p.tenant_id as string);
-  if (!gw || gw.provider !== "stripe") return false;
-  const card = await cardFromSetup(gw, sessionId);
-  if (!card) return false;
+  if (!gw || gw.provider !== (p.provider ?? "stripe")) return false;
+  let saved: { paymentMethod: string; customer?: string; brand?: string; last4?: string; exp?: string } | null;
+  if (gw.provider === "razorpay") {
+    const r = await razorpayMandateResult(gw, sessionId);
+    saved = r && { paymentMethod: r.token, customer: r.customer, brand: r.brand, last4: r.last4, exp: r.exp };
+  } else {
+    saved = await cardFromSetup(gw, sessionId);
+  }
+  if (!saved) return false;
+  const card = saved;
   await db()
     .from("customer_payment_profiles")
-    .update({ payment_method_id: card.paymentMethod, brand: card.brand ?? null, last4: card.last4 ?? null, exp: card.exp ?? null, autopay: true, setup_ref: null, updated_at: new Date().toISOString() })
+    .update({
+      payment_method_id: card.paymentMethod,
+      ...(card.customer ? { provider_customer_id: card.customer } : {}),
+      brand: card.brand ?? null,
+      last4: card.last4 ?? null,
+      exp: card.exp ?? null,
+      autopay: true,
+      setup_ref: null,
+      updated_at: new Date().toISOString(),
+    })
     .eq("tenant_id", p.tenant_id)
     .eq("customer_id", p.customer_id);
   return true;
@@ -456,7 +521,7 @@ export async function autoChargeOrder(orderId: string): Promise<"paid" | "skippe
   const { data: p, error } = await db().from("customer_payment_profiles").select("*").eq("tenant_id", o.tenant_id).eq("customer_id", o.customer_id).maybeSingle();
   if (error || !p?.autopay || !p.payment_method_id) return "skipped";
   const gw = await tenantGateway(o.tenant_id as string);
-  if (!gw || gw.provider !== "stripe") return "skipped";
+  if (!gw || gw.provider !== (p.provider ?? "stripe")) return "skipped";
   // one automatic try per bill
   const { data: tried } = await db().from("payment_intents").select("id").eq("order_id", orderId).eq("auto", true).limit(1);
   if (tried?.length) return "skipped";
@@ -465,12 +530,33 @@ export async function autoChargeOrder(orderId: string): Promise<"paid" | "skippe
   const tip = roundMoney((Number(o.amount_due) * (Number(p.tip_pct) || 0)) / 100, currency);
   const amount = Number(o.amount_due) + tip;
   const minor = toMinor(amount, currency);
+  // over the card mandate's limit: the customer pays this one by hand
+  if (gw.provider === "razorpay" && (currency !== "INR" || minor > RZP_MANDATE_MAX_MINOR)) return "skipped";
   const { data: intent } = await db()
     .from("payment_intents")
-    .insert({ kind: "order", tenant_id: o.tenant_id, order_id: orderId, customer_id: o.customer_id, provider: "stripe", platform: false, amount_minor: minor, currency, tip, auto: true })
+    .insert({ kind: "order", tenant_id: o.tenant_id, order_id: orderId, customer_id: o.customer_id, provider: gw.provider, platform: false, amount_minor: minor, currency, tip, auto: true })
     .select("*")
     .single();
   if (!intent) return "failed";
+  if (gw.provider === "razorpay") {
+    // Razorpay sends the bank's pre-debit notice and takes the money about a day later; the webhook settles it
+    const { data: c } = await db().from("customers").select("name, email, phone").eq("id", o.customer_id).maybeSingle();
+    const r = await chargeRazorpayToken(gw, {
+      amountMinor: minor,
+      customer: p.provider_customer_id as string,
+      token: p.payment_method_id as string,
+      description: `Laundry pickup #${o.device_order_id} · ${(t?.name as string) ?? "Toss"}`,
+      reference: intent.id as string,
+      who: { name: (c?.name as string) ?? undefined, email: (c?.email as string) ?? undefined, phone: (c?.phone as string) ?? undefined },
+    });
+    if (r.ref) {
+      await db().from("payment_intents").update({ provider_ref: r.ref }).eq("id", intent.id);
+      return "skipped";
+    }
+    await db().from("payment_intents").update({ status: "failed" }).eq("id", intent.id).eq("status", "created");
+    logError("automatic charge failed", { order: orderId, error: r.error });
+    return "failed";
+  }
   const r = await chargeSavedCard(gw, {
     amountMinor: minor,
     currency,
@@ -515,4 +601,124 @@ export async function autoChargeDue(limit = 30): Promise<number> {
     }
   }
   return paid;
+}
+
+// ================= automatic plan renewal (laundries paying Toss) =================
+// The manager approves a monthly subscription once on Toss's gateway (Razorpay: card or UPI Autopay; Stripe:
+// card, Apple Pay, Google Pay). Each month the gateway charges it and tells Toss by webhook; Toss checks the amount
+// and extends the plan by a month, exactly like a payment made by hand.
+
+export type Renewal = { status: "created" | "active" | "failing" | "cancelled"; provider: Provider; amount: number; currency: string; lastChargedAt?: string };
+
+const renewalRow = async (tenantId: string) => (await db().from("plan_autorenew").select("*").eq("tenant_id", tenantId).maybeSingle()).data as Record<string, unknown> | null;
+
+/** The laundry's automatic renewal, for Billing. Asks the gateway if a just-opened one hasn't been confirmed yet. */
+export async function getRenewal(tenantId: string): Promise<Renewal | null> {
+  let row = await renewalRow(tenantId).catch(() => null);
+  if (!row) return null;
+  if (row.status === "created" && row.provider_ref) {
+    const gw = await platformGateway(row.currency as string);
+    if (gw && gw.provider === row.provider) {
+      const s = await renewalStatus(gw, row.provider_ref as string).catch(() => null);
+      if (s && s.state !== "created") {
+        await db().from("plan_autorenew").update({ status: s.state, provider_sub_id: s.sub ?? row.provider_sub_id, updated_at: new Date().toISOString() }).eq("tenant_id", tenantId);
+        row = { ...row, status: s.state };
+      }
+    }
+  }
+  return {
+    status: row.status as Renewal["status"],
+    provider: row.provider as Provider,
+    amount: fromMinor(row.amount_minor as number, row.currency as string),
+    currency: row.currency as string,
+    lastChargedAt: (row.last_charged_at as string) ?? undefined,
+  };
+}
+
+/** Opens the gateway's page to start monthly renewal. The first month is charged when the paid time runs out. */
+export async function startRenewal(
+  tenantId: string,
+  p: { amount: number; currency: string; business: string; firstChargeAt?: Date; email?: string; phone?: string },
+): Promise<{ url: string } | { error: string }> {
+  const gw = await platformGateway(p.currency);
+  if (!gw) return { error: "Automatic renewal isn't set up yet." };
+  const existing = await renewalRow(tenantId).catch(() => undefined);
+  if (existing === undefined) return { error: "Automatic renewal switches on after the next database update." };
+  if (existing?.status === "active") return { error: "Automatic renewal is already on." };
+  try {
+    const page = await createRenewal(gw, {
+      amount: p.amount,
+      currency: p.currency,
+      name: `Toss Pro · ${p.business}`,
+      tenant: tenantId,
+      firstChargeAt: p.firstChargeAt,
+      returnUrl: `${APP_URL}/admin/billing?renew=1`,
+      cancelUrl: `${APP_URL}/admin/billing`,
+      who: { name: p.business, email: p.email, phone: p.phone },
+    });
+    const { error } = await db()
+      .from("plan_autorenew")
+      .upsert(
+        { tenant_id: tenantId, provider: gw.provider, currency: p.currency, amount_minor: toMinor(p.amount, p.currency), provider_ref: page.ref, provider_sub_id: page.sub ?? null, checkout_url: page.url, status: "created", updated_at: new Date().toISOString() },
+        { onConflict: "tenant_id" },
+      );
+    if (error) return { error: "Automatic renewal switches on after the next database update." };
+    return { url: page.url };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logError("plan renewal start failed", msg);
+    if (/subscription|not enabled|feature|international/i.test(msg)) return { error: "Toss's payment account isn't ready for automatic renewal yet. Pay by month for now." };
+    return { error: "The page couldn't be opened. Try again in a minute." };
+  }
+}
+
+/** Stops automatic renewal: nothing more is charged; the time already paid for stays. */
+export async function stopRenewal(tenantId: string): Promise<void> {
+  const row = await renewalRow(tenantId);
+  if (!row) return;
+  const gw = await platformGateway(row.currency as string);
+  if (gw && gw.provider === row.provider && row.provider_sub_id) await cancelRenewal(gw, row.provider_sub_id as string).catch((err) => logError("plan renewal cancel failed", err instanceof Error ? err.message : err));
+  await db().from("plan_autorenew").update({ status: "cancelled", updated_at: new Date().toISOString() }).eq("tenant_id", tenantId);
+}
+
+/** A renewal webhook from Toss's own gateway: started, charged (extend the plan by a month), failing or ended. */
+async function onRenewal(provider: Provider, event: GatewayEvent) {
+  const r = event.renewal!;
+  let row: Record<string, unknown> | null = null;
+  if (r.sub) row = (await db().from("plan_autorenew").select("*").eq("provider_sub_id", r.sub).maybeSingle()).data;
+  if (!row && r.session) row = (await db().from("plan_autorenew").select("*").eq("provider_ref", r.session).maybeSingle()).data;
+  if (!row && r.sub) row = (await db().from("plan_autorenew").select("*").eq("provider_ref", r.sub).maybeSingle()).data;
+  if (!row || row.provider !== provider) return;
+  const tenantId = row.tenant_id as string;
+  const now = new Date().toISOString();
+  if (r.state !== "charged") {
+    await db()
+      .from("plan_autorenew")
+      .update({ status: r.state, ...(r.sub ? { provider_sub_id: r.sub } : {}), updated_at: now })
+      .eq("tenant_id", tenantId);
+    return;
+  }
+  // a month was paid: the gateway must have charged exactly the monthly price Toss set up
+  if (event.amountMinor !== row.amount_minor || (event.currency ?? "").toUpperCase() !== String(row.currency).toUpperCase()) {
+    logError("plan renewal amount mismatch", { tenant: tenantId, expected: row.amount_minor, got: event.amountMinor, currency: event.currency });
+    return;
+  }
+  const { data: pay, error } = await db()
+    .from("subscription_payments")
+    .insert({
+      tenant_id: tenantId,
+      months: 1,
+      amount: fromMinor(event.amountMinor!, row.currency as string),
+      discount_pct: 0,
+      credit_used: 0,
+      payment_ref: (event.paymentId ?? event.eventId).replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 35),
+      currency: row.currency,
+    })
+    .select("id")
+    .single();
+  if (error || !pay) throw error ?? new Error("renewal payment not recorded");
+  const { error: e2 } = await db().rpc("review_subscription_payment", { p_id: pay.id, p_approve: true });
+  if (e2) throw e2;
+  await db().from("plan_autorenew").update({ status: "active", last_charged_at: now, updated_at: now }).eq("tenant_id", tenantId);
+  await notifySubscriptionReviewed(pay.id as number);
 }

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
 import { GatewayPay } from "@/components/gateway-pay";
-import { paySubscriptionOnline } from "@/lib/actions/gateway";
-import { platformGatewayName, refreshIntent } from "@/lib/gateway-payments";
+import { paySubscriptionOnline, startPlanRenewal, stopPlanRenewal } from "@/lib/actions/gateway";
+import { getRenewal, platformGatewayName, refreshIntent } from "@/lib/gateway-payments";
 import { getPlatformSettings, getTenantById, getTenantCreditBalance, listSubscriptionPayments } from "@/lib/data";
 import { myFormat } from "@/lib/my-format";
 import { moneyIn, subscriptionFormat } from "@/lib/region-format";
@@ -11,6 +11,7 @@ import { planState } from "@/lib/plan";
 import { subscriptionQuote, withBasketCredit } from "@/lib/pricing";
 import { requireRole } from "@/lib/session";
 import { PlanCompare } from "./plan-compare";
+import { AutoRenew } from "./auto-renew";
 
 export const metadata: Metadata = { title: "Billing" };
 
@@ -51,6 +52,9 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
   // back from the gateway: what it confirmed (never what the URL says)
   const back = typeof params.intent === "string" ? await refreshIntent(params.intent, { tenantId: tenant.id }) : null;
   const badge = STATE_BADGE[plan.state];
+  // renew automatically every month at the one-month price (needs Toss's gateway, like paying by hand)
+  const renewGateway = online ?? (await platformGatewayName(sub.region.currency));
+  const renewal = renewGateway ? await getRenewal(tenant.id).catch(() => null) : null;
 
   return (
     <div className="stagger mx-auto w-full max-w-3xl space-y-6">
@@ -125,6 +129,20 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
               <GatewayPay key={months} start={paySubscriptionOnline.bind(null, months)} amountLabel={sub.money(amount)} gatewayName={online!} />
             </div>
           )}
+        </Card>
+      )}
+
+      {plan.state !== "SUSPENDED" && renewGateway && (
+        <Card title="Renew automatically">
+          <AutoRenew
+            status={renewal}
+            start={startPlanRenewal}
+            stop={stopPlanRenewal}
+            priceLabel={sub.money(quote(1).amount)}
+            gatewayName={renewGateway}
+            firstCharge={plan.state === "TRIAL" || plan.state === "ACTIVE" ? fmt.date(plan.until!) : undefined}
+            india={!usd}
+          />
         </Card>
       )}
 

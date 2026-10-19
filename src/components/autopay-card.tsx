@@ -12,13 +12,16 @@ export function AutopayCard({
   start,
   update,
   business,
+  provider = "stripe",
 }: {
   status: Autopay | null;
   start: (tipPct: number) => Promise<{ url?: string; error?: string }>;
   update: (fd: FormData) => Promise<void>;
   business: string;
+  provider?: "stripe" | "razorpay";
 }) {
-  const [tip, setTip] = useState(status?.tipPct ?? 15);
+  const india = provider === "razorpay";
+  const [tip, setTip] = useState(status?.tipPct ?? (india ? 0 : 15));
   const [error, setError] = useState<string>();
   const [pending, go] = useTransition();
 
@@ -61,14 +64,17 @@ export function AutopayCard({
     return (
       <div className="space-y-4">
         <p className="text-sm text-secondary">
-          Save a card, Apple Pay or Google Pay once. When {business} has your laundry ready, the bill is paid automatically and you get a
-          receipt. No checkout each time.
+          {india
+            ? `Save your card once. When ${business} has your laundry ready, the bill is paid from it automatically and you get a receipt. Your bank tells you a day before each charge (RBI rule), up to ₹15,000 a bill.`
+            : `Save a card, Apple Pay or Google Pay once. When ${business} has your laundry ready, the bill is paid automatically and you get a receipt. No checkout each time.`}
         </p>
         {tipPicker}
         <button type="button" disabled={pending} onClick={save} className="btn-primary rounded-full px-5 py-2 text-sm font-medium disabled:opacity-70">
           {pending ? "Opening…" : "Set up automatic payments →"}
         </button>
-        <p className="text-xs text-muted">Secured by Stripe. Toss never sees your card number. Turn it off anytime.</p>
+        <p className="text-xs text-muted">
+          Secured by {india ? "Razorpay" : "Stripe"}. Toss never sees your card number. Turn it off anytime.{india ? " Razorpay checks the card with a ₹1 payment." : ""}
+        </p>
         {error && (
           <p role="alert" className="text-sm text-critical">
             {error}

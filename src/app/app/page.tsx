@@ -61,7 +61,9 @@ export default async function CustomerOverview() {
   const upi = direct && !!business && business.currency === "INR" && isValidUpiId(business.upiId);
   const canPay = direct && !!business && (upi || business.currency !== "INR");
   // abroad (Stripe): save a card once and every bill is charged when it's ready, with a tip
-  const autopay = business && gateway === "stripe" ? await getAutopay(business.id, session.userId) : null;
+  // India (Razorpay): the same, with a card mandate; the bank tells the customer a day before each charge
+  const autopayGateway = business && (gateway === "stripe" || (gateway === "razorpay" && business.currency === "INR")) ? gateway : null;
+  const autopay = business && autopayGateway ? await getAutopay(business.id, session.userId) : null;
   const toPay = unpaid.filter((o) => o.amountDue > 0);
 
   // One UPI link + QR per unpaid order, pre-filled with this business's UPI ID and the amount.
@@ -267,13 +269,14 @@ export default async function CustomerOverview() {
         </Card>
       </div>
 
-      {business && gateway === "stripe" && (
+      {business && autopayGateway && (
         <Card title="Pay automatically">
           <AutopayCard
             status={autopay}
             start={startAutopay}
             update={updateAutopay}
             business={business.name}
+            provider={autopayGateway}
           />
         </Card>
       )}

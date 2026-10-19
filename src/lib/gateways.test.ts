@@ -79,3 +79,38 @@ describe("Stripe saved cards (pay automatically)", () => {
     expect(setup).toMatchObject({ status: "ignore", setup: true, ref: "cs_setup_1" });
   });
 });
+
+describe("automatic payments in webhooks", () => {
+  const rzp = (event: string, payload: object) => parseRazorpay(JSON.stringify({ event, payload }), "evt");
+
+  it("reads Razorpay plan renewals", () => {
+    const charged = rzp("subscription.charged", {
+      subscription: { entity: { id: "sub_1", notes: { toss_tenant: "t1" } } },
+      payment: { entity: { id: "pay_9", amount: 49900, currency: "INR", method: "card", order_id: "order_x", invoice_id: "inv_x" } },
+    });
+    expect(charged).toMatchObject({ status: "ignore", renewal: { sub: "sub_1", tenant: "t1", state: "charged" }, paymentId: "pay_9", amountMinor: 49900, currency: "INR" });
+    expect(rzp("subscription.halted", { subscription: { entity: { id: "sub_1", notes: [] } } }).renewal).toEqual({ sub: "sub_1", tenant: undefined, state: "failing" });
+    expect(rzp("subscription.cancelled", { subscription: { entity: { id: "sub_1" } } }).renewal?.state).toBe("cancelled");
+  });
+
+  it("reads Razorpay recurring charges and finished card mandates", () => {
+    expect(rzp("payment.captured", { payment: { entity: { id: "pay_1", amount: 28100, currency: "INR", order_id: "order_1" } } })).toMatchObject({ ref: "order_1", status: "paid", amountMinor: 28100 });
+    expect(rzp("payment.failed", { payment: { entity: { id: "pay_2", order_id: "order_2" } } })).toMatchObject({ ref: "order_2", status: "failed" });
+    // the subscription's own payments carry an invoice: handled as renewals, not here
+    expect(rzp("payment.captured", { payment: { entity: { id: "pay_3", order_id: "order_3", invoice_id: "inv_3" } } }).status).toBe("ignore");
+    expect(rzp("invoice.paid", { invoice: { entity: { id: "inv_7" } } })).toMatchObject({ setup: true, ref: "inv_7" });
+  });
+
+  it("reads Stripe plan renewals", () => {
+    expect(parseStripe(stripeEvent("checkout.session.completed", { id: "cs_9", mode: "subscription", subscription: "sub_s", client_reference_id: "t1" })).renewal).toEqual({
+      session: "cs_9",
+      sub: "sub_s",
+      tenant: "t1",
+      state: "active",
+    });
+    expect(parseStripe(stripeEvent("invoice.paid", { id: "in_1", subscription: "sub_s", amount_paid: 1900, currency: "usd" }))).toMatchObject({ renewal: { sub: "sub_s", state: "charged" }, amountMinor: 1900, currency: "USD" });
+    expect(parseStripe(stripeEvent("invoice.paid", { id: "in_0", subscription: "sub_s", amount_paid: 0, currency: "usd" })).renewal?.state).toBe("active");
+    expect(parseStripe(stripeEvent("invoice.payment_failed", { id: "in_2", parent: { subscription_details: { subscription: "sub_s" } } })).renewal?.state).toBe("failing");
+    expect(parseStripe(stripeEvent("customer.subscription.deleted", { id: "sub_s" })).renewal).toEqual({ sub: "sub_s", state: "cancelled" });
+  });
+});

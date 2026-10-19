@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createStripeWebhook, deleteStripeWebhook, testKeys, type GatewayKeys, type Provider } from "../gateways";
-import { platformToken, refreshIntent, setAutopay, startCardSetup, startOrderPayment, startSubscriptionPayment, webhookUrl } from "../gateway-payments";
+import { platformToken, refreshIntent, setAutopay, startCardSetup, startOrderPayment, startRenewal, startSubscriptionPayment, stopRenewal, webhookUrl } from "../gateway-payments";
+import { planState } from "../plan";
 import { checkPassword } from "../password-check";
 import { getPlatformSettings, getTenantById, getTenantCreditBalance } from "../data";
 import { subscriptionQuote, withBasketCredit } from "../pricing";
@@ -123,6 +124,33 @@ export async function paySubscriptionOnline(months: number): Promise<{ url?: str
   // the payer's mobile number, so the gateway doesn't ask for it (Indian gateways must collect one)
   const { data: me } = await supabaseAdmin().from("customers").select("phone").eq("id", session.userId).maybeSingle();
   return startSubscriptionPayment(tenant.id, { months, amount: toPay, currency, discountPct: pct, creditUsed: credit, business: tenant.name, email: session.email, phone: (me?.phone as string) ?? undefined });
+}
+
+/** Manager: renew the plan automatically every month (one month's price, charged when the paid time runs out). */
+export async function startPlanRenewal(): Promise<{ url?: string; error?: string }> {
+  const session = await requireManager();
+  const [tenant, platform] = await Promise.all([getTenantById(session.tenantId), getPlatformSettings()]);
+  if (!tenant) return { error: "Business not found." };
+  const currency = subscriptionCurrency(tenant);
+  const usd = currency === "USD";
+  const monthly = usd ? (tenant.parentTenantId ? platform.usdBranchPrice : platform.usdMonthlyPrice) : tenant.parentTenantId ? platform.branchPrice : platform.monthlyPrice;
+  const { amount } = subscriptionQuote(monthly, platform, 1, currency);
+  const plan = planState(tenant);
+  const { data: me } = await supabaseAdmin().from("customers").select("phone").eq("id", session.userId).maybeSingle();
+  return startRenewal(tenant.id, {
+    amount,
+    currency,
+    business: tenant.name,
+    firstChargeAt: plan.state === "TRIAL" || plan.state === "ACTIVE" ? new Date(plan.until!) : undefined,
+    email: session.email,
+    phone: (me?.phone as string) ?? undefined,
+  });
+}
+
+export async function stopPlanRenewal() {
+  const session = await requireManager();
+  await stopRenewal(session.tenantId!);
+  revalidatePath("/admin/billing");
 }
 
 /** The page the customer or manager returns to asks this (Toss checks with the gateway if needed). */

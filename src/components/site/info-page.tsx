@@ -11,7 +11,8 @@ export const COMPANY_LINKS = [
   { label: "Contact", href: "/contact" },
   { label: "Terms of Service", href: "/terms" },
   { label: "Privacy Policy", href: "/privacy" },
-  { label: "Refund Policy", href: "/refund" },
+  { label: "Cancellation & Refund", href: "/refund" },
+  { label: "Shipping & Exchange", href: "/shipping" },
   { label: "Cookie Policy", href: "/cookies" },
   { label: "Delete my data", href: "/data-deletion" },
 ];

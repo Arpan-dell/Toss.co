@@ -80,7 +80,7 @@ export default async function TermsPage() {
       <p>
         Baskets are printed to order. Price, colour and delivery are confirmed with you before you pay. Power it from a normal USB-C charger,
         keep it dry and don&apos;t stand on it. If it arrives faulty, tell us within 7 days and we&apos;ll fix or replace it. Refunds and
-        cancellations are covered by our <Link href="/refund">Refund Policy</Link>.
+        cancellations are covered by our <Link href="/refund">Cancellation &amp; Refund Policy</Link> and delivery by our <Link href="/shipping">Shipping &amp; Exchange Policy</Link>.
       </p>
 
       <h2 id="basket-credit" className="scroll-mt-28">Basket credit</h2>

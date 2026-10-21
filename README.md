@@ -11,6 +11,11 @@ both. Session cookies use `AUTH_COOKIE_DOMAIN` (`.tosslaundry.online`) so one si
 
 Toss is a B2B2C platform for smart laundry baskets. An ESP32 + load-cell basket detects when it's full and automatically dispatches a pickup driver over Telegram. This repo is the web platform: a customer portal to track and pay, and a manager portal to run the whole city.
 
+## Docs
+
+- [docs/flow.md](docs/flow.md): how a pickup, a driver's day, sign-up and payments work, step by step.
+- [docs/decisions.md](docs/decisions.md): every major decision, why it was made and what was not chosen.
+
 ## Stack ($0 to run)
 
 - **Next.js 16** (App Router) + TypeScript + Tailwind CSS v4, hosted on **Vercel** (Hobby, free)

@@ -44,3 +44,6 @@ next-env.d.ts
 # supabase cli
 supabase/.temp
 supabase/.branches
+
+# database backups (customer data: never commit)
+/backups/

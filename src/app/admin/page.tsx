@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { OrderLink } from "@/components/order-link";
+import { Onboarding } from "@/components/onboarding";
 import { currentTier, planGate } from "@/components/plan-gate";
 import { sendForDelivery } from "@/lib/actions/delivery";
 import { markReady } from "@/lib/actions/service";
@@ -76,9 +77,22 @@ export default async function LiveBoard() {
   const deliveries = all.filter((o) => o.deliveryStatus === "WAITING" || o.deliveryStatus === "ASSIGNED" || o.deliveryStatus === "OUT");
   const outNow = deliveries.filter((o) => o.deliveryStatus === "OUT").length;
 
+  // first-run checklist, from real data; it disappears once everything is done
+  const setup = tenant
+    ? [
+        { done: !!tenant.storeLocated, title: "Place your store on the map", hint: "So customers nearby find you and drivers get routes that end at the store.", href: "/admin/business", cta: "Set location" },
+        { done: paidOnline(tenant) || !!tenant.onlineGateway, title: "Choose how customers pay you", hint: "Connect a payment gateway, or add your UPI ID or other payment details.", href: "/admin/settings/online-payments", cta: "Set up payments" },
+        { done: drivers.some((d) => !!d.telegramChatId), title: "Add a driver and connect Telegram", hint: "They open the driver bot, share their number and tap Online.", href: "/admin/fleet", cta: "Add a driver" },
+        { done: devices.length > 0, title: "Connect a basket", hint: "A customer's basket appears here after its first order. Share your Business ID so customers can join.", href: "/admin/fleet", cta: "See baskets" },
+        { done: all.some((o) => o.status === "COMPLETED"), title: "Finish your first pickup", hint: "Once a driver weighs and picks up a bag, you'll see the bill and payment here.", href: "/admin/orders", cta: "See orders" },
+      ]
+    : [];
+
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker="Command centre">Live board</PageTitle>
+
+      <Onboarding title={`Welcome${tenant ? `, ${tenant.name}` : ""}. Five steps to your first pickup`} steps={setup} />
 
       <NeedsAttention alerts={alerts} locked={lockedAlerts} />
 

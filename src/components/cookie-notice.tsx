@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Cookie } from "@phosphor-icons/react";
 
-// The cookie notice. Toss only uses essential cookies (sign-in) and a saved theme choice, with no analytics or
-// advertising, so there's nothing to consent to: the notice says so plainly, with one button and a link to the
+// The cookie notice. Toss only uses essential cookies (sign-in) and a saved theme choice, with no advertising or
+// tracking cookies (page counts are cookie-free), so there's nothing to consent to: the notice says so plainly, with one button and a link to the
 // policy. No pre-ticked boxes and no "reject" that does nothing. Shown once per browser; it sits bottom-left so it
 // never covers the assistant button (bottom-right) or blocks the page.
 const KEY = "toss-cookie-notice";
@@ -37,7 +37,7 @@ export function CookieNotice() {
       <p className="flex gap-2.5 text-secondary">
         <Cookie size={20} weight="duotone" aria-hidden className="mt-0.5 shrink-0 text-accent" />
         <span>
-          We only use cookies that keep you signed in and remember your theme. <b className="text-fg">No ads, analytics or tracking.</b>{" "}
+          We only use cookies that keep you signed in and remember your theme. <b className="text-fg">No ads or tracking cookies.</b> Visits are counted without cookies.{" "}
           <Link href="/cookies" className="text-accent underline-offset-4 hover:underline">
             Cookie policy
           </Link>

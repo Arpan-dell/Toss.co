@@ -3,6 +3,7 @@ import { OrderTable } from "@/components/order-table";
 import { IdChip } from "@/components/id-chip";
 import { JoinBusiness } from "@/components/join-business";
 import { AutopayCard } from "@/components/autopay-card";
+import { Onboarding } from "@/components/onboarding";
 import { GatewayPay } from "@/components/gateway-pay";
 import { RegionPay } from "@/components/region-pay";
 import { UpiPay } from "@/components/upi-pay";
@@ -102,6 +103,16 @@ export default async function CustomerOverview() {
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker="Overview">Hi, {firstName}</PageTitle>
+
+      <Onboarding
+        title="Get your first pickup going"
+        steps={[
+          { done: !!customer?.tenantId, title: "Join your laundry", hint: "Enter the Business ID your laundry gave you, or find one near you.", href: "/laundries", cta: "Find a laundry" },
+          { done: !!customer?.telegramId, title: "Link your Telegram", hint: "So orders from your basket and updates show up here.", href: "/app/settings", cta: "Link Telegram" },
+          { done: !!device, title: "Connect your basket", hint: "Claim it in the Toss Control bot, then it appears here.", href: "/app/settings", cta: "How to connect" },
+          { done: orders.length > 0, title: "Book your first pickup", hint: "Fill the basket to its target weight, or ask for a pickup in the bot.", href: "/app/orders", cta: "My orders" },
+        ]}
+      />
 
       {offer && business && (
         <div

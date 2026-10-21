@@ -24,6 +24,8 @@ export async function GET(request: Request) {
     const ref = logError("keep-alive query failed", error.code);
     return Response.json({ error: "Database unavailable", ref }, { status: 500 });
   }
+  // error reports are kept for 30 days
+  await supabaseAdmin().from("error_log").delete().lt("created_at", new Date(Date.now() - 30 * 86_400_000).toISOString());
   // old rate-limit windows are useless after a day
   await supabaseAdmin().from("rate_limits").delete().lt("window_start", new Date(Date.now() - 86_400_000).toISOString());
   const winback = await runWinback().catch((err) => {

@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { reportClientError } from "@/lib/report-error";
 import { siteHref } from "@/lib/hosts";
 
 // Shown when a page fails. Never shows the error itself (Next.js already replaces server errors with a
 // generic one); the digest is the reference that matches the full details in the server logs.
 export default function ErrorPage({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
+  useEffect(() => reportClientError(error), [error]);
   return (
     <main id="main" tabIndex={-1} className="outline-none mx-auto grid min-h-[60vh] w-full max-w-md place-items-center px-4 py-16">
       <div className="w-full rounded-[10px] border border-t-2 border-border border-t-critical bg-surface-solid p-7">

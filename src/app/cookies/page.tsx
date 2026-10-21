@@ -24,10 +24,11 @@ const STORAGE: [string, string][] = [
 
 export default function CookiesPage() {
   return (
-    <InfoPage kicker="Cookie Policy" title="Only the cookies we need." updated="11 October 2026">
+    <InfoPage kicker="Cookie Policy" title="Only the cookies we need." updated="21 October 2026">
       <p>
-        Toss uses a few essential cookies and some browser storage to work. <b>We don&apos;t use advertising, analytics or tracking cookies</b>,
-        and we don&apos;t let other companies put cookies on our pages. Because everything here is needed for the site to work (or only saves a
+        Toss uses a few essential cookies and some browser storage to work. <b>We don&apos;t use advertising or tracking cookies</b>,
+        and we don&apos;t let other companies put cookies on our pages. We count page visits with a cookie-free tool that stores nothing on your
+        device and doesn&apos;t track you across sites (see the <Link href="/privacy">Privacy Policy</Link>). Because everything here is needed for the site to work (or only saves a
         choice you made), there&apos;s nothing to accept or reject.
       </p>
 

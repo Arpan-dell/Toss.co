@@ -22,6 +22,7 @@ export const LIMITS = {
   resetSubmitIp: { limit: 10, windowSec: 60 * 60 },
   basketRequestIp: { limit: 3, windowSec: 60 * 60 }, // "Get a basket" requests
   deletionRequestIp: { limit: 3, windowSec: 60 * 60 }, // data deletion requests
+  clientErrorIp: { limit: 10, windowSec: 10 * 60 }, // browser error reports
   driverLocation: { limit: 40, windowSec: 10 * 60 }, // the route page sends a point about once a minute
   assistant: { limit: 40, windowSec: 10 * 60 }, // in-app assistant questions per account (keeps the free AI quota safe)
 } as const;

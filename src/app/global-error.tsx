@@ -1,7 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
+import { reportClientError } from "@/lib/report-error";
+
 // Last-resort error screen (the root layout itself failed), so it can't rely on the app's styles.
 export default function GlobalError({ error, retry }: { error: Error & { digest?: string }; retry: () => void }) {
+  useEffect(() => reportClientError(error), [error]);
   return (
     <html lang="en">
       <body style={{ fontFamily: "system-ui, sans-serif", background: "#f5f7fc", color: "#0b1430", display: "grid", placeItems: "center", minHeight: "100vh", margin: 0 }}>

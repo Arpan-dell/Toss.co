@@ -14,7 +14,7 @@ const EMAIL = BUSINESS.email;
 // Kept in step with the code: if a new field, service or cookie is added, update this page.
 export default function PrivacyPage() {
   return (
-    <InfoPage kicker="Privacy Policy" title="Your data, in plain words." updated="15 October 2026">
+    <InfoPage kicker="Privacy Policy" title="Your data, in plain words." updated="21 October 2026">
       <p>
         {BUSINESS.legalName || BUSINESS.brand} (&ldquo;Toss&rdquo;, &ldquo;we&rdquo;), {BUSINESS.address || BUSINESS.city}, runs this website,
         the Toss baskets and the Telegram bots that go with them. This page explains what we
@@ -105,9 +105,22 @@ export default function PrivacyPage() {
       <h2>Cookies and storage</h2>
       <p>
         We use only the cookies needed to keep you signed in. They can&apos;t be read by scripts on the page and are only sent over a secure
-        connection. Your browser also remembers your light or dark theme choice. There are no advertising, analytics or tracking cookies.
+        connection. Your browser also remembers your light or dark theme choice. There are no advertising or tracking cookies.
         Every cookie and storage item is listed in the <Link href="/cookies">Cookie Policy</Link>.
       </p>
+
+      <h2>Page counts and error reports</h2>
+      <ul>
+        <li>
+          <b>Page counts:</b> we count visits to pages with Vercel Web Analytics, which uses no cookies and doesn&apos;t follow you across other
+          sites or build a profile of you. It records which page was opened, roughly where from (country) and which kind of device and browser.
+          It never sees your name, email, phone or what you type.
+        </li>
+        <li>
+          <b>Error reports:</b> when something breaks, we keep a short note of what failed for 30 days so we can fix it. Names, emails, phone
+          numbers, IDs and keys are removed before anything is saved.
+        </li>
+      </ul>
 
       <h2>How long we keep it</h2>
       <p>

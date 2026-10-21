@@ -6,13 +6,20 @@
 //  - the paid amount and currency must equal what Toss asked for.
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export type Provider = "razorpay" | "stripe";
+export type Provider = "razorpay" | "stripe" | "dodo";
 export interface GatewayKeys {
   provider: Provider;
   keyId?: string; // Razorpay key ID
-  secret: string; // Razorpay key secret / Stripe secret key
+  secret: string; // Razorpay key secret / Stripe secret key / Dodo API key
   webhookSecret?: string;
+  /** Dodo: live or test API host */
+  live?: boolean;
+  /** Dodo: the products it charges for (made in its dashboard) */
+  products?: { once?: string; monthly?: string };
 }
+
+/** The name people see. */
+export const gatewayLabel = (p: string) => (p === "razorpay" ? "Razorpay" : p === "dodo" ? "Dodo Payments" : "Stripe");
 
 // ---------- amounts in the gateway's smallest unit ----------
 const ZERO_DECIMAL = new Set(["BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF"]);
@@ -217,6 +224,7 @@ export interface CheckoutRequest {
 /** Creates a hosted payment page for exactly this amount. Returns its id (for payment_intents) and URL. */
 export async function createCheckout(k: GatewayKeys, r: CheckoutRequest): Promise<{ ref: string; url: string }> {
   const minor = toMinor(r.amount, r.currency);
+  if (k.provider === "dodo") return dodoCheckout(k, r, minor);
   if (k.provider === "razorpay") {
     const link = await rzp<{ id: string; short_url: string }>(k, "/payment_links", {
       method: "POST",
@@ -259,6 +267,7 @@ export async function createCheckout(k: GatewayKeys, r: CheckoutRequest): Promis
 
 /** Asks the gateway itself whether a payment page was paid (used when the webhook is late or lost). */
 export async function checkoutStatus(k: GatewayKeys, ref: string): Promise<GatewayEvent> {
+  if (k.provider === "dodo") return dodoCheckoutStatus(k, ref);
   if (k.provider === "razorpay" && ref.startsWith("order_")) {
     const r = await rzp<{ items?: { id: string; status: string; amount: number; currency: string; method?: string }[] }>(k, `/orders/${encodeURIComponent(ref)}/payments`);
     const items = r.items ?? [];
@@ -287,6 +296,7 @@ export async function checkoutStatus(k: GatewayKeys, ref: string): Promise<Gatew
 
 /** Checks that the keys work (and are allowed to create payment pages). Returns whether they're live keys. */
 export async function testKeys(k: GatewayKeys): Promise<{ live: boolean }> {
+  if (k.provider === "dodo") return dodoTestKey(k);
   if (k.provider === "razorpay") {
     if (!/^rzp_(test|live)_[A-Za-z0-9]{6,}$/.test(k.keyId ?? "")) throw new Error("A Razorpay key ID starts with rzp_test_ or rzp_live_.");
     await rzp(k, "/payment_links?count=1");
@@ -480,6 +490,7 @@ export interface RenewalRequest {
 export async function createRenewal(k: GatewayKeys, r: RenewalRequest): Promise<{ ref: string; url: string; sub?: string }> {
   const minor = toMinor(r.amount, r.currency);
   const later = r.firstChargeAt && r.firstChargeAt.getTime() > Date.now() + 2 * 86_400_000 ? Math.floor(r.firstChargeAt.getTime() / 1000) : undefined;
+  if (k.provider === "dodo") return dodoRenewal(k, r, minor, later);
   if (k.provider === "razorpay") {
     const plan = await rzp<{ id: string }>(k, "/plans", {
       method: "POST",
@@ -513,6 +524,10 @@ export async function createRenewal(k: GatewayKeys, r: RenewalRequest): Promise<
 
 /** Where a renewal stands, asked of the gateway (for when the manager comes back before the webhook). */
 export async function renewalStatus(k: GatewayKeys, ref: string): Promise<{ sub?: string; state: "created" | "active" | "failing" | "cancelled" }> {
+  if (k.provider === "dodo") {
+    const s = await dodo<{ payment_status?: string | null }>(k, `/checkouts/${encodeURIComponent(ref)}`);
+    return { state: s.payment_status === "succeeded" ? "active" : "created" };
+  }
   if (k.provider === "razorpay") {
     const s = await rzp<{ id: string; status: string }>(k, `/subscriptions/${encodeURIComponent(ref)}`);
     const state = ["authenticated", "active"].includes(s.status) ? "active" : ["pending", "halted", "paused"].includes(s.status) ? "failing" : ["cancelled", "completed", "expired"].includes(s.status) ? "cancelled" : "created";
@@ -524,6 +539,152 @@ export async function renewalStatus(k: GatewayKeys, ref: string): Promise<{ sub?
 
 /** Stops a renewal now: nothing more is charged (the time already paid for stays). */
 export async function cancelRenewal(k: GatewayKeys, sub: string): Promise<void> {
-  if (k.provider === "razorpay") await rzp(k, `/subscriptions/${encodeURIComponent(sub)}/cancel`, { method: "POST", body: { cancel_at_cycle_end: 0 } });
+  if (k.provider === "dodo") await dodo(k, `/subscriptions/${encodeURIComponent(sub)}`, { method: "PATCH", body: { status: "cancelled" } });
+  else if (k.provider === "razorpay") await rzp(k, `/subscriptions/${encodeURIComponent(sub)}/cancel`, { method: "POST", body: { cancel_at_cycle_end: 0 } });
   else await stripe(k, `/subscriptions/${encodeURIComponent(sub)}`, { method: "DELETE" });
+}
+
+// ================= Dodo Payments (Toss's own US-dollar billing) =================
+// A merchant of record: the laundry buys from Dodo, Dodo adds and pays the sales tax, and pays Toss out in India.
+// Prices live on products in Dodo's dashboard: a "pay what you want" one-time product (Toss sets each amount, for
+// 1–12 months) and a monthly subscription product. Amounts Dodo reports include tax, so Toss checks them before tax.
+const DODO = { live: "https://live.dodopayments.com", test: "https://test.dodopayments.com" };
+
+async function dodo<T>(k: GatewayKeys, path: string, init?: { method?: string; body?: unknown }): Promise<T> {
+  const res = await fetch(`${k.live ? DODO.live : DODO.test}${path}`, {
+    method: init?.method ?? "GET",
+    headers: { Authorization: `Bearer ${k.secret}`, "Content-Type": "application/json" },
+    body: init?.body ? JSON.stringify(init.body) : undefined,
+    signal: AbortSignal.timeout(15_000),
+  });
+  const data = (await res.json().catch(() => ({}))) as T & { message?: string; error?: string | { message?: string } };
+  if (!res.ok) {
+    const msg = typeof data.error === "object" ? data.error?.message : (data.message ?? data.error);
+    throw new Error(`Dodo: ${msg ?? (res.status === 401 ? "authentication failed" : res.status)}`);
+  }
+  return data;
+}
+
+/** Standard Webhooks: base64 HMAC-SHA256 of "id.timestamp.body" with the secret (whsec_ + base64 key); 5 minutes' leeway. */
+export function verifyDodo(raw: string, h: { id: string | null; timestamp: string | null; signature: string | null }, secret: string, nowSec = Math.floor(Date.now() / 1000)): boolean {
+  if (!h.id || !h.timestamp || !h.signature || !secret) return false;
+  const t = Number(h.timestamp);
+  if (!Number.isFinite(t) || Math.abs(nowSec - t) > 300) return false;
+  const key = secret.startsWith("whsec_") ? Buffer.from(secret.slice(6), "base64") : Buffer.from(secret, "utf8");
+  const expected = Buffer.from(createHmac("sha256", key).update(`${h.id}.${h.timestamp}.${raw}`).digest("base64"));
+  return h.signature.split(" ").some((part) => {
+    const [version, sig] = part.split(",");
+    const got = Buffer.from(sig ?? "");
+    return version === "v1" && got.length === expected.length && timingSafeEqual(got, expected);
+  });
+}
+
+type DodoPayment = {
+  payment_id?: string;
+  status?: string | null;
+  total_amount?: number;
+  tax?: number | null;
+  currency?: string;
+  subscription_id?: string | null;
+  checkout_session_id?: string | null;
+  payment_method?: string | null;
+  metadata?: Record<string, unknown>;
+};
+type DodoSubscription = { subscription_id?: string; status?: string; metadata?: Record<string, unknown> };
+const beforeTax = (p: DodoPayment) => (typeof p.total_amount === "number" ? p.total_amount - (p.tax ?? 0) : undefined);
+const meta = (m: Record<string, unknown> | undefined, k: string) => (typeof m?.[k] === "string" ? (m[k] as string) : undefined);
+
+export function parseDodo(raw: string, webhookId: string | null): GatewayEvent {
+  const e = JSON.parse(raw) as { type?: string; data?: DodoPayment & DodoSubscription };
+  const type = e.type ?? "";
+  const d = e.data ?? {};
+  const eventId = webhookId || createHmac("sha256", "id").update(raw).digest("hex").slice(0, 32);
+  if (type === "payment.succeeded" || type === "payment.failed") {
+    const ok = type === "payment.succeeded";
+    const money = { paymentId: d.payment_id, amountMinor: beforeTax(d), currency: d.currency?.toUpperCase(), method: d.payment_method ?? "card" };
+    // a month of an automatic renewal
+    if (d.subscription_id) return { eventId, type, status: "ignore", renewal: { sub: d.subscription_id, tenant: meta(d.metadata, "toss_tenant"), state: ok ? "charged" : "failing" }, ...money };
+    return { eventId, type, ref: d.checkout_session_id ?? undefined, status: ok ? "paid" : "failed", ...money };
+  }
+  const state = ({ "subscription.active": "active", "subscription.on_hold": "failing", "subscription.past_due": "failing", "subscription.failed": "failing", "subscription.cancelled": "cancelled", "subscription.expired": "cancelled" } as const)[
+    type as "subscription.active"
+  ];
+  if (state && d.subscription_id) return { eventId, type, status: "ignore", renewal: { sub: d.subscription_id, tenant: meta(d.metadata, "toss_tenant"), state } };
+  return { eventId, type, status: "ignore" };
+}
+
+async function dodoCheckout(k: GatewayKeys, r: CheckoutRequest, minor: number): Promise<{ ref: string; url: string }> {
+  if (!k.products?.once) throw new Error("Dodo: no one-time product is set up");
+  const s = await dodo<{ session_id: string; checkout_url: string | null }>(k, "/checkouts", {
+    method: "POST",
+    body: {
+      product_cart: [{ product_id: k.products.once, quantity: 1, amount: minor }],
+      customer: r.customer?.email ? { email: r.customer.email, name: r.customer.name ?? r.customer.email } : undefined,
+      return_url: r.returnUrl,
+      metadata: { toss_intent: r.reference },
+    },
+  });
+  if (!s.checkout_url) throw new Error("Dodo: no checkout page returned");
+  return { ref: s.session_id, url: s.checkout_url };
+}
+
+async function dodoCheckoutStatus(k: GatewayKeys, ref: string): Promise<GatewayEvent> {
+  const s = await dodo<{ payment_id?: string | null; payment_status?: string | null }>(k, `/checkouts/${encodeURIComponent(ref)}`);
+  if (!s.payment_id || !s.payment_status) return { eventId: `check:${ref}`, type: "status.open", ref, status: "ignore" };
+  if (s.payment_status !== "succeeded") {
+    const failed = ["failed", "cancelled"].includes(s.payment_status);
+    return { eventId: `check:${ref}`, type: `status.${s.payment_status}`, ref, status: failed ? "failed" : "ignore" };
+  }
+  const p = await dodo<DodoPayment>(k, `/payments/${encodeURIComponent(s.payment_id)}`);
+  return { eventId: `check:${ref}`, type: "status.succeeded", ref, status: "paid", paymentId: p.payment_id, amountMinor: beforeTax(p), currency: p.currency?.toUpperCase(), method: p.payment_method ?? "card" };
+}
+
+/** Dodo keys don't say which mode they're for: try live, then test. */
+async function dodoTestKey(k: GatewayKeys): Promise<{ live: boolean }> {
+  if (k.secret.length < 20) throw new Error("That doesn't look like a Dodo API key.");
+  try {
+    await dodo({ ...k, live: true }, "/products?page_size=1");
+    return { live: true };
+  } catch {
+    await dodo({ ...k, live: false }, "/products?page_size=1");
+    return { live: false };
+  }
+}
+
+type DodoProduct = { product_id: string; is_recurring: boolean; price?: number | null; currency?: string | null; price_detail?: { pay_what_you_want?: boolean } | null };
+
+/** Finds the two products and checks they're the right kinds. Returns what's wrong, or null. */
+export async function checkDodoProducts(k: GatewayKeys): Promise<string | null> {
+  const r = await dodo<{ items: DodoProduct[] }>(k, "/products?page_size=100");
+  const once = r.items.find((p) => p.product_id === k.products?.once);
+  const monthly = r.items.find((p) => p.product_id === k.products?.monthly);
+  if (!once) return "Toss couldn't find the one-time product. Copy its ID from Dodo → Products.";
+  if (once.is_recurring) return "The one-time product is a subscription. Make a one-time product with Pay What You Want turned on.";
+  if (once.price_detail && once.price_detail.pay_what_you_want === false) return "Turn on Pay What You Want for the one-time product, so Toss can charge 1, 3, 6 or 12 months.";
+  if (k.products?.monthly && !monthly) return "Toss couldn't find the monthly product. Copy its ID from Dodo → Products.";
+  if (monthly && !monthly.is_recurring) return "The monthly product must be a subscription (billed every month).";
+  return null;
+}
+
+async function dodoRenewal(k: GatewayKeys, r: RenewalRequest, minor: number, laterSec?: number): Promise<{ ref: string; url: string }> {
+  if (!k.products?.monthly) throw new Error("Dodo: no monthly product is set up");
+  // the monthly product's own price is what gets charged: it must be Toss's monthly price
+  const list = await dodo<{ items: DodoProduct[] }>(k, "/products?page_size=100&recurring=true");
+  const product = list.items.find((p) => p.product_id === k.products!.monthly);
+  if (!product || product.price !== minor || (product.currency ?? "").toUpperCase() !== r.currency.toUpperCase()) {
+    throw new Error("Dodo: the monthly product's price doesn't match this plan's price");
+  }
+  const trialDays = laterSec ? Math.ceil((laterSec * 1000 - Date.now()) / 86_400_000) : 0;
+  const s = await dodo<{ session_id: string; checkout_url: string | null }>(k, "/checkouts", {
+    method: "POST",
+    body: {
+      product_cart: [{ product_id: k.products.monthly, quantity: 1 }],
+      customer: r.who.email ? { email: r.who.email, name: r.who.name ?? r.who.email } : undefined,
+      return_url: r.returnUrl,
+      metadata: { toss_tenant: r.tenant, toss_renewal: "1" },
+      subscription_data: trialDays > 0 ? { trial_period_days: trialDays } : undefined,
+    },
+  });
+  if (!s.checkout_url) throw new Error("Dodo: no checkout page returned");
+  return { ref: s.session_id, url: s.checkout_url };
 }

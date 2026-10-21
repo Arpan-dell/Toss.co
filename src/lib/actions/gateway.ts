@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createStripeWebhook, deleteStripeWebhook, testKeys, type GatewayKeys, type Provider } from "../gateways";
+import { checkDodoProducts, createStripeWebhook, deleteStripeWebhook, testKeys, type GatewayKeys, type Provider } from "../gateways";
 import { platformToken, refreshIntent, setAutopay, startCardSetup, startOrderPayment, startRenewal, startSubscriptionPayment, stopRenewal, webhookUrl } from "../gateway-payments";
 import { planState } from "../plan";
 import { checkPassword } from "../password-check";
@@ -178,10 +178,11 @@ export async function connectPlatformGateway(_prev: FormState, fd: FormData): Pr
   if (wrong) return { error: wrong };
   const group = text(fd, "group") === "USD" ? "USD" : "INR";
   const provider = text(fd, "provider") as Provider;
-  if (provider !== "razorpay" && provider !== "stripe") return { error: "Choose Razorpay or Stripe." };
+  if (provider !== "razorpay" && provider !== "stripe" && provider !== "dodo") return { error: "Choose a payment gateway." };
   const db = supabaseAdmin();
   const { data: existing, error: tableErr } = await db.from("platform_gateways").select("*").eq("currency_group", group).maybeSingle();
   if (tableErr) return { error: "Run the 0036 database update first (Supabase → SQL Editor)." };
+  if (provider === "dodo") return connectDodo(group, fd, existing);
 
   const webhookSecret = text(fd, "webhookSecret");
   if (provider === "razorpay" && existing?.provider === "razorpay" && !text(fd, "secret") && webhookSecret) {
@@ -224,6 +225,54 @@ export async function connectPlatformGateway(_prev: FormState, fd: FormData): Pr
   revalidatePath("/owner", "layout");
   revalidatePath("/admin", "layout");
   return { message: `Razorpay is connected for ${group === "INR" ? "rupee" : "US dollar"} plans${live ? "" : " (test mode)"}. Businesses now pay with one tap and plans extend by themselves.` };
+}
+
+/**
+ * Dodo Payments for US-dollar plans: the API key, the webhook's signing secret (Dodo shows it after the webhook is
+ * added with Toss's URL) and the two products Toss charges for. Everything is checked against Dodo before saving.
+ */
+async function connectDodo(group: "INR" | "USD", fd: FormData, existing: Record<string, unknown> | null): Promise<FormState> {
+  if (group !== "USD") return { error: "Dodo Payments is for US-dollar plans. Use Razorpay for rupees." };
+  const webhookSecret = text(fd, "webhookSecret");
+  const keys: GatewayKeys = {
+    provider: "dodo",
+    secret: text(fd, "secret"),
+    products: { once: text(fd, "productOnce") || undefined, monthly: text(fd, "productMonthly") || undefined },
+  };
+  if (!keys.secret) return { error: "Paste your Dodo API key." };
+  if (!/^whsec_[A-Za-z0-9+/=]{16,}$/.test(webhookSecret)) return { error: "Paste the webhook's signing secret from Dodo (it starts with whsec_)." };
+  if (!keys.products?.once) return { error: "Paste the ID of your one-time product." };
+  try {
+    ({ live: keys.live } = await testKeys(keys));
+    const wrong = await checkDodoProducts(keys);
+    if (wrong) return { error: wrong };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message.replace(/^Dodo: /, "Dodo said: ") : "That key didn't work." };
+  }
+  const db = supabaseAdmin();
+  if (existing?.provider === "stripe" && existing.webhook_endpoint_id) {
+    await deleteStripeWebhook({ provider: "stripe", secret: open(existing.secret_enc as string) }, existing.webhook_endpoint_id as string);
+  }
+  const { error } = await db.from("platform_gateways").upsert(
+    {
+      currency_group: group,
+      provider: "dodo",
+      key_id: null,
+      secret_enc: seal(keys.secret),
+      webhook_secret_enc: seal(webhookSecret),
+      webhook_endpoint_id: null,
+      live: keys.live === true,
+      config: keys.products,
+      connected_at: new Date().toISOString(),
+    },
+    { onConflict: "currency_group" },
+  );
+  if (error) return { error: /config|check constraint/i.test(error.message) ? "Run the 0041 database update first (Supabase → SQL Editor)." : "Couldn't save the connection. Try again." };
+  revalidatePath("/owner", "layout");
+  revalidatePath("/admin", "layout");
+  return {
+    message: `Dodo Payments is connected for US-dollar plans${keys.live ? "" : " (test mode)"}.${keys.products?.monthly ? " Automatic monthly renewal is on too." : " Add a monthly product to offer automatic renewal."}`,
+  };
 }
 
 export async function disconnectPlatformGateway(fd: FormData) {

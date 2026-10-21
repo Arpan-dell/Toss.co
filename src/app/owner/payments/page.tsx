@@ -4,7 +4,7 @@ import { Badge, Card, EmptyState, PageTitle, StatTile } from "@/components/ui";
 import { reviewSubscriptionPayment } from "@/lib/actions/owner";
 import { listSubscriptionPayments, listTenants } from "@/lib/data";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { fromMinor } from "@/lib/gateways";
+import { fromMinor, gatewayLabel } from "@/lib/gateways";
 import { moneyIn } from "@/lib/region-format";
 import { requireRole } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -12,10 +12,10 @@ import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
 
 export const metadata: Metadata = { title: "Subscription payments" };
 
-// How a plan payment arrived, from its reference: Razorpay payment ids start "pay_", Stripe invoices "in_".
+// How a plan payment arrived, from its reference: gateway payment ids start "pay_" (Razorpay, Dodo), Stripe invoices "in_".
 // Anything else is an older payment someone typed a UPI reference for.
 function via(ref: string): { label: string; tone: "good" | "info" | "neutral" } {
-  if (/^PAY/.test(ref)) return { label: "Razorpay", tone: "good" };
+  if (/^PAY/.test(ref)) return { label: "Online", tone: "good" };
   if (/^IN[A-Z0-9]/.test(ref) && ref.length > 20) return { label: "Stripe", tone: "good" };
   return { label: "UPI (manual)", tone: "neutral" };
 }
@@ -69,7 +69,7 @@ export default async function OwnerPayments() {
               <li key={group} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
                 <span>
                   {group === "INR" ? "Rupees (India)" : "US dollars (abroad)"}
-                  <span className="ml-2 text-secondary">{g ? `${g.provider === "razorpay" ? "Razorpay" : "Stripe"} · ${g.live ? "live" : "test mode"}` : "not connected"}</span>
+                  <span className="ml-2 text-secondary">{g ? `${gatewayLabel(g.provider as string)} · ${g.live ? "live" : "test mode"}` : "not connected"}</span>
                 </span>
                 <span className="flex items-center gap-2 text-xs text-muted">
                   {g?.last_event_at && <span>last confirmation {formatDateTime(g.last_event_at as string)}</span>}
@@ -104,7 +104,7 @@ export default async function OwnerPayments() {
                   <span>
                     {name.get(r.tenant_id as string) ?? (r.tenant_id as string)}
                     <span className="ml-2 text-secondary">
-                      {moneyIn(fromMinor(r.amount_minor as number, r.currency as string), r.currency as string)}/month · {r.provider === "razorpay" ? "Razorpay" : "Stripe"}
+                      {moneyIn(fromMinor(r.amount_minor as number, r.currency as string), r.currency as string)}/month · {gatewayLabel(r.provider as string)}
                     </span>
                   </span>
                   <span className="flex items-center gap-2 text-xs text-muted">

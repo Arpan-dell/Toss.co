@@ -11,12 +11,15 @@ import {
   createStripeCustomer,
   checkoutStatus,
   fromMinor,
+  gatewayLabel,
+  parseDodo,
   parseRazorpay,
   parseStripe,
   razorpayMandateResult,
   renewalStatus,
   RZP_MANDATE_MAX_MINOR,
   toMinor,
+  verifyDodo,
   verifyRazorpay,
   verifyStripe,
   type GatewayEvent,
@@ -96,6 +99,7 @@ export async function platformGateway(currency: string): Promise<(GatewayKeys & 
       secret: open(data.secret_enc as string),
       webhookSecret: data.webhook_secret_enc ? open(data.webhook_secret_enc as string) : undefined,
       live: data.live === true,
+      products: (data.config as { once?: string; monthly?: string } | null) ?? undefined,
     };
   }
   return envPlatformGateway(group);
@@ -114,7 +118,7 @@ function envPlatformGateway(group: "INR" | "USD"): GatewayKeys | null {
 /** Which gateway Toss takes subscriptions through for this currency (no keys leave this file). */
 export async function platformGatewayName(currency: string): Promise<string | null> {
   const g = await platformGateway(currency).catch(() => null);
-  return g ? (g.provider === "razorpay" ? "Razorpay" : "Stripe") : null;
+  return g ? gatewayLabel(g.provider) : null;
 }
 
 export const webhookUrl = (provider: Provider, token: string) => `${APP_URL}/api/pay/webhook/${provider}/${token}`;
@@ -232,14 +236,19 @@ export async function handleWebhook(provider: Provider, token: string, raw: stri
     keys = row && row.provider === provider && row.webhook_secret_enc ? { provider, secret: "", webhookSecret: open(row.webhook_secret_enc as string) } : null;
     if (row) await db().from("tenant_gateways").update({ last_event_at: new Date().toISOString() }).eq("tenant_id", row.tenant_id);
   }
-  if (!keys?.webhookSecret || keys.provider !== provider) return 404;
+  if (!keys?.webhookSecret || keys.provider !== provider || (provider === "dodo" && !platform)) return 404;
 
-  const ok = provider === "razorpay" ? verifyRazorpay(raw, headers.get("x-razorpay-signature"), keys.webhookSecret) : verifyStripe(raw, headers.get("stripe-signature"), keys.webhookSecret);
+  const ok =
+    provider === "razorpay"
+      ? verifyRazorpay(raw, headers.get("x-razorpay-signature"), keys.webhookSecret)
+      : provider === "dodo"
+        ? verifyDodo(raw, { id: headers.get("webhook-id"), timestamp: headers.get("webhook-timestamp"), signature: headers.get("webhook-signature") }, keys.webhookSecret)
+        : verifyStripe(raw, headers.get("stripe-signature"), keys.webhookSecret);
   if (!ok) return 400; // not from the gateway (or tampered with): ignored
 
   let event: GatewayEvent;
   try {
-    event = provider === "razorpay" ? parseRazorpay(raw, headers.get("x-razorpay-event-id")) : parseStripe(raw);
+    event = provider === "razorpay" ? parseRazorpay(raw, headers.get("x-razorpay-event-id")) : provider === "dodo" ? parseDodo(raw, headers.get("webhook-id")) : parseStripe(raw);
   } catch {
     return 400;
   }
@@ -688,6 +697,10 @@ async function onRenewal(provider: Provider, event: GatewayEvent) {
   if (r.sub) row = (await db().from("plan_autorenew").select("*").eq("provider_sub_id", r.sub).maybeSingle()).data;
   if (!row && r.session) row = (await db().from("plan_autorenew").select("*").eq("provider_ref", r.session).maybeSingle()).data;
   if (!row && r.sub) row = (await db().from("plan_autorenew").select("*").eq("provider_ref", r.sub).maybeSingle()).data;
+  // Dodo's first message about a new subscription: matched by the business Toss put in its metadata
+  if (!row && r.tenant && provider === "dodo") {
+    row = (await db().from("plan_autorenew").select("*").eq("tenant_id", r.tenant).eq("provider", "dodo").is("provider_sub_id", null).maybeSingle()).data;
+  }
   if (!row || row.provider !== provider) return;
   const tenantId = row.tenant_id as string;
   const now = new Date().toISOString();
@@ -719,6 +732,9 @@ async function onRenewal(provider: Provider, event: GatewayEvent) {
   if (error || !pay) throw error ?? new Error("renewal payment not recorded");
   const { error: e2 } = await db().rpc("review_subscription_payment", { p_id: pay.id, p_approve: true });
   if (e2) throw e2;
-  await db().from("plan_autorenew").update({ status: "active", last_charged_at: now, updated_at: now }).eq("tenant_id", tenantId);
+  await db()
+    .from("plan_autorenew")
+    .update({ status: "active", last_charged_at: now, updated_at: now, ...(r.sub ? { provider_sub_id: r.sub } : {}) })
+    .eq("tenant_id", tenantId);
   await notifySubscriptionReviewed(pay.id as number);
 }

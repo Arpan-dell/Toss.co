@@ -3,20 +3,32 @@ import { Badge, Card } from "@/components/ui";
 import { connectPlatformGateway, disconnectPlatformGateway } from "@/lib/actions/gateway";
 import { platformToken, webhookUrl } from "@/lib/gateway-payments";
 import { formatDateTime } from "@/lib/format";
+import { getPlatformSettings } from "@/lib/data";
+import { gatewayLabel } from "@/lib/gateways";
+import { moneyIn } from "@/lib/region-format";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { GatewayForm } from "../../admin/settings/online-payments/gateway-form";
 
 const GROUPS = [
   { group: "INR" as const, title: "Rupees (businesses in India)", suggested: "razorpay" as const, note: "UPI, cards, netbanking and wallets. The payment page shows a UPI QR code too." },
-  { group: "USD" as const, title: "US dollars (businesses abroad)", suggested: "stripe" as const, note: "Cards, Apple Pay and Google Pay. Razorpay works too if international payments are on for your account." },
+  {
+    group: "USD" as const,
+    title: "US dollars (businesses abroad)",
+    suggested: "dodo" as const,
+    note: "Dodo Payments takes cards worldwide, handles sales tax and pays you out in India. Razorpay works too once international payments are on; Stripe needs an invite for Indian businesses.",
+  },
 ];
 
 // Owner → Plan & payments: Toss's own gateway for subscriptions. Businesses tap Pay, the gateway confirms the
 // payment to Toss, and the plan extends by itself: no references to type, nothing to approve.
 export async function PlatformGatewayCard() {
-  const { data, error } = await supabaseAdmin().from("platform_gateways").select("currency_group, provider, key_id, live, webhook_secret_enc, connected_at, last_event_at");
+  const [{ data, error }, platform] = await Promise.all([
+    supabaseAdmin().from("platform_gateways").select("currency_group, provider, key_id, live, webhook_secret_enc, connected_at, last_event_at"),
+    getPlatformSettings(),
+  ]);
+  const dodo = { webhookUrl: webhookUrl("dodo", platformToken("USD")), monthlyPrice: moneyIn(platform.usdMonthlyPrice, "USD") };
   return (
-    <Card title="Razorpay for Billing (businesses paying their Toss plan)">
+    <Card title="Payment gateways for Billing (businesses paying their Toss plan)">
       <p className="mb-4 text-sm text-secondary">
         Businesses pay their plan on your gateway&apos;s page, and it&apos;s confirmed to Toss automatically. The money goes to your gateway account.
       </p>
@@ -37,7 +49,7 @@ export async function PlatformGatewayCard() {
                   <h3 className="text-sm font-semibold text-fg">{g.title}</h3>
                   {connected ? (
                     <Badge tone={connected.live ? "good" : "warn"} icon="●">
-                      {connected.provider === "razorpay" ? "Razorpay" : "Stripe"} · {connected.live ? "live" : "test mode"}
+                      {gatewayLabel(connected.provider as string)} · {connected.live ? "live" : "test mode"}
                     </Badge>
                   ) : (
                     <Badge tone="neutral">Not connected</Badge>
@@ -73,7 +85,13 @@ export async function PlatformGatewayCard() {
                     />
                   </div>
                 ) : (
-                  <GatewayForm suggested={g.suggested} action={connectPlatformGateway} hidden={{ group: g.group }} />
+                  <GatewayForm
+                    suggested={g.suggested}
+                    action={connectPlatformGateway}
+                    hidden={{ group: g.group }}
+                    providers={g.group === "USD" ? ["dodo", "razorpay", "stripe"] : ["razorpay", "stripe"]}
+                    dodo={g.group === "USD" ? dodo : undefined}
+                  />
                 )}
               </section>
             );

@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { fromMinor, parseRazorpay, parseStripe, toMinor, verifyRazorpay, verifyStripe } from "./gateways";
+import { fromMinor, parseDodo, parseRazorpay, parseStripe, toMinor, verifyDodo, verifyRazorpay, verifyStripe } from "./gateways";
 
 // fake secrets: test data only
 const RZP_SECRET = "rzp-webhook-secret-not-real";
@@ -112,5 +112,38 @@ describe("automatic payments in webhooks", () => {
     expect(parseStripe(stripeEvent("invoice.paid", { id: "in_0", subscription: "sub_s", amount_paid: 0, currency: "usd" })).renewal?.state).toBe("active");
     expect(parseStripe(stripeEvent("invoice.payment_failed", { id: "in_2", parent: { subscription_details: { subscription: "sub_s" } } })).renewal?.state).toBe("failing");
     expect(parseStripe(stripeEvent("customer.subscription.deleted", { id: "sub_s" })).renewal).toEqual({ sub: "sub_s", state: "cancelled" });
+  });
+});
+
+describe("Dodo webhooks", () => {
+  // a made-up secret in Dodo's format (whsec_ + base64 key); never a real one
+  const key = Buffer.from("toss-test-signing-key-0123456789");
+  const secret = `whsec_${key.toString("base64")}`;
+  const sign = (id: string, ts: string, raw: string) => `v1,${createHmac("sha256", key).update(`${id}.${ts}.${raw}`).digest("base64")}`;
+  const now = 1_800_000_000;
+
+  it("accepts a correctly signed message and rejects tampered, old or unsigned ones", () => {
+    const raw = JSON.stringify({ type: "payment.succeeded", data: { payment_id: "pay_1" } });
+    const ts = String(now);
+    const h = { id: "msg_1", timestamp: ts, signature: `v1,bad ${sign("msg_1", ts, raw)}` };
+    expect(verifyDodo(raw, h, secret, now)).toBe(true);
+    expect(verifyDodo(raw.replace("pay_1", "pay_2"), h, secret, now)).toBe(false);
+    expect(verifyDodo(raw, h, secret, now + 301)).toBe(false);
+    expect(verifyDodo(raw, { ...h, signature: null }, secret, now)).toBe(false);
+  });
+
+  it("reads one-time payments, before tax", () => {
+    const e = parseDodo(JSON.stringify({ type: "payment.succeeded", data: { payment_id: "pay_9", total_amount: 5240, tax: 340, currency: "usd", checkout_session_id: "cks_1" } }), "msg_9");
+    expect(e).toMatchObject({ eventId: "msg_9", ref: "cks_1", status: "paid", paymentId: "pay_9", amountMinor: 4900, currency: "USD" });
+    expect(parseDodo(JSON.stringify({ type: "payment.failed", data: { checkout_session_id: "cks_2" } }), "m").status).toBe("failed");
+  });
+
+  it("reads plan renewals", () => {
+    const charged = parseDodo(JSON.stringify({ type: "payment.succeeded", data: { payment_id: "pay_3", total_amount: 1900, tax: 0, currency: "USD", subscription_id: "sub_1", metadata: { toss_tenant: "t1" } } }), "m");
+    expect(charged).toMatchObject({ status: "ignore", renewal: { sub: "sub_1", tenant: "t1", state: "charged" }, amountMinor: 1900 });
+    expect(parseDodo(JSON.stringify({ type: "subscription.active", data: { subscription_id: "sub_1", metadata: { toss_tenant: "t1" } } }), "m").renewal).toEqual({ sub: "sub_1", tenant: "t1", state: "active" });
+    expect(parseDodo(JSON.stringify({ type: "subscription.on_hold", data: { subscription_id: "sub_1" } }), "m").renewal?.state).toBe("failing");
+    expect(parseDodo(JSON.stringify({ type: "subscription.cancelled", data: { subscription_id: "sub_1" } }), "m").renewal?.state).toBe("cancelled");
+    expect(parseDodo(JSON.stringify({ type: "subscription.renewed", data: { subscription_id: "sub_1" } }), "m").renewal).toBeUndefined();
   });
 });

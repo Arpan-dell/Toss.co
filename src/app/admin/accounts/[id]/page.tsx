@@ -11,6 +11,11 @@ import { deviceLabel, getTenantById, listAccounts, listDevices, listOrders } fro
 import { formatPhone } from "@/lib/phone";
 import { getSession } from "@/lib/session";
 import { myFormat } from "@/lib/my-format";
+import { saveRoundSettings } from "@/lib/actions/bookings";
+import { getRound } from "@/lib/bookings";
+import { isVirtualDevice } from "@/lib/rounds";
+import { listActiveOrders } from "@/lib/data";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Business account" };
 
@@ -29,7 +34,11 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
   if (!account || !tenant) notFound(); // RLS: other businesses' accounts don't exist here
 
   const baskets = devices.filter((d) => d.accountId === account.id);
-  const free = devices.filter((d) => !d.accountId);
+  const free = devices.filter((d) => !d.accountId && !isVirtualDevice(d.deviceId));
+  // collection rounds (migration 0042): settings, residents, and the bags signed up for the next one
+  const [round, active] = await Promise.all([getRound(account.id, tenant.id), listActiveOrders()]);
+  const { data: residents } = round ? await supabaseAdmin().from("customers").select("id, name, room").eq("account_id", account.id).order("room") : { data: null };
+  const nextBags = active.filter((o) => o.roundAccountId === account.id);
   const bills = statements(orders.filter((o) => o.accountId === account.id));
   const price = account.pricePerKg ?? tenant.pricePerKg;
 
@@ -120,6 +129,104 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
           </div>
         </Card>
       </div>
+
+      <Card title="Collection rounds" action={round?.everyDays ? <Badge tone="good">Every {round.everyDays === 1 ? "day" : `${round.everyDays} days`}</Badge> : undefined}>
+        {!round ? (
+          <EmptyState>Run the 0042 database update (Supabase → SQL Editor) to set up collection rounds.</EmptyState>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ActionForm action={saveRoundSettings} submitLabel="Save rounds">
+              <input type="hidden" name="accountId" value={account.id} />
+              <p className="text-sm text-secondary">
+                A driver comes every few days at a set time. Residents tap <b className="text-fg">I have clothes this time</b> in Toss before it;
+                the driver collects every bag as one stop and weighs each one.
+              </p>
+              <Field label="Address of the hostel or PG">
+                <input name="address" defaultValue={round.address === account.name ? "" : round.address} maxLength={300} className={fieldClass} />
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="How often">
+                  <select name="everyDays" defaultValue={String(round.everyDays)} className={fieldClass}>
+                    <option value="0">Off</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 10, 14].map((n) => (
+                      <option key={n} value={n}>
+                        {n === 1 ? "Every day" : `Every ${n} days`}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="At">
+                  <input name="time" type="time" defaultValue={round.time} className={fieldClass} />
+                </Field>
+                <Field label="Sign-ups close">
+                  <select name="cutoff" defaultValue={String(round.cutoffMinutes)} className={fieldClass}>
+                    {[
+                      [0, "At the round"],
+                      [30, "30 min before"],
+                      [60, "1 hour before"],
+                      [120, "2 hours before"],
+                      [180, "3 hours before"],
+                      [720, "12 hours before"],
+                    ].map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              <Field label="Who pays">
+                <select name="billing" defaultValue={round.billing} className={fieldClass}>
+                  <option value="account">The hostel: on this account&apos;s monthly bill</option>
+                  <option value="resident">Each resident pays for their own bag</option>
+                </select>
+              </Field>
+            </ActionForm>
+
+            <div className="space-y-4 text-sm">
+              <p className="text-secondary">
+                {round.nextAt ? (
+                  <>
+                    Next collection: <span className="font-semibold text-fg">{fmt.dateTime(round.nextAt)}</span>
+                  </>
+                ) : (
+                  "No collection scheduled. Choose how often and save."
+                )}
+              </p>
+              <div>
+                <p className="mb-1.5 font-medium">Bags signed up ({nextBags.length})</p>
+                {nextBags.length === 0 ? (
+                  <p className="text-muted">None yet.</p>
+                ) : (
+                  <ul className="divide-y divide-border">
+                    {nextBags.map((o) => (
+                      <li key={o.id} className="flex justify-between gap-3 py-1.5">
+                        <span>{o.address}</span>
+                        <span className="text-muted">{o.status === "ACCEPTED" ? "with the driver" : "waiting"}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <p className="mb-1.5 font-medium">Residents on Toss ({residents?.length ?? 0})</p>
+                <p className="text-muted">
+                  Residents pick this hostel and their room in their Toss account (share your Business ID, {tenant.joinCode}). Drivers can also add a
+                  bag for anyone at the door.
+                </p>
+                {residents && residents.length > 0 && (
+                  <p className="mt-1.5 text-secondary">
+                    {residents
+                      .slice(0, 40)
+                      .map((r) => [r.room ? `Room ${r.room}` : null, r.name].filter(Boolean).join(" · ") || "Resident")
+                      .join(", ")}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
 
       <Card title="Monthly bills">
         {bills.length === 0 ? (

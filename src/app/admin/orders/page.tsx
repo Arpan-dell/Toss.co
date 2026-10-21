@@ -6,6 +6,8 @@ import { OrderTable } from "@/components/order-table";
 import { Card, PageTitle } from "@/components/ui";
 import { listOrders, now } from "@/lib/data";
 import type { OrderStatus } from "@/lib/types";
+import { bookForCustomer } from "@/lib/actions/bookings";
+import { NewPickup } from "./new-pickup";
 
 export const metadata: Metadata = { title: "Orders" };
 
@@ -49,6 +51,15 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
   return (
     <div className="stagger space-y-6">
       <PageTitle kicker="All baskets">Orders</PageTitle>
+
+      <Card id="new-pickup" title="New pickup">
+        <details>
+          <summary className="cursor-pointer text-sm font-medium text-accent">Book a pickup for a customer who phoned or messaged you</summary>
+          <div className="mt-4">
+            <NewPickup action={bookForCustomer} />
+          </div>
+        </details>
+      </Card>
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex gap-1 rounded-full border border-border bg-ink/[0.03] p-1 text-sm">

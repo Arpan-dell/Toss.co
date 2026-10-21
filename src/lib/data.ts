@@ -4,6 +4,7 @@ import { cached, KEYS } from "./cache";
 import { createClient } from "./supabase/server";
 import { isSupabaseConfigured, supabaseAdmin } from "./supabase/admin";
 import type { Report } from "./ai/brain";
+import { isVirtualDevice } from "./rounds";
 import type { AiAction, BusinessAccount, Customer, CustomerOffer, Device, Driver, Order, PayMethods, PlatformSettings, SubscriptionPayment, Tenant } from "./types";
 import type { LaundryPrefs } from "./prefs";
 
@@ -60,6 +61,13 @@ function toOrder(r: Row): Order {
     deliveredAt: u(r.delivered_at),
     pickupStart: r.pickup_start_lat != null && r.pickup_start_lng != null ? { lat: Number(r.pickup_start_lat), lng: Number(r.pickup_start_lng) } : undefined,
     deliveryStart: r.delivery_start_lat != null && r.delivery_start_lng != null ? { lat: Number(r.delivery_start_lat), lng: Number(r.delivery_start_lng) } : undefined,
+    source: (r.source as Order["source"]) ?? undefined,
+    pickupAfter: u(r.pickup_after),
+    notes: u(r.notes),
+    bags: r.bags != null ? Number(r.bags) : undefined,
+    contactName: u(r.contact_name),
+    contactPhone: u(r.contact_phone),
+    roundAccountId: u(r.round_account_id),
     deliveryCode: u(r.delivery_code),
     deliveryVerified: u(r.delivery_verified),
     deliveryAttempts: (r.delivery_attempts as number) ?? 0,
@@ -475,9 +483,11 @@ export const listDevices = cache(async (): Promise<Device[]> => {
 export async function getDeviceForCustomer(customerId: string): Promise<Device | undefined> {
   const supabase = await db();
   const rows = orThrow(
-    await supabase.from("devices").select(DEVICE_COLUMNS).eq("customer_id", customerId).order("last_seen_at", { ascending: false }).limit(1),
+    await supabase.from("devices").select(DEVICE_COLUMNS).eq("customer_id", customerId).order("last_seen_at", { ascending: false, nullsFirst: false }).limit(5),
   );
-  return (rows as Row[])[0] ? toDevice((rows as Row[])[0]) : undefined;
+  // a real Toss basket only: bookings without a basket hang on a "virtual" one (see lib/rounds.ts)
+  const real = (rows as Row[]).find((r) => !isVirtualDevice(r.device_id as string));
+  return real ? toDevice(real) : undefined;
 }
 
 export async function listDrivers(): Promise<Driver[]> {

@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { dispatchDue } from "@/lib/bookings";
 import { dispatchEnabled, dispatchOrder, nudgeStaleDrivers } from "@/lib/dispatch/service";
 import { handleIngest } from "@/lib/ingest/handle";
 import { SupabaseStore } from "@/lib/ingest/supabase-store";
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
 
   // baskets ping every few minutes: a free clock for reminding online drivers whose location stopped
   after(() => nudgeStaleDrivers().catch((err) => logError("location reminders failed", err)));
+  after(() => dispatchDue().catch((err) => logError("due bookings failed", err)));
   try {
     const res = await handleIngest(
       { method: "POST", deviceKey: request.headers.get("x-device-key"), bodyText: await request.text() },

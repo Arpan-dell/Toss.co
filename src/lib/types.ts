@@ -220,6 +220,14 @@ export interface Order {
   deliveredAt?: string;
   pickupStart?: { lat: number; lng: number }; // where the driver was when given the pickup (migration 0038)
   deliveryStart?: { lat: number; lng: number }; // …and the delivery
+  // pickups without a basket (migration 0042)
+  source?: "basket" | "web" | "manager" | "round";
+  pickupAfter?: string; // booked for this time (or a hostel round)
+  notes?: string;
+  bags?: number;
+  contactName?: string; // booked by the laundry for someone without an account
+  contactPhone?: string;
+  roundAccountId?: string; // the hostel/PG round it belongs to
   deliveryCode?: string; // 4 digits the customer reads to the driver at the door
   deliveryVerified?: boolean;
   deliveryAttempts?: number; // "customer not home" count

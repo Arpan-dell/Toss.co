@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { OrderLink } from "@/components/order-link";
 import { Onboarding } from "@/components/onboarding";
+import { realBaskets } from "@/lib/rounds";
+import { dispatchDue } from "@/lib/bookings";
+import { cancelBookingAsManager } from "@/lib/actions/bookings";
 import { currentTier, planGate } from "@/components/plan-gate";
 import { sendForDelivery } from "@/lib/actions/delivery";
 import { markReady } from "@/lib/actions/service";
@@ -32,6 +35,8 @@ export default async function LiveBoard() {
   const session = await getSession();
   // open gateway payments: ask the gateway after this page is sent (the live updates show the result)
   if (session?.tenantId) after(() => reconcileFor({ tenantId: session.tenantId }).catch(() => 0));
+  // bookings for a time slot and hostel rounds that have come up go to drivers (also runs from the cron jobs)
+  after(() => dispatchDue().catch(() => undefined));
   const [active, devices, drivers, all, tier, tenant] = await Promise.all([
     listActiveOrders(),
     listDevices(),
@@ -62,7 +67,10 @@ export default async function LiveBoard() {
   const lockedAlerts = pro ? [] : allAlerts.filter((a) => PRO_ALERTS.includes(a.key));
   // promised turnaround: picked up, not ready, past the promise (Pro)
   const late = tier?.tier === "PRO" ? all.filter((o) => isLate(o, current)).slice(0, 8) : [];
-  const pending = active.filter((o) => o.status === "PENDING");
+  // booked for later (a time slot or a hostel round): not waiting for a driver yet
+  const later = (o: { pickupAfter?: string }) => !!o.pickupAfter && new Date(o.pickupAfter).getTime() - 30 * 60_000 > current.getTime();
+  const scheduled = active.filter((o) => o.status === "PENDING" && later(o)).sort((a, b) => a.pickupAfter!.localeCompare(b.pickupAfter!));
+  const pending = active.filter((o) => o.status === "PENDING" && !later(o));
   const enRoute = active.filter((o) => o.status === "ACCEPTED");
   const outstanding = all
     .filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID")
@@ -83,7 +91,7 @@ export default async function LiveBoard() {
         { done: !!tenant.storeLocated, title: "Place your store on the map", hint: "So customers nearby find you and drivers get routes that end at the store.", href: "/admin/business", cta: "Set location" },
         { done: paidOnline(tenant) || !!tenant.onlineGateway, title: "Choose how customers pay you", hint: "Connect a payment gateway, or add your UPI ID or other payment details.", href: "/admin/settings/online-payments", cta: "Set up payments" },
         { done: drivers.some((d) => !!d.telegramChatId), title: "Add a driver and connect Telegram", hint: "They open the driver bot, share their number and tap Online.", href: "/admin/fleet", cta: "Add a driver" },
-        { done: devices.length > 0, title: "Connect a basket", hint: "A customer's basket appears here after its first order. Share your Business ID so customers can join.", href: "/admin/fleet", cta: "See baskets" },
+        { done: all.length > 0, title: "Get your first pickup", hint: "Share your Business ID so customers can join and book (no basket needed), or book one for a customer who phoned.", href: "/admin/orders#new-pickup", cta: "Book a pickup" },
         { done: all.some((o) => o.status === "COMPLETED"), title: "Finish your first pickup", hint: "Once a driver weighs and picks up a bag, you'll see the bill and payment here.", href: "/admin/orders", cta: "See orders" },
       ]
     : [];
@@ -101,10 +109,31 @@ export default async function LiveBoard() {
         <StatTile label="Driver on the way" value={String(enRoute.length)} hint={outNow ? `+ ${outNow} out for delivery` : undefined} />
         <StatTile
           label="Baskets online"
-          value={`${devices.filter(isDeviceOnline).length} / ${devices.length}`}
+          value={`${realBaskets(devices).filter(isDeviceOnline).length} / ${realBaskets(devices).length}`}
         />
         <StatTile label="Unpaid bills" value={fmt.money(outstanding)} />
       </div>
+
+      {scheduled.length > 0 && (
+        <Card title={`Booked for later (${scheduled.length})`} action={<Badge tone="info">Goes to a driver 30 min before</Badge>}>
+          <ul className="divide-y divide-border">
+            {scheduled.slice(0, 12).map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                <span className="text-sm">
+                  <span className="font-medium tabular-nums">{fmt.dateTime(o.pickupAfter!)}</span>
+                  <span className="ml-2 text-secondary">{o.address}</span>
+                  {o.contactName && <span className="ml-2 text-muted">· {o.contactName}</span>}
+                  {o.roundAccountId && <span className="ml-2 text-muted">· hostel round</span>}
+                </span>
+                <form action={cancelBookingAsManager}>
+                  <input type="hidden" name="orderId" value={o.id} />
+                  <button className="text-xs text-secondary hover:text-critical">Cancel</button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {late.length > 0 && (
         <Card id="late" title={`Running late (${late.length})`} action={<Badge tone="critical">Past promise</Badge>}>

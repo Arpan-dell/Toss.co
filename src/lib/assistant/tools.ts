@@ -28,6 +28,7 @@ import { profitReport } from "../profit-report";
 import { nowText, type Intent, type Period } from "./intents";
 import { paidOnline } from "../pay-methods";
 import { countryOf } from "../regions";
+import { realBaskets } from "../rounds";
 import { driverRouteKm } from "../driver-routes";
 import { supabaseAdmin } from "../supabase/admin";
 
@@ -402,7 +403,7 @@ async function managerTool(intent: Intent, session: Session): Promise<AssistantR
   const plan = planState(tenant);
   const alerts = async () => {
     const pro = tierOf(plan.state) === "PRO";
-    const [devices, supplies] = await Promise.all([listDevices(), pro ? listSupplies() : Promise.resolve([])]);
+    const [devices, supplies] = await Promise.all([listDevices().then(realBaskets), pro ? listSupplies() : Promise.resolve([])]);
     return attentionItems({
       now: now(),
       orders,
@@ -546,7 +547,7 @@ async function analyze(question: string, session: Session): Promise<AssistantRep
   let names: string[] = []; // real names behind "Driver 1, 2 …" / "Business 1, 2 …"
   let label = "Driver";
   if (session.role === "MANAGER") {
-    const [orders, drivers, tenant, devices] = await Promise.all([listOrders(), listDrivers(), getTenantById(session.tenantId), listDevices().catch(() => [])]);
+    const [orders, drivers, tenant, devices] = await Promise.all([listOrders(), listDrivers(), getTenantById(session.tenantId), listDevices().then(realBaskets).catch(() => [])]);
     if (!tenant) return { text: "This account isn't linked to a business yet." };
     snap = inCurrency(managerSnapshot(orders, drivers, tenant, now()), tenant.currency);
     names = drivers.map((d) => d.name);

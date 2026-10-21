@@ -1,4 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
+import { after } from "next/server";
+import { dispatchDue } from "@/lib/bookings";
 import { handleDriverUpdate } from "@/lib/dispatch/service";
 import { logError } from "@/lib/log";
 
@@ -11,6 +13,8 @@ export async function POST(request: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  // drivers use the bot all day: a free clock for bookings and hostel rounds that have come up (at most once a minute)
+  after(() => dispatchDue().catch((err) => logError("due bookings failed", err)));
   try {
     await handleDriverUpdate(await request.json());
   } catch (err) {

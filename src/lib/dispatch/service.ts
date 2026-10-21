@@ -55,6 +55,7 @@ import { logError } from "@/lib/log";
 import { tierOfRow } from "@/lib/plan";
 import { APP_URL, SITE_URL } from "@/lib/site";
 import { autoChargeOrder } from "../gateway-payments";
+import { isDue } from "../rounds";
 
 // Automatic pickup dispatch over the driver bot. Runs server-side with the service role:
 // it crosses customers, baskets and drivers inside one business, and is triggered by trusted events
@@ -286,6 +287,10 @@ export async function dispatchOrder(orderId: string): Promise<DispatchResult> {
   if (!o) return { assigned: false, reason: "order not found" };
   if (!ACTIVE.includes(o.status as string) || o.driver_id) return { assigned: false, reason: "already handled" };
   if (!o.tenant_id) return { assigned: false, reason: "basket owner hasn't joined a business" };
+  // a hostel round's bags go out together, to one driver (dispatchRound)
+  if (o.round_account_id) return { assigned: false, reason: "part of a hostel round" };
+  // booked for a time slot: given to a driver shortly before it
+  if (!isDue(o.pickup_after as string | null, new Date())) return { assigned: false, reason: "scheduled for later" };
 
   const pickup = await basketPoint(o.device_id as string);
   const choice = chooseDriver(pickup, await candidates(o.tenant_id as string), { exclude: (o.declined_by as string[]) ?? [] });
@@ -307,6 +312,74 @@ export async function dispatchOrder(orderId: string): Promise<DispatchResult> {
     (e) => logError("customer notify failed", e),
   );
   return { assigned: true, driver: choice.driver.name, distanceKm: choice.distanceKm };
+}
+
+/**
+ * Gives a pickup to this driver (a hostel round, or a bag the driver added on the spot). Only if nobody has it yet.
+ * The round's own message carries the map, so each bag's card is short.
+ */
+export async function giveToDriver(orderId: string, chatId: string, opts: { compact?: boolean } = {}): Promise<boolean> {
+  const now = new Date().toISOString();
+  const { data: won } = await db()
+    .from("orders")
+    .update({ driver_id: chatId, status: "ACCEPTED", accepted_at: now, assigned_at: now, driver_ack_at: null })
+    .eq("id", orderId)
+    .is("driver_id", null)
+    .eq("status", "PENDING")
+    .select("*");
+  if (!won?.length) return false;
+  await db().from("drivers").update({ status: "ON_JOB" }).eq("telegram_chat_id", chatId).neq("status", "OFFLINE");
+  await noteStart(orderId, chatId, "pickup");
+  await notifyAssignment(won[0] as Row, chatId, undefined, opts).catch((e) => logError("driver notify failed", e));
+  await notifyCustomer(won[0] as Row, `🚚 Your laundry is being collected today (order #${won[0].device_order_id}).`).catch((e) => logError("customer notify failed", e));
+  return true;
+}
+
+/**
+ * A hostel or PG round: every bag signed up for it goes to one driver, as one stop. The nearest online driver gets
+ * it (a round counts as one job, so a driver with room for one more takes the whole round). Returns who took it.
+ */
+export async function dispatchRound(account: { id: string; name: string; tenantId: string; address: string }, orderIds: string[]): Promise<string | null> {
+  if (!orderIds.length) return null;
+  const token = driverToken();
+  const { data: first } = await db().from("orders").select("device_id").eq("id", orderIds[0]).maybeSingle();
+  const point = first ? await basketPoint(first.device_id as string) : undefined;
+  const choice = chooseDriver(point, await candidates(account.tenantId));
+  if (!choice) return null;
+  const chatId = choice.driver.chatId;
+  const driver = await driverByChat(chatId);
+  if (token) {
+    const { data: bags } = await db().from("orders").select("contact_name, customer_id, notes").in("id", orderIds);
+    const ids = (bags ?? []).map((b) => b.customer_id as string).filter(Boolean);
+    const { data: people } = ids.length ? await db().from("customers").select("id, name, room").in("id", ids) : { data: [] };
+    const who = (b: Row) => {
+      const p = (people ?? []).find((x) => x.id === b.customer_id);
+      return [p?.room ? `Room ${p.room}` : null, (p?.name as string) ?? (b.contact_name as string) ?? null].filter(Boolean).join(" · ") || "Resident";
+    };
+    if (point) await sendLocation(token, chatId, point.lat, point.lng);
+    await sendMessage(
+      token,
+      chatId,
+      [
+        `🏢 <b>ROUND · ${esc(account.name)}</b>`,
+        LINE,
+        `📍 ${esc(account.address)}`,
+        `🧺 <b>${orderIds.length}</b> bag${orderIds.length > 1 ? "s" : ""} to collect:`,
+        ...(bags ?? []).slice(0, 30).map((b) => `• ${esc(who(b as Row))}`),
+        "",
+        "Weigh each bag with its own <b>✅ Picked up</b> button below. Someone else has clothes? Add them with the button.",
+      ].join("\n"),
+      {
+        inline: [
+          [{ text: "🗺 Navigate", url: point ? directionsUrl({ destination: point }) : searchUrl(account.address) }],
+          ...(driver ? [[{ text: "➕ Add a bag here", url: `${APP_URL}/r/${driver.route_token as string}/round/${account.id}` }]] : []),
+        ],
+      },
+    ).catch((e) => logError("round notify failed", e));
+  }
+  let given = 0;
+  for (const id of orderIds) if (await giveToDriver(id, chatId, { compact: true })) given++;
+  return given ? choice.driver.name : null;
 }
 
 /** Tries to place every waiting pickup of a business (e.g. when a driver comes online). */
@@ -621,7 +694,7 @@ async function handleDeliveryButton(token: string, cb: NonNullable<TgUpdate["cal
 }
 
 /** Tells a driver about a pickup they've been given (also used for manual assignment from the dashboard). */
-export async function notifyAssignment(order: Row, chatId: string, pickup?: LatLng) {
+export async function notifyAssignment(order: Row, chatId: string, pickup?: LatLng, opts: { compact?: boolean } = {}) {
   const token = driverToken();
   if (!token) return;
   const driver = await driverByChat(chatId);
@@ -629,31 +702,40 @@ export async function notifyAssignment(order: Row, chatId: string, pickup?: LatL
   const { data: c } = order.customer_id
     ? await db().from("customers").select("name, phone").eq("id", order.customer_id as string).maybeSingle()
     : { data: null };
+  const f = await fmtFor(order.tenant_id);
+  // a customer the laundry booked by phone has no account: the name and number are on the order
+  const name = (c?.name as string) ?? (order.contact_name as string | null);
+  const phone = (c?.phone as string) ?? (order.contact_phone as string | null);
+  const kg = Number(order.weight_kg) || 0;
 
-  const pin = pickup ? await sendLocation(token, chatId, pickup.lat, pickup.lng) : undefined;
-  const buttons = assignmentButtons(order, driver, pickup, !order.driver_ack_at);
+  // one stop for a whole hostel round: the round's own message has the map, not every bag
+  const pin = pickup && !opts.compact ? await sendLocation(token, chatId, pickup.lat, pickup.lng) : undefined;
+  const buttons = assignmentButtons(order, driver, opts.compact ? undefined : pickup, !order.driver_ack_at, opts.compact);
   const lines = [
-    `🔔 <b>NEW PICKUP</b> · ${esc(orderLabel({ deviceId: order.device_id as string, deviceOrderId: order.device_order_id as number }))}`,
+    `🔔 <b>${order.source === "round" ? "ROUND BAG" : "NEW PICKUP"}</b> · ${esc(orderLabel({ deviceId: order.device_id as string, deviceOrderId: order.device_order_id as number }))}`,
     "━━━━━━━━━━━━━━",
     `📍 ${esc((order.address as string) || "Address not set")}`,
-    c?.name ? `👤 ${esc(c.name as string)}` : null,
+    name ? `👤 ${esc(name)}` : null,
     // Customer numbers are private: only the driver collecting the laundry gets one, and it disappears
     // from this message once they mark it picked up.
-    c?.phone ? `📞 ${formatPhone(c.phone as string)}` : null,
-    `⚖️ ${(await fmtFor(order.tenant_id)).weight(Number(order.weight_kg))}`,
-    store.place ? `🏁 Then deliver to <b>${esc(store.name)}</b>` : null,
+    phone ? `📞 ${formatPhone(phone)}` : null,
+    order.pickup_after && order.source !== "round" ? `🕘 Collect at <b>${esc(f.dateTime(order.pickup_after as string))}</b>` : null,
+    order.bags ? `🧺 ${order.bags} bag${Number(order.bags) > 1 ? "s" : ""}` : null,
+    order.notes ? `📝 ${esc(order.notes as string)}` : null,
+    kg > 0 ? `⚖️ ${f.weight(kg)}` : "⚖️ Weigh it at the door",
+    store.place && !opts.compact ? `🏁 Then deliver to <b>${esc(store.name)}</b>` : null,
   ].filter(Boolean);
   const card = await sendMessage(token, chatId, lines.join("\n"), { inline: buttons });
   await remember(order.id as string, "pickup", chatId, pin, card);
 }
 
 // "Got it" first (until the driver confirms), then navigation and the job's buttons.
-function assignmentButtons(order: Row, driver: Row | null, pickup: LatLng | undefined, withAck: boolean): InlineButton[][] {
+function assignmentButtons(order: Row, driver: Row | null, pickup: LatLng | undefined, withAck: boolean, compact = false): InlineButton[][] {
   const id = order.id as string;
   return [
     ...(withAck ? [[{ text: "👍 Got it", callback_data: `ack:${id}` }]] : []),
-    [{ text: "🗺 Navigate to pickup", url: pickup ? directionsUrl({ destination: pickup }) : searchUrl(order.address as string) }],
-    ...(driver ? [[{ text: "🛣 My full route (always up to date)", url: routeLink(driver) }]] : []),
+    ...(compact ? [] : [[{ text: "🗺 Navigate to pickup", url: pickup ? directionsUrl({ destination: pickup }) : searchUrl(order.address as string) }]]),
+    ...(driver && !compact ? [[{ text: "🛣 My full route (always up to date)", url: routeLink(driver) }]] : []),
     [
       { text: "✅ Picked up", callback_data: `done:${id}` },
       { text: "↩️ Can't take it", callback_data: `decline:${id}` },
@@ -1070,6 +1152,7 @@ async function finishPickup(
   if (source === "driver") Object.assign(patch, { weight_kg: kg, weighed_kg: kg, weighed_at: now });
   if (source === "driver" && o.payment_status === "UNPAID") {
     const { data: t } = await db().from("tenants").select("*").eq("id", o.tenant_id as string).maybeSingle();
+    const { data: acct } = o.account_id ? await db().from("business_accounts").select("price_per_kg").eq("id", o.account_id as string).maybeSingle() : { data: null };
     const priced = repriceForWeight(
       {
         weightKg: Number(o.weight_kg) || 0,
@@ -1079,7 +1162,7 @@ async function finishPickup(
         discountPct: o.discount_pct as number | null,
       },
       kg,
-      Number(t?.price_per_kg) || 0,
+      Number(acct?.price_per_kg) || Number(t?.price_per_kg) || 0,
       { currency: (t?.currency as string) ?? "INR", minOrder: Number(t?.min_order ?? 0) || 0 },
     );
     Object.assign(patch, { amount_due: priced.amountDue, amount_before_discount: priced.amountBeforeDiscount });

@@ -4,6 +4,7 @@ import { autoChargeDue, reconcileOpenIntents } from "@/lib/gateway-payments";
 import { runLateAlerts, runLowStockAlerts, runPlanReminders } from "@/lib/email/notify";
 import { runWinback } from "@/lib/offers";
 import { nudgeStaleDrivers } from "@/lib/dispatch/service";
+import { dispatchDue } from "@/lib/bookings";
 import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { logError } from "@/lib/log";
 
@@ -54,6 +55,7 @@ export async function GET(request: Request) {
     return { error: "reconcile failed" };
   });
   await nudgeStaleDrivers({ force: true }).catch((err) => logError("location reminders failed", err));
+  await dispatchDue({ force: true }).catch((err) => logError("due bookings failed", err));
   const ai = await runAutopilotAll(200_000).catch((err) => {
     logError("Toss AI daily run failed", err);
     return { error: "ai failed" };

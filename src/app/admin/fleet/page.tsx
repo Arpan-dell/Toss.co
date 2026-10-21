@@ -11,6 +11,7 @@ import { AddDriverForm, BasketEditor, DriverStatusControl } from "./forms";
 import { getSession } from "@/lib/session";
 import { driverRouteKm } from "@/lib/driver-routes";
 import { startOfDay } from "@/lib/route-distance";
+import { realBaskets } from "@/lib/rounds";
 import type { Order } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Fleet" };
@@ -25,13 +26,15 @@ export default async function Fleet() {
   const locked = await planGate();
   if (locked) return locked;
 
-  const [devices, drivers, active, all, customers] = await Promise.all([
+  const [allDevices, drivers, active, all, customers] = await Promise.all([
     listDevices(),
     listDrivers(),
     listActiveOrders(),
     listOrders(),
     listCustomers(),
   ]);
+  // physical Toss baskets only (bookings without a basket hang on "virtual" ones)
+  const devices = realBaskets(allDevices);
   const current = now();
   // kilometres each driver covered on jobs (stop to stop, from where they started): today, yesterday, this month
   const session = await getSession();

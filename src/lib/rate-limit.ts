@@ -22,6 +22,8 @@ export const LIMITS = {
   resetSubmitIp: { limit: 10, windowSec: 60 * 60 },
   basketRequestIp: { limit: 3, windowSec: 60 * 60 }, // "Get a basket" requests
   deletionRequestIp: { limit: 3, windowSec: 60 * 60 }, // data deletion requests
+  booking: { limit: 6, windowSec: 60 * 60 }, // pickups a customer books online, per account
+  roundBag: { limit: 60, windowSec: 60 * 60 }, // bags a driver adds at a hostel, per driver
   clientErrorIp: { limit: 10, windowSec: 10 * 60 }, // browser error reports
   driverLocation: { limit: 40, windowSec: 10 * 60 }, // the route page sends a point about once a minute
   assistant: { limit: 40, windowSec: 10 * 60 }, // in-app assistant questions per account (keeps the free AI quota safe)

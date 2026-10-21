@@ -4,6 +4,11 @@ import { IdChip } from "@/components/id-chip";
 import { JoinBusiness } from "@/components/join-business";
 import { AutopayCard } from "@/components/autopay-card";
 import { Onboarding } from "@/components/onboarding";
+import { ActionForm } from "@/components/action-form";
+import { BookPickup, HostelPicker } from "@/components/book-pickup";
+import { bookPickup, cancelMyBooking, chooseHostel, joinNextRound } from "@/lib/actions/bookings";
+import { listRounds, roundBagOf } from "@/lib/bookings";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { GatewayPay } from "@/components/gateway-pay";
 import { RegionPay } from "@/components/region-pay";
 import { UpiPay } from "@/components/upi-pay";
@@ -54,6 +59,13 @@ export default async function CustomerOverview() {
   const verifying = orders.filter((o) => o.paymentStatus === "PENDING");
   const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? "there";
   const [business, offer] = await Promise.all([getTenantById(customer?.tenantId), getOpenOffer(session.userId, customer?.tenantId)]);
+  // no basket needed: book a pickup, or join your hostel's next collection
+  const rounds = business ? await listRounds(business.id) : [];
+  const { data: home } = rounds.length ? await supabaseAdmin().from("customers").select("account_id, room").eq("id", session.userId).maybeSingle() : { data: null };
+  const myRound = rounds.find((r) => r.id === home?.account_id);
+  const myBag = myRound ? await roundBagOf(session.userId, myRound.id) : null;
+  const lastAddress = device?.address ?? orders.find((o) => o.address && !o.roundAccountId)?.address;
+  const cancellable = active && active.status === "PENDING" && !active.driverId && active.source && active.source !== "basket";
   // India: UPI, as before. Elsewhere: the business's own methods (PayPal, Venmo, SEPA, Pix…), with a tip option.
   // a laundry with its own gateway (Razorpay/Stripe) takes payments only through it: confirmed automatically
   const gateway = business?.onlineGateway;
@@ -109,8 +121,7 @@ export default async function CustomerOverview() {
         steps={[
           { done: !!customer?.tenantId, title: "Join your laundry", hint: "Enter the Business ID your laundry gave you, or find one near you.", href: "/laundries", cta: "Find a laundry" },
           { done: !!customer?.telegramId, title: "Link your Telegram", hint: "So orders from your basket and updates show up here.", href: "/app/settings", cta: "Link Telegram" },
-          { done: !!device, title: "Connect your basket", hint: "Claim it in the Toss Control bot, then it appears here.", href: "/app/settings", cta: "How to connect" },
-          { done: orders.length > 0, title: "Book your first pickup", hint: "Fill the basket to its target weight, or ask for a pickup in the bot.", href: "/app/orders", cta: "My orders" },
+          { done: orders.length > 0, title: "Book your first pickup", hint: "Book one below (no basket needed), or let your Toss basket book it when it's full.", href: "/app", cta: "Book a pickup" },
         ]}
       />
 
@@ -239,16 +250,30 @@ export default async function CustomerOverview() {
                 </div>
                 <div>
                   <dt className="text-muted">Weight</dt>
-                  <dd className="tabular-nums">{fmt.weight(active.weightKg)} · {fmt.money(active.amountDue)}</dd>
+                  <dd className="tabular-nums">{active.weightKg > 0 ? `${fmt.weight(active.weightKg)} · ${fmt.money(active.amountDue)}` : "Weighed at the door"}</dd>
                 </div>
+                {active.pickupAfter && (
+                  <div>
+                    <dt className="text-muted">{active.roundAccountId ? "Collection" : "Booked for"}</dt>
+                    <dd>{fmt.dateTime(active.pickupAfter)}</dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-muted">Pickup address</dt>
                   <dd>{active.address}</dd>
                 </div>
+                {cancellable && (
+                  <form action={cancelMyBooking}>
+                    <input type="hidden" name="orderId" value={active.id} />
+                    <button className="btn-ghost rounded-full px-3.5 py-1.5 text-xs text-critical">Cancel this pickup</button>
+                  </form>
+                )}
               </dl>
             </div>
+          ) : business ? (
+            <BookPickup action={bookPickup} address={lastAddress} business={business.name} />
           ) : (
-            <EmptyState>No pickup in progress. Your basket will request one when it&apos;s full.</EmptyState>
+            <EmptyState>No pickup in progress. Join your laundry first, then book pickups here.</EmptyState>
           )}
         </Card>
 
@@ -269,7 +294,7 @@ export default async function CustomerOverview() {
             </div>
           ) : (
             <div className="space-y-3 py-4 text-center text-sm text-muted">
-              <p>No basket linked yet.</p>
+              <p>No basket linked yet. You can still book pickups here.</p>
               {!customer?.telegramId && (
                 <Link href="/app/settings" className="text-accent transition-colors hover:text-accent-2">
                   Link your Telegram account →
@@ -279,6 +304,39 @@ export default async function CustomerOverview() {
           )}
         </Card>
       </div>
+
+      {business && rounds.length > 0 && (
+        <Card title="Your hostel or PG" action={myRound ? <Badge tone="good">{myRound.name}</Badge> : undefined}>
+          <div className="space-y-4">
+            {myRound?.nextAt && (
+              <div className="rounded-[10px] border border-border p-4">
+                <p className="text-sm text-secondary">
+                  Next collection: <span className="font-semibold text-fg">{fmt.dateTime(myRound.nextAt)}</span>
+                  {myRound.cutoffMinutes > 0 ? ` · sign up until ${fmt.dateTime(new Date(new Date(myRound.nextAt).getTime() - myRound.cutoffMinutes * 60_000).toISOString())}` : ""}
+                </p>
+                {myBag ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <Badge tone="good">You&apos;re on it · bag #{myBag.number}</Badge>
+                    {myBag.status === "PENDING" && (
+                      <form action={cancelMyBooking}>
+                        <input type="hidden" name="orderId" value={myBag.id} />
+                        <button className="text-sm text-secondary hover:text-critical">Not this time</button>
+                      </form>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-3">
+                    <ActionForm action={joinNextRound} submitLabel="🧺 I have clothes this time">
+                      <p className="text-xs text-muted">Leave your bag ready; the driver weighs it and you pay for the weight{myRound.billing === "account" ? " on your hostel's monthly bill" : ""}.</p>
+                    </ActionForm>
+                  </div>
+                )}
+              </div>
+            )}
+            <HostelPicker action={chooseHostel} rounds={rounds.map((r) => ({ id: r.id, name: r.name }))} current={home?.account_id as string | undefined} room={home?.room as string | undefined} />
+          </div>
+        </Card>
+      )}
 
       {business && autopayGateway && (
         <Card title="Pay automatically">

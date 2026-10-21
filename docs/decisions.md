@@ -104,6 +104,30 @@ Newest areas last. Each entry: **Chose** · **Why** · **Not chosen (and why)**.
 - **Chose:** a region setting (currency, weight unit, tax label, payment methods, time zone) with sensible defaults per country.
 - **Why:** people abroad use different methods (PayPal, Venmo, SEPA, Pix…) and units (lb).
 
+### Dodo Payments for Toss's own dollar billing
+- **Chose:** Dodo Payments (a merchant of record) for laundries abroad paying Toss in US dollars: a "pay what you want" one-time product (Toss sets the amount for 1–12 months) and a monthly subscription product.
+- **Why:** Stripe only takes Indian businesses by invite; Dodo onboards Indian sellers, handles sales tax abroad and pays out in India, and TrustMRR can verify revenue from it.
+- **Checks:** Standard Webhooks signatures; amounts compared before tax (Dodo adds tax); auto-renewal refuses to start if the monthly product's price doesn't match the plan.
+- **Not chosen:** Dodo for laundries' own customers (it sells software on your behalf, not local laundry services).
+
+## Pickups without a basket
+
+### A "virtual basket" per customer
+- **Chose:** a booking creates an ordinary order on a stand-in basket row: `web-<laundry>-<customer>` (booked online), `tel-<laundry>-<phone>` (booked by the laundry), `rnd-<account>` (a hostel round). Told apart by the id, not a new column.
+- **Why:** every order is keyed by its basket; reusing that keeps dispatch, weighing, payments and delivery unchanged. No new basket column means dashboards keep working before the database update runs.
+- **Not chosen:** a separate "bookings" table (would duplicate the whole order pipeline).
+
+### Booking now or for a time slot
+- **Chose:** "as soon as possible" goes to the nearest driver at once; a time slot (up to 7 days ahead) goes out 30 minutes before. One open pickup per customer, a phone number required, rate-limited, cancellable until a driver takes it.
+- **No weight asked:** the driver weighs at the door, as with baskets.
+- **Clock:** due bookings go out on basket pings, any driver-bot message, the live board, the cron endpoints and the daily job (free). An external free scheduler every 10 minutes makes it exact.
+
+### Hostel and PG collection rounds
+- **Chose:** a business account can have a round every N days at a set time. Residents tap "I have clothes this time" until a cut-off; when it's due, every bag goes to **one driver as one stop**, with one round message and a short card per bag. The driver can add bags at the door (from a link in the round message).
+- **Who pays:** the hostel (monthly account bill, at the account's price) or each resident; chosen per account.
+- **Why:** this is how PG/hostel laundry works in practice (a delivery boy every two days, whoever wants to gives clothes).
+- **Not chosen:** one booking per resident dispatched separately (several drivers to one building).
+
 ## The assistant
 
 ### Rules first, AI second

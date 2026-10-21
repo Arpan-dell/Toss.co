@@ -23,6 +23,12 @@ A plain walk-through of what happens, in order, for each person. For *why* thing
 8. **Payment.** See flow 4.
 9. **Invoice.** A numbered PDF invoice is emailed once the bill is paid.
 
+## 1b. Without a basket
+
+- **Customer books online:** dashboard → Book a pickup (address, now or a time, bags, note). Same pickup flow from step 3; the driver weighs it at the door.
+- **Laundry books by phone:** Orders → New pickup (name, mobile, address, now or a time).
+- **Hostel or PG round:** the manager sets it on the account (every N days at a time, who pays). Residents pick their hostel and room once, then tap **I have clothes this time** before each collection. When it's due, one driver gets every bag as one stop and weighs each; anyone else at the door can be added from the round message.
+
 ## 2. A driver's day
 
 1. Manager adds the driver by name and mobile number. The driver opens the bot, taps **Share my phone number**, and is connected.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstRoundAt, isDue, isVirtualDevice, nextRoundAt, parseSlot, phoneDeviceId, realBaskets, roundDeviceId, roundOpen, webDeviceId, zonedToUtc } from "./rounds";
+import { firstRoundAt, isDue, isVirtualDevice, nextRoundAt, parseSlot, phoneDeviceId, planRoundTrips, realBaskets, roundDeviceId, roundOpen, webDeviceId, zonedToUtc } from "./rounds";
 
 const IST = "Asia/Kolkata";
 
@@ -55,5 +55,21 @@ describe("times in the laundry's time zone", () => {
     expect(parseSlot("2026-10-23T15:00", IST, now)).toHaveProperty("error");
     expect(parseSlot("2026-11-05T15:00", IST, now)).toHaveProperty("error");
     expect(parseSlot("tomorrow", IST, now)).toHaveProperty("error");
+  });
+});
+
+describe("combining hostel rounds into trips", () => {
+  const A = { lat: 28.52, lng: 77.2 }, B = { lat: 28.53, lng: 77.21 }, C = { lat: 28.7, lng: 77.1 };
+
+  it("puts small rounds due together on one trip, nearest next", () => {
+    expect(planRoundTrips([{ id: "far", bags: 2, point: C }, { id: "pg1", bags: 5, point: A }, { id: "pg2", bags: 3, point: B }])).toEqual([["pg1", "pg2", "far"]]);
+  });
+
+  it("starts a new trip when the bags don't fit", () => {
+    expect(planRoundTrips([{ id: "pg1", bags: 14, point: A }, { id: "pg2", bags: 9, point: B }, { id: "pg3", bags: 4, point: C }], 20)).toEqual([["pg1", "pg3"], ["pg2"]]);
+  });
+
+  it("gives a big hostel its own trip", () => {
+    expect(planRoundTrips([{ id: "big", bags: 30 }, { id: "small", bags: 2 }], 20)).toEqual([["big"], ["small"]]);
   });
 });

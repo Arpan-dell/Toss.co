@@ -90,3 +90,44 @@ export function parseSlot(value: string, timeZone: string, now: Date): { at: Dat
   if (at.getTime() > now.getTime() + MAX_AHEAD_MS) return { error: "Pickups can be booked up to 7 days ahead." };
   return { at: at.getTime() - now.getTime() < DISPATCH_LEAD_MS ? null : at };
 }
+
+// ---------- combining hostel rounds that are due together into one trip ----------
+
+/** Bags one driver collects on a combined round trip (the most a driver can carry at once, as on Fleet). */
+export const TRIP_MAX_BAGS = 20;
+
+type RoundStop = { id: string; bags: number; point?: { lat: number; lng: number } };
+
+const km = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => {
+  const r = Math.PI / 180;
+  const x = (b.lng - a.lng) * r * Math.cos(((a.lat + b.lat) / 2) * r);
+  const y = (b.lat - a.lat) * r;
+  return Math.sqrt(x * x + y * y) * 6371;
+};
+
+/**
+ * Hostels whose rounds are due at the same time, packed into as few trips as fit: start with the hostel with the
+ * most bags, then go to the nearest next one while the bags still fit. A hostel with more bags than a trip holds
+ * gets its own trip. Returns the trips as hostel ids in visiting order.
+ */
+export function planRoundTrips(stops: RoundStop[], maxBags = TRIP_MAX_BAGS): string[][] {
+  const left = [...stops].sort((a, b) => b.bags - a.bags);
+  const trips: string[][] = [];
+  while (left.length) {
+    let here = left.shift()!;
+    const trip = [here.id];
+    let bags = here.bags;
+    for (;;) {
+      const fits = left.filter((s) => bags + s.bags <= maxBags);
+      if (!fits.length) break;
+      // nearest next hostel (one without a location goes last)
+      const next = fits.sort((a, b) => (here.point && a.point ? km(here.point, a.point) : 1e9) - (here.point && b.point ? km(here.point, b.point) : 1e9))[0];
+      left.splice(left.indexOf(next), 1);
+      trip.push(next.id);
+      bags += next.bags;
+      here = next;
+    }
+    trips.push(trip);
+  }
+  return trips;
+}

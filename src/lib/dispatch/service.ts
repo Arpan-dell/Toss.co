@@ -335,52 +335,71 @@ export async function giveToDriver(orderId: string, chatId: string, opts: { comp
   return true;
 }
 
+/** Where a basket (or a hostel's round basket) is, for planning trips. */
+export const devicePoint = (deviceId: string) => basketPoint(deviceId);
+
+type RoundStopIn = { account: { id: string; name: string; tenantId: string; address: string }; orderIds: string[] };
+
 /**
- * A hostel or PG round: every bag signed up for it goes to one driver, as one stop. The nearest online driver gets
- * it (a round counts as one job, so a driver with room for one more takes the whole round). Returns who took it.
+ * A hostel or PG round: every bag signed up for it goes to one driver, as one stop. Several hostels whose rounds are
+ * due together can be one trip (stops in visiting order, see planRoundTrips): the same driver goes on to the next
+ * hostel. The nearest online driver to the first stop gets it (a trip counts as one job). Returns who took it.
  */
-export async function dispatchRound(account: { id: string; name: string; tenantId: string; address: string }, orderIds: string[]): Promise<string | null> {
-  if (!orderIds.length) return null;
+export async function dispatchRoundTrip(stops: RoundStopIn[]): Promise<string | null> {
+  stops = stops.filter((s) => s.orderIds.length);
+  if (!stops.length) return null;
   const token = driverToken();
-  const { data: first } = await db().from("orders").select("device_id").eq("id", orderIds[0]).maybeSingle();
-  const point = first ? await basketPoint(first.device_id as string) : undefined;
-  const choice = chooseDriver(point, await candidates(account.tenantId));
+  const points: (LatLng | undefined)[] = [];
+  for (const s of stops) {
+    const { data: first } = await db().from("orders").select("device_id").eq("id", s.orderIds[0]).maybeSingle();
+    points.push(first ? await basketPoint(first.device_id as string) : undefined);
+  }
+  const choice = chooseDriver(points[0], await candidates(stops[0].account.tenantId));
   if (!choice) return null;
   const chatId = choice.driver.chatId;
   const driver = await driverByChat(chatId);
   if (token) {
-    const { data: bags } = await db().from("orders").select("contact_name, customer_id, notes").in("id", orderIds);
+    const all = stops.flatMap((s) => s.orderIds);
+    const { data: bags } = await db().from("orders").select("id, contact_name, customer_id").in("id", all);
     const ids = (bags ?? []).map((b) => b.customer_id as string).filter(Boolean);
     const { data: people } = ids.length ? await db().from("customers").select("id, name, room").in("id", ids) : { data: [] };
     const who = (b: Row) => {
       const p = (people ?? []).find((x) => x.id === b.customer_id);
       return [p?.room ? `Room ${p.room}` : null, (p?.name as string) ?? (b.contact_name as string) ?? null].filter(Boolean).join(" · ") || "Resident";
     };
-    if (point) await sendLocation(token, chatId, point.lat, point.lng);
-    await sendMessage(
-      token,
-      chatId,
-      [
-        `🏢 <b>ROUND · ${esc(account.name)}</b>`,
-        LINE,
-        `📍 ${esc(account.address)}`,
-        `🧺 <b>${orderIds.length}</b> bag${orderIds.length > 1 ? "s" : ""} to collect:`,
-        ...(bags ?? []).slice(0, 30).map((b) => `• ${esc(who(b as Row))}`),
+    const total = all.length;
+    const lines = [
+      stops.length > 1 ? `🏢 <b>ROUND TRIP · ${stops.length} hostels · ${total} bags</b>` : `🏢 <b>ROUND · ${esc(stops[0].account.name)}</b>`,
+      LINE,
+      ...stops.flatMap((s, i) => [
+        `${stops.length > 1 ? `<b>${i + 1}. ${esc(s.account.name)}</b> · ` : ""}📍 ${esc(s.account.address)}`,
+        `🧺 ${s.orderIds.length} bag${s.orderIds.length > 1 ? "s" : ""}: ${(bags ?? [])
+          .filter((b) => s.orderIds.includes(b.id as string))
+          .slice(0, 12)
+          .map((b) => esc(who(b as Row)))
+          .join(", ")}`,
         "",
-        "Weigh each bag with its own <b>✅ Picked up</b> button below. Someone else has clothes? Add them with the button.",
-      ].join("\n"),
-      {
-        inline: [
-          [{ text: "🗺 Navigate", url: point ? directionsUrl({ destination: point }) : searchUrl(account.address) }],
-          ...(driver ? [[{ text: "➕ Add a bag here", url: `${APP_URL}/r/${driver.route_token as string}/round/${account.id}` }]] : []),
-        ],
-      },
-    ).catch((e) => logError("round notify failed", e));
+      ]),
+      "Weigh each bag with its own <b>✅ Picked up</b> button below. Someone else has clothes? Add them with the button.",
+    ];
+    if (points[0]) await sendLocation(token, chatId, points[0].lat, points[0].lng);
+    await sendMessage(token, chatId, lines.join("\n"), {
+      inline: [
+        ...stops.slice(0, 6).map((s, i) => [
+          { text: `🗺 ${stops.length > 1 ? `${i + 1}. ` : ""}${s.account.name}`.slice(0, 40), url: points[i] ? directionsUrl({ destination: points[i]! }) : searchUrl(s.account.address) },
+          ...(driver ? [{ text: "➕ Add a bag", url: `${APP_URL}/r/${driver.route_token as string}/round/${s.account.id}` }] : []),
+        ]),
+        ...(driver && stops.length > 1 ? [[{ text: "🛣 Whole trip in order", url: routeLink(driver) }]] : []),
+      ],
+    }).catch((e) => logError("round notify failed", e));
   }
   let given = 0;
-  for (const id of orderIds) if (await giveToDriver(id, chatId, { compact: true })) given++;
+  for (const s of stops) for (const id of s.orderIds) if (await giveToDriver(id, chatId, { compact: true })) given++;
   return given ? choice.driver.name : null;
 }
+
+/** One hostel's round on its own (kept for callers that have a single hostel). */
+export const dispatchRound = (account: RoundStopIn["account"], orderIds: string[]) => dispatchRoundTrip([{ account, orderIds }]);
 
 /** Tries to place every waiting pickup of a business (e.g. when a driver comes online). */
 export async function dispatchWaiting(tenantId: string): Promise<number> {

@@ -1,8 +1,8 @@
 import "server-only";
-import { dispatchOrder, dispatchRound } from "./dispatch/service";
+import { devicePoint, dispatchOrder, dispatchRoundTrip } from "./dispatch/service";
 import { logError } from "./log";
 import { applyOfferToOrder } from "./offers";
-import { DISPATCH_LEAD_MS, firstRoundAt, isDue, nextRoundAt, phoneDeviceId, roundDeviceId, roundOpen, webDeviceId } from "./rounds";
+import { DISPATCH_LEAD_MS, firstRoundAt, isDue, nextRoundAt, phoneDeviceId, planRoundTrips, roundDeviceId, roundOpen, webDeviceId } from "./rounds";
 import { supabaseAdmin } from "./supabase/admin";
 
 // Pickups without a Toss basket (migration 0042). A booking becomes an ordinary order on a "virtual basket", so
@@ -258,14 +258,25 @@ export async function dispatchDue(opts: { force?: boolean } = {}): Promise<{ rou
     .limit(200);
   const byRound = new Map<string, string[]>();
   for (const b of bags ?? []) byRound.set(b.round_account_id as string, [...(byRound.get(b.round_account_id as string) ?? []), b.id as string]);
+  // hostels of the same laundry that are due together: one driver goes on from one to the next while the bags fit
+  const byTenant = new Map<string, { account: { id: string; name: string; tenantId: string; address: string }; orderIds: string[] }[]>();
   for (const [accountId, ids] of byRound) {
     const { data: a } = await db().from("business_accounts").select("id, tenant_id, name, address").eq("id", accountId).maybeSingle();
     if (!a) continue;
-    const who = await dispatchRound({ id: a.id as string, name: a.name as string, tenantId: a.tenant_id as string, address: (a.address as string) || (a.name as string) }, ids).catch((err) => {
-      logError("round dispatch failed", err);
-      return null;
-    });
-    if (who) out.rounds++;
+    const stop = { account: { id: a.id as string, name: a.name as string, tenantId: a.tenant_id as string, address: (a.address as string) || (a.name as string) }, orderIds: ids };
+    byTenant.set(stop.account.tenantId, [...(byTenant.get(stop.account.tenantId) ?? []), stop]);
+  }
+  for (const stops of byTenant.values()) {
+    const points = await Promise.all(stops.map((s) => devicePoint(roundDeviceId(s.account.id)).catch(() => undefined)));
+    const trips = planRoundTrips(stops.map((s, i) => ({ id: s.account.id, bags: s.orderIds.length, point: points[i] })));
+    for (const trip of trips) {
+      const ordered = trip.map((id) => stops.find((s) => s.account.id === id)!);
+      const who = await dispatchRoundTrip(ordered).catch((err) => {
+        logError("round dispatch failed", err);
+        return null;
+      });
+      if (who) out.rounds += ordered.length;
+    }
   }
 
   // 3. single bookings whose time slot is coming up

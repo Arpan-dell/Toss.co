@@ -67,7 +67,8 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
               <input type="hidden" name="accountId" value={account.id} />
               <p className="text-sm text-secondary">
                 A driver comes every few days at a set time. Residents tap <b className="text-fg">I have clothes this time</b> in Toss before it;
-                the driver collects every bag as one stop and weighs each one.
+                the driver collects every bag as one stop and weighs each one. Hostels with a round at the <b className="text-fg">same time</b> go to
+                one driver as a single trip, nearest next, while the bags fit (up to 20).
               </p>
               <Field label="Address of the hostel or PG">
                 <input name="address" defaultValue={round.address === account.name ? "" : round.address} maxLength={300} className={fieldClass} />

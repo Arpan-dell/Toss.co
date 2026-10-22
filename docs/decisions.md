@@ -132,6 +132,7 @@ Newest areas last. Each entry: **Chose** · **Why** · **Not chosen (and why)**.
 - **Who pays:** the hostel (monthly account bill, at the account's price) or each resident; chosen per account.
 - **Why:** this is how PG/hostel laundry works in practice (a delivery boy every two days, whoever wants to gives clothes).
 - **Not chosen:** one booking per resident dispatched separately (several drivers to one building).
+- **Combined trips:** hostels of the same laundry whose rounds are due together go to one driver as one trip, starting with the biggest and then the nearest next, while the bags fit (20). A bigger hostel gets its own trip. Not chosen: a full route optimiser (overkill for a handful of hostels).
 
 ## The assistant
 

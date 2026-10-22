@@ -58,78 +58,6 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
         ← All accounts
       </Link>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="Baskets on this account">
-          {baskets.length === 0 ? (
-            <EmptyState>No baskets yet. Add the account&apos;s baskets below; their new pickups go on this bill.</EmptyState>
-          ) : (
-            <ul className="divide-y divide-border text-sm">
-              {baskets.map((d) => (
-                <li key={d.deviceId} className="flex items-center justify-between gap-3 py-2.5 first:pt-0">
-                  <span>
-                    <span className="font-medium text-fg">{deviceLabel(d)}</span>
-                    <span className="block font-mono text-xs text-muted">{d.deviceId}</span>
-                  </span>
-                  <form action={setBasketAccount}>
-                    <input type="hidden" name="deviceId" value={d.deviceId} />
-                    <input type="hidden" name="accountId" value="" />
-                    <button className="text-xs text-muted underline hover:text-critical">Remove</button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          )}
-          {free.length > 0 && (
-            <form action={setBasketAccount} className="mt-4 flex gap-2 border-t border-border pt-4">
-              <input type="hidden" name="accountId" value={account.id} />
-              <label className="sr-only" htmlFor="deviceId">
-                Basket to add
-              </label>
-              <select id="deviceId" name="deviceId" required className="flex-1 rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm">
-                {free.map((d) => (
-                  <option key={d.deviceId} value={d.deviceId}>
-                    {deviceLabel(d)}
-                  </option>
-                ))}
-              </select>
-              <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium">Add basket</button>
-            </form>
-          )}
-          <p className="mt-3 text-xs text-muted">Pickups from these baskets are priced at {fmt.money(price)}/kg and billed monthly; customers aren&apos;t asked to pay each pickup.</p>
-        </Card>
-
-        <Card title="Details">
-          <ActionForm action={saveAccount} submitLabel="Save">
-            <input type="hidden" name="id" value={account.id} />
-            <Field label="Name">
-              <input name="name" required minLength={2} maxLength={80} defaultValue={account.name} className={fieldClass} />
-            </Field>
-            <Field label="Price per kg (₹)" hint={`Empty: your normal ${fmt.money(tenant.pricePerKg)}/kg.`}>
-              <input name="pricePerKg" type="number" min={1} step="any" defaultValue={account.pricePerKg ?? ""} className={fieldClass} />
-            </Field>
-            <Field label="Contact person">
-              <input name="contactName" maxLength={80} defaultValue={account.contactName ?? ""} className={fieldClass} />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Mobile" hint="For sending bills on WhatsApp.">
-                <input name="phone" type="tel" inputMode="tel" defaultValue={account.phone ? formatPhone(account.phone) : ""} className={fieldClass} />
-              </Field>
-              <Field label="Email">
-                <input name="email" type="email" defaultValue={account.email ?? ""} className={fieldClass} />
-              </Field>
-            </div>
-          </ActionForm>
-          <div className="mt-4 border-t border-border pt-4">
-            <ConfirmButton
-              action={deleteAccount}
-              fields={{ id: account.id }}
-              label="Delete account"
-              confirm="Delete this account? Its baskets keep working and past pickups stay; new pickups are billed normally."
-            />
-          </div>
-        </Card>
-      </div>
-
       <Card title="Collection rounds" action={round?.everyDays ? <Badge tone="good">Every {round.everyDays === 1 ? "day" : `${round.everyDays} days`}</Badge> : undefined}>
         {!round ? (
           <EmptyState>Run the 0042 database update (Supabase → SQL Editor) to set up collection rounds.</EmptyState>
@@ -227,6 +155,78 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
           </div>
         )}
       </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card title="Baskets on this account">
+          {baskets.length === 0 ? (
+            <EmptyState>No baskets yet. Add the account&apos;s baskets below; their new pickups go on this bill.</EmptyState>
+          ) : (
+            <ul className="divide-y divide-border text-sm">
+              {baskets.map((d) => (
+                <li key={d.deviceId} className="flex items-center justify-between gap-3 py-2.5 first:pt-0">
+                  <span>
+                    <span className="font-medium text-fg">{deviceLabel(d)}</span>
+                    <span className="block font-mono text-xs text-muted">{d.deviceId}</span>
+                  </span>
+                  <form action={setBasketAccount}>
+                    <input type="hidden" name="deviceId" value={d.deviceId} />
+                    <input type="hidden" name="accountId" value="" />
+                    <button className="text-xs text-muted underline hover:text-critical">Remove</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+          {free.length > 0 && (
+            <form action={setBasketAccount} className="mt-4 flex gap-2 border-t border-border pt-4">
+              <input type="hidden" name="accountId" value={account.id} />
+              <label className="sr-only" htmlFor="deviceId">
+                Basket to add
+              </label>
+              <select id="deviceId" name="deviceId" required className="flex-1 rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm">
+                {free.map((d) => (
+                  <option key={d.deviceId} value={d.deviceId}>
+                    {deviceLabel(d)}
+                  </option>
+                ))}
+              </select>
+              <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium">Add basket</button>
+            </form>
+          )}
+          <p className="mt-3 text-xs text-muted">Pickups from these baskets are priced at {fmt.money(price)}/kg and billed monthly; customers aren&apos;t asked to pay each pickup.</p>
+        </Card>
+
+        <Card title="Details">
+          <ActionForm action={saveAccount} submitLabel="Save">
+            <input type="hidden" name="id" value={account.id} />
+            <Field label="Name">
+              <input name="name" required minLength={2} maxLength={80} defaultValue={account.name} className={fieldClass} />
+            </Field>
+            <Field label="Price per kg (₹)" hint={`Empty: your normal ${fmt.money(tenant.pricePerKg)}/kg.`}>
+              <input name="pricePerKg" type="number" min={1} step="any" defaultValue={account.pricePerKg ?? ""} className={fieldClass} />
+            </Field>
+            <Field label="Contact person">
+              <input name="contactName" maxLength={80} defaultValue={account.contactName ?? ""} className={fieldClass} />
+            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Mobile" hint="For sending bills on WhatsApp.">
+                <input name="phone" type="tel" inputMode="tel" defaultValue={account.phone ? formatPhone(account.phone) : ""} className={fieldClass} />
+              </Field>
+              <Field label="Email">
+                <input name="email" type="email" defaultValue={account.email ?? ""} className={fieldClass} />
+              </Field>
+            </div>
+          </ActionForm>
+          <div className="mt-4 border-t border-border pt-4">
+            <ConfirmButton
+              action={deleteAccount}
+              fields={{ id: account.id }}
+              label="Delete account"
+              confirm="Delete this account? Its baskets keep working and past pickups stay; new pickups are billed normally."
+            />
+          </div>
+        </Card>
+      </div>
 
       <Card title="Monthly bills">
         {bills.length === 0 ? (

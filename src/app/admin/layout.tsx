@@ -23,6 +23,7 @@ const nav: PortalNavItem[] = [
   { href: "/admin/payments", label: "Payments", icon: "payments" },
   { href: "/admin/customers", label: "Customers", icon: "customers" },
   { href: "/admin/fleet", label: "Fleet", icon: "fleet" },
+  { href: "/admin/accounts", label: "Hostels & PGs", icon: "accounts" },
   { href: "/admin/driver-pay", label: "Driver pay", icon: "driverpay" },
   { href: "/admin/stock", label: "Supplies", icon: "stock" },
   { href: "/admin/profit", label: "Profit", icon: "profit" },
@@ -31,7 +32,7 @@ const nav: PortalNavItem[] = [
     href: "/admin/settings",
     label: "Settings",
     icon: "settings",
-    match: ["/admin/business", "/admin/accounts", "/admin/analytics", "/admin/ratings", "/admin/branches"],
+    match: ["/admin/business", "/admin/analytics", "/admin/ratings", "/admin/branches"],
   },
   { href: "/admin/billing", label: "Billing", icon: "billing" },
 ];

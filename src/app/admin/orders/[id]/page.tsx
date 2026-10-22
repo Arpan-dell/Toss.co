@@ -76,7 +76,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageTitle kicker={`Order ${orderLabel(order)}`}>{fmt.money(order.amountDue)}</PageTitle>
         <div className="flex gap-2">
-          <OrderStatusBadge status={order.status} />
+          <OrderStatusBadge status={order.status} order={order} />
           <PaymentBadge status={order.paymentStatus} />
         </div>
       </div>

@@ -241,7 +241,7 @@ export default async function CustomerOverview() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Active pickup" className="lg:col-span-2" action={active && <OrderStatusBadge status={active.status} />}>
+        <Card title="Active pickup" className="lg:col-span-2" action={active && <OrderStatusBadge status={active.status} order={active} />}>
           {active ? (
             <div className="grid gap-6 sm:grid-cols-2">
               <StatusTimeline order={active} />

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { OrderStatus, PaymentStatus } from "@/lib/types";
 import { CountUp } from "./count-up";
+import { orderStage } from "@/lib/order-stage";
 
 // Dashboard visual system ("dispatch ledger"): flat solid panels with hairline borders, monospace labels
 // with a dotted leader like a laundry ticket, figures in mono on a heavy top rule, and square-cornered status
@@ -96,7 +97,12 @@ const orderStatusMeta: Record<OrderStatus, { tone: Tone; icon: string; label: st
   CANCELLED: { tone: "neutral", icon: "✕", label: "Cancelled" },
 };
 
-export function OrderStatusBadge({ status }: { status: OrderStatus }) {
+/** An order's status; given the order, its real stage after pickup (to weigh, in the wash, ready, out, delivered). */
+export function OrderStatusBadge({ status, order }: { status: OrderStatus; order?: Parameters<typeof orderStage>[0] }) {
+  if (order) {
+    const s = orderStage(order);
+    return <Badge tone={s.tone} live={s.live}>{s.label}</Badge>;
+  }
   const m = orderStatusMeta[status];
   return <Badge tone={m.tone} icon={m.icon} live={m.live}>{m.label}</Badge>;
 }

@@ -48,7 +48,7 @@ const GROUPS: { title: string; tiles: Tile[] }[] = [
   {
     title: "Grow",
     tiles: [
-      { href: "/admin/accounts", title: "Business accounts", text: "PGs, hostels and offices with many baskets, billed once a month.", icon: Briefcase, pro: true },
+      { href: "/admin/accounts", title: "Hostels, PGs & offices", text: "Collection rounds every few days, and one monthly bill. Also in the bottom bar.", icon: Briefcase, pro: true },
       { href: "/admin/branches", title: "Branches", text: "Run more than one laundry from one login.", icon: TreeStructure, pro: true },
       { href: "/admin/ratings", title: "Ratings", text: "What customers think of each pickup, and who to call back.", icon: Star, pro: true },
       { href: "/admin/analytics", title: "Analytics", text: "Busy days, best customers and what's coming next week.", icon: ChartLineUp, pro: true },

@@ -49,7 +49,7 @@ export async function OrderTable({ orders, showAddress = false, emptyText = "No 
                 {o.discountPct ? <span className="ml-1.5 rounded-full bg-good-bg px-1.5 py-0.5 text-[10px] text-good">−{o.discountPct}%</span> : null}
               </td>
               <td className="px-3 py-2.5">
-                <OrderStatusBadge status={o.status} />
+                <OrderStatusBadge status={o.status} order={o} />
                 {linkToAdmin && isLate(o, now()) && <span className="ml-1.5 rounded-[4px] bg-critical-bg px-1.5 py-0.5 text-[10px] font-medium text-critical">Late</span>}
               </td>
               <td className="px-5 py-2.5">

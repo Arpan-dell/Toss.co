@@ -1,4 +1,3 @@
-import { BackLink } from "@/components/back-link";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
@@ -41,8 +40,7 @@ export default async function Accounts() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Pro">Business accounts</PageTitle>
-      <BackLink />
+      <PageTitle kicker="Pro · business accounts">Hostels, PGs &amp; offices</PageTitle>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatTile label="Accounts" value={String(accounts.length)} hint={`${rows.reduce((s, r) => s + r.baskets, 0)} baskets`} />
@@ -53,7 +51,10 @@ export default async function Accounts() {
       <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
         <Card title="Accounts">
           {rows.length === 0 ? (
-            <EmptyState>Add your first PG, hostel or office. Then put its baskets on the account.</EmptyState>
+            <EmptyState>
+              Add your first PG, hostel or office on the right. Its page then lets you set a collection round (a driver every few days at a set
+              time; residents sign up in Toss) and one monthly bill.
+            </EmptyState>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {rows.map(({ a, baskets, month, unpaid }) => (

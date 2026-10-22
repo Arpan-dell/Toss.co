@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { geocodeStore } from "../dispatch/service";
+import { geocodeStore, notifyWeighed } from "../dispatch/service";
 import { parseKg, repriceForWeight } from "../dispatch/weighing";
 import { sortedTotal } from "../sorting";
 import { notifyClosureRequested } from "../email/notify";
@@ -203,19 +203,27 @@ export async function updateServiceArea(_prev: FormState, formData: FormData): P
   };
 }
 
-// Weigh at pickup: when on, drivers must enter the scale reading before a pickup completes, and that weight is
-// billed. Off: "Picked up" completes with the basket's own reading.
+// Where clothes are weighed: at the door (the driver enters the scale reading before a pickup completes), at the
+// store (the driver just collects; the laundry enters the weight and the bill follows), or the basket's reading.
 export async function updateWeighing(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await requireManager();
-  const on = formData.get("weighAtPickup") === "on";
-  // whites and coloured bags are weighed separately, so sorting needs weighing on
-  const sort = on && formData.get("sortWhites") === "on";
+  const raw = text(formData, "weighAt");
+  const weighAt = raw === "store" || raw === "basket" ? raw : "door";
+  // whites and coloured bags are weighed separately by the driver, so sorting needs weighing at the door
+  const sort = weighAt === "door" && formData.get("sortWhites") === "on";
   // not in the manager's column grants: written server-side after the role check
-  const { error } = await supabaseAdmin().from("tenants").update({ weigh_at_pickup: on, sort_whites: sort }).eq("id", session.tenantId);
+  const db = supabaseAdmin();
+  let { error } = await db.from("tenants").update({ weigh_at: weighAt, weigh_at_pickup: weighAt === "door", sort_whites: sort }).eq("id", session.tenantId);
+  if (error && /weigh_at/.test(error.message ?? "")) {
+    if (weighAt === "store") return { error: "Weighing at the store switches on after the 0043 database update (Supabase → SQL Editor)." };
+    ({ error } = await db.from("tenants").update({ weigh_at_pickup: weighAt === "door", sort_whites: sort }).eq("id", session.tenantId));
+  }
   if (error) return { error: friendlyError(error) };
   done();
-  if (!on) return { message: "Saved. Pickups use the basket's reading." + (formData.get("sortWhites") === "on" ? " Sorting whites needs weighing at pickup, so it's off too." : "") };
-  return { message: sort ? "Saved. Drivers will bag whites and coloured clothes separately and weigh each bag." : "Saved. Drivers will weigh every bag at pickup." };
+  const unsorted = formData.get("sortWhites") === "on" && !sort ? " Sorting whites needs weighing at the door, so it's off." : "";
+  if (weighAt === "store") return { message: "Saved. Drivers just collect; weigh each bag at the store from your live board, and the customer gets the bill." + unsorted };
+  if (weighAt === "basket") return { message: "Saved. Pickups use the basket's reading. Pickups booked without a basket are weighed at the store." + unsorted };
+  return { message: sort ? "Saved. Drivers will bag whites and coloured clothes separately and weigh each bag." : "Saved. Drivers will weigh every bag at the door." };
 }
 
 // The manager confirms or corrects an unpaid order's weight (e.g. weighed again at the store). Re-priced at
@@ -241,12 +249,14 @@ export async function confirmOrderWeight(_prev: FormState, formData: FormData): 
   const supabase = await createClient();
   const { data: o } = await supabase
     .from("orders")
-    .select("id, weight_kg, amount_due, amount_gross, amount_before_discount, discount_pct, payment_status, reported_weight_kg, tenant_id")
+    .select("*")
     .eq("id", orderId)
     .maybeSingle();
   if (!o || o.tenant_id !== session.tenantId) return { error: "Order not found in your business." };
   if (o.payment_status !== "UNPAID") return { error: "This order is already paid or being paid, so its amount is fixed." };
   const { data: t } = await supabase.from("tenants").select("*").eq("id", session.tenantId).maybeSingle();
+  // a hostel or office on a monthly account has its own price per kg
+  const { data: acct } = o.account_id ? await supabase.from("business_accounts").select("price_per_kg").eq("id", o.account_id as string).maybeSingle() : { data: null };
 
   const priced = repriceForWeight(
     {
@@ -257,7 +267,7 @@ export async function confirmOrderWeight(_prev: FormState, formData: FormData): 
       discountPct: o.discount_pct as number | null,
     },
     kg,
-    Number(t?.price_per_kg) || 0,
+    Number(acct?.price_per_kg) || Number(t?.price_per_kg) || 0,
     { currency: (t?.currency as string) ?? "INR", minOrder: Number(t?.min_order ?? 0) || 0 },
   );
   const { data: saved, error } = await supabaseAdmin()
@@ -272,12 +282,15 @@ export async function confirmOrderWeight(_prev: FormState, formData: FormData): 
       coloured_kg: split ? coloured : null,
       amount_due: priced.amountDue,
       amount_before_discount: priced.amountBeforeDiscount,
+      // weighed at the store: the order can now be marked ready and paid
+      ...(o.weigh_pending ? { weigh_pending: false } : {}),
     })
     .eq("id", orderId)
     .eq("tenant_id", session.tenantId)
     .eq("payment_status", "UNPAID")
     .select("id");
   if (error || !saved?.length) return { error: error ? friendlyError(error) : "This order can't be changed anymore." };
+  if (o.weigh_pending) await notifyWeighed(orderId).catch(() => {});
   done();
   return { message: `Weight confirmed: ${kg} kg, ₹${priced.amountDue}.` };
 }

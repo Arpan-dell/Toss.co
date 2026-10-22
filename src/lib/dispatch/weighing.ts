@@ -54,3 +54,9 @@ export function repriceForWeight(
 /** Percent difference between the basket's reading and the scale (positive: the bag was heavier). */
 export const weightGapPct = (reportedKg: number, weighedKg: number) =>
   reportedKg > 0 ? Math.round(((weighedKg - reportedKg) / reportedKg) * 100) : null;
+
+/** Where a laundry weighs: at the door (driver), at the store, or the basket's reading (before 0043: on/off). */
+export function weighPlace(t: { weigh_at?: unknown; weigh_at_pickup?: unknown } | null | undefined): "door" | "store" | "basket" {
+  if (t?.weigh_at === "store" || t?.weigh_at === "basket" || t?.weigh_at === "door") return t.weigh_at;
+  return t?.weigh_at_pickup === false ? "basket" : "door";
+}

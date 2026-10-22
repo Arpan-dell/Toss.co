@@ -24,20 +24,37 @@ export default async function Operations() {
       <PageTitle kicker="Settings">How you work</PageTitle>
       <BackLink />
 
-      <Card title="Weight at pickup">
+      <Card title="Where clothes are weighed">
         <ActionForm action={updateWeighing} submitLabel="Save">
-          <label className="flex items-start gap-2.5 text-sm">
-            <input name="weighAtPickup" type="checkbox" defaultChecked={tenant.weighAtPickup} className="mt-0.5 size-4 accent-[var(--accent)]" />
-            <span>
-              <span className="font-medium text-fg">Driver weighs every bag at pickup</span>
-              <span className="mt-0.5 block text-secondary">
-                After <b>Picked up</b>, the driver bot asks for the scale reading and bills that weight. The basket&apos;s reading is
-                kept beside it, so a basket that under-reports shows up on the order page. A driver without a scale can still use the
-                basket&apos;s reading; that order is marked <i>not weighed</i>.
-              </span>
-              <span className="mt-1 block text-xs text-muted">Off: pickups bill the basket&apos;s reading straight away. You can still confirm any unpaid order&apos;s weight on its page.</span>
-            </span>
-          </label>
+          <fieldset className="space-y-3">
+            <legend className="sr-only">Where clothes are weighed</legend>
+            {[
+              {
+                value: "door",
+                title: "At the door, by the driver",
+                body: "After Picked up, the driver bot asks for the scale reading and bills that weight. The basket's reading is kept beside it, so a basket that under-reports shows up on the order page.",
+              },
+              {
+                value: "store",
+                title: "At the store",
+                body: "Drivers just collect. Bags wait under “To weigh at the store” on your live board; enter each weight there and the customer gets the bill. Orders can't be marked ready until they're weighed.",
+              },
+              {
+                value: "basket",
+                title: "The basket's reading",
+                body: "Pickups bill what the basket weighed straight away. Pickups booked without a basket are weighed at the store.",
+              },
+            ].map((o) => (
+              <label key={o.value} className="flex items-start gap-2.5 text-sm">
+                <input type="radio" name="weighAt" value={o.value} defaultChecked={tenant.weighAt === o.value} className="mt-0.5 size-4 accent-[var(--accent)]" />
+                <span>
+                  <span className="font-medium text-fg">{o.title}</span>
+                  <span className="mt-0.5 block text-secondary">{o.body}</span>
+                </span>
+              </label>
+            ))}
+            <p className="text-xs text-muted">Whichever you choose, you can confirm or correct any unpaid order&apos;s weight on its page.</p>
+          </fieldset>
           <label className="flex items-start gap-2.5 border-t border-dotted border-border-strong pt-3 text-sm">
             <input name="sortWhites" type="checkbox" defaultChecked={tenant.sortWhites} className="mt-0.5 size-4 accent-[var(--accent)]" />
             <span>
@@ -48,7 +65,7 @@ export default async function Operations() {
                 bleach can come off the whites only.
               </span>
               <span className="mt-1 block text-xs text-muted">
-                Needs weighing at pickup. The price per kg is the same for both bags.
+                Needs weighing at the door. The price per kg is the same for both bags.
                 {!pro && " On Toss Free drivers use one bag; upgrade to turn sorting on."}
               </span>
             </span>

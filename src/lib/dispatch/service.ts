@@ -46,7 +46,7 @@ export async function withdrawJob(orderId: string, kind: "pickup" | "delivery", 
 }
 import { chooseDriver, directionsUrl, liveUntil, locationState, searchUrl, type DriverCandidate, type LatLng } from "./core";
 import { geocode } from "./geocode";
-import { MAX_KG, MIN_KG, parseWeight, repriceForWeight } from "./weighing";
+import { MAX_KG, MIN_KG, parseWeight, repriceForWeight, weighPlace } from "./weighing";
 import { formatterFor, INDIA_FORMAT, regionOf, type Formatter } from "../region-format";
 import { earnings, monthStartIST, weekStartIST } from "../driver-pay";
 import { bagTag, bagsLine, isSorted, sortedTotal } from "../sorting";
@@ -1134,16 +1134,19 @@ async function finishPickup(
   driver: Row,
   o: Row,
   kg: number,
-  source: "driver" | "basket",
+  source: "driver" | "basket" | "store",
   msg?: { chat: { id: number }; message_id: number },
   bags?: { whitesKg: number; colouredKg: number },
 ) {
   const chatId = driver.telegram_chat_id as string;
   const now = new Date().toISOString();
+  const atStore = source === "store";
   const patch: Record<string, unknown> = {
     status: "COMPLETED",
     completed_at: now,
-    weight_source: source,
+    // weighed at the store: no weight yet (a basket's reading, if any, stands until the laundry enters it)
+    weight_source: atStore ? (kg > 0 ? "basket" : null) : source,
+    ...(atStore ? { weigh_pending: true } : {}),
     reported_weight_kg: o.reported_weight_kg ?? o.weight_kg,
     // whites and coloured bags (only when both were weighed; a basket reading can't be split)
     whites_kg: bags?.whitesKg ?? null,
@@ -1167,7 +1170,13 @@ async function finishPickup(
     );
     Object.assign(patch, { amount_due: priced.amountDue, amount_before_discount: priced.amountBeforeDiscount });
   }
-  const { data: done } = await db().from("orders").update(patch).eq("id", o.id as string).eq("driver_id", chatId).in("status", ACTIVE).select("amount_due");
+  const close = () => db().from("orders").update(patch).eq("id", o.id as string).eq("driver_id", chatId).in("status", ACTIVE).select("amount_due");
+  let { data: done, error: closeErr } = await close();
+  if (closeErr && atStore && /weigh_pending/.test(closeErr.message ?? "")) {
+    // before migration 0043: complete it anyway; the laundry still confirms the weight on the order page
+    delete patch.weigh_pending;
+    ({ data: done, error: closeErr } = await close());
+  }
   await db().from("drivers").update({ weighing_order_id: null, weighing_step: null }).eq("id", driver.id as string);
   if (!done?.length) {
     await sendMessage(token, chatId, "This pickup was already closed.", { keyboard: MENU });
@@ -1178,12 +1187,14 @@ async function finishPickup(
   const split = bags ? `\n${bagsLine(bags, true)}` : "";
   const weighed = (source === "driver" ? `⚖️ ${f.weight(kg)} weighed` : `⚖️ ${f.weight(kg)} (basket reading)`) + split;
   if (msg) await editMessage(token, String(msg.chat.id), msg.message_id, `✅ <b>Picked up</b> · #${o.device_order_id}\n<s>${esc((o.address as string) || "")}</s>`);
-  await sendMessage(token, chatId, `✅ <b>Picked up</b> · #${o.device_order_id}\n${weighed} · ${f.money(amount)}`, { keyboard: MENU });
+  await sendMessage(token, chatId, `✅ <b>Picked up</b> · #${o.device_order_id}\n${atStore ? "⚖️ Weighed at the store" : `${weighed} · ${f.money(amount)}`}`, { keyboard: MENU });
   await notifyCustomer(
     o,
-    `✅ Your laundry has been picked up (order #${o.device_order_id}).\n${source === "driver" ? `⚖️ Weighed at pickup: <b>${f.weight(kg)}</b>` : `⚖️ ${f.weight(kg)}`} · <b>${f.money(amount)}</b>${
-      bags ? `\n${bagsLine(bags, true)}\n<i>Whites and coloured clothes are washed separately.</i>` : ""
-    }\nThank you!`,
+    atStore
+      ? `✅ Your laundry has been picked up (order #${o.device_order_id}).\n⚖️ We'll weigh it at the store and send you the bill.\nThank you!`
+      : `✅ Your laundry has been picked up (order #${o.device_order_id}).\n${source === "driver" ? `⚖️ Weighed at pickup: <b>${f.weight(kg)}</b>` : `⚖️ ${f.weight(kg)}`} · <b>${f.money(amount)}</b>${
+          bags ? `\n${bagsLine(bags, true)}\n<i>Whites and coloured clothes are washed separately.</i>` : ""
+        }\nThank you!`,
   ).catch(() => {});
 
   const r = await currentRoute(driver);
@@ -1208,6 +1219,22 @@ async function finishPickup(
   await sendMessage(token, chatId, `📸 <b>Send one photo of the ${bags ? "bags" : "bag"}</b> for #${o.device_order_id}.\n<i>Proof of pickup: it protects you if anything is questioned later.</i>`, {
     inline: [[{ text: "Skip", callback_data: "skipphoto" }]],
   });
+}
+
+// A driver without a scale: the basket's reading if there is one, otherwise the laundry weighs it at the store.
+function noScale(orderId: string, reportedKg: number, reading: string): InlineButton {
+  return reportedKg > 0 ? { text: `No scale: use the basket's ${reading}`, callback_data: `basket:${orderId}` } : { text: "No scale: weigh it at the store", callback_data: `store:${orderId}` };
+}
+
+/** The laundry weighed a pickup at the store: tell the customer the weight and the bill. */
+export async function notifyWeighed(orderId: string): Promise<void> {
+  const { data: o } = await db().from("orders").select("*").eq("id", orderId).maybeSingle();
+  if (!o) return;
+  const f = await fmtFor(o.tenant_id);
+  await notifyCustomer(
+    o as Row,
+    `⚖️ Your laundry was weighed at the store (order #${o.device_order_id}): <b>${f.weight(Number(o.weight_kg) || 0)}</b> · <b>${f.money(Number(o.amount_due) || 0)}</b>.\nYou can pay in your Toss account.`,
+  ).catch(() => {});
 }
 
 // Sorted pickup, one bag weighed (kg 0: no clothes of that kind). Whites first, then coloured; after the coloured
@@ -1266,10 +1293,17 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
   if (action === "done") {
     if (!o.driver_ack_at) await db().from("orders").update({ driver_ack_at: new Date().toISOString() }).eq("id", orderId).is("driver_ack_at", null);
     const reported = Number(o.weight_kg) || 0;
-    const { data: t } = await db().from("tenants").select("weigh_at_pickup, sort_whites").eq("id", o.tenant_id as string).maybeSingle();
+    const { data: t } = await db().from("tenants").select("*").eq("id", o.tenant_id as string).maybeSingle();
     const f = await fmtFor(o.tenant_id);
     const r = f.weight(reported);
-    if (t?.weigh_at_pickup === false) {
+    const weighAt = weighPlace(t);
+    // weighed at the store (or nothing to bill yet: a pickup booked without a basket has no reading)
+    if (weighAt === "store" || (weighAt === "basket" && reported <= 0)) {
+      await answerCallback(token, cb.id, "Picked up ✅ The laundry weighs it at the store.");
+      await finishPickup(token, driver, o as Row, reported, "store", msg);
+      return;
+    }
+    if (weighAt === "basket") {
       // the business doesn't weigh at pickup: the basket's reading stands
       await answerCallback(token, cb.id, "Marked as picked up ✅");
       await finishPickup(token, driver, o as Row, reported, "basket", msg);
@@ -1290,7 +1324,7 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
         {
           inline: [
             [{ text: "No whites", callback_data: `nowhites:${orderId}` }],
-            [{ text: `No scale: use the basket's ${r}`, callback_data: `basket:${orderId}` }],
+            [noScale(orderId, reported, r)],
           ],
         },
       );
@@ -1304,7 +1338,7 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
       token,
       chatId,
       `⚖️ <b>Weigh the bag</b> · #${o.device_order_id}\n${LINE}\nSend the weight on your scale in ${f.unit}, like <code>${f.unit === "lb" ? "14" : "6.4"}</code>.\nThe basket reported <b>${r}</b>.`,
-      { inline: [[{ text: `No scale: use the basket's ${r}`, callback_data: `basket:${orderId}` }]] },
+      { inline: [[noScale(orderId, reported, r)]] },
     );
   } else if (
     (action === "nowhites" || action === "nocoloured") &&
@@ -1313,6 +1347,9 @@ async function handleButton(token: string, cb: NonNullable<TgUpdate["callback_qu
   ) {
     await answerCallback(token, cb.id, action === "nowhites" ? "No whites" : "No coloured clothes");
     await weighBag(token, driver, o as Row, action === "nowhites" ? "WHITES" : "COLOURED", 0);
+  } else if (action === "store") {
+    await answerCallback(token, cb.id, "Picked up ✅ The laundry weighs it at the store.");
+    await finishPickup(token, driver, o as Row, Number(o.weight_kg) || 0, "store", msg);
   } else if (action === "basket") {
     await answerCallback(token, cb.id, "Using the basket's reading");
     await finishPickup(token, driver, o as Row, Number(o.weight_kg) || 0, "basket", msg);

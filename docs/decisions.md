@@ -56,6 +56,11 @@ Newest areas last. Each entry: **Chose** · **Why** · **Not chosen (and why)**.
 ### The driver's scale decides the price
 - **Why:** the basket's reading is an estimate. The customer sees both numbers, so disputes are about facts. Whites and coloured can be bagged and weighed apart.
 
+### Where clothes are weighed: a laundry setting
+- **Chose:** three options in Settings → How you work: **at the door** by the driver (default), **at the store** (the driver just collects; the laundry enters each weight on the live board, then the customer gets the bill), or **the basket's reading**.
+- **Safety:** a pickup without a weight is marked "to weigh"; it can't be marked ready or charged to a saved card until weighed, and the customer sees "being weighed" instead of a bill. A booking without a basket has no reading, so "no scale" and "basket's reading" fall back to weighing at the store, never a ₹0 bill.
+- **Why:** some laundries have no scales for drivers, or prefer one accurate scale at the store.
+
 ### Photo proof at pickup and a 4-digit delivery code
 - **Why:** protects drivers and customers in a dispute; the code makes sure clothes only go to their owner.
 

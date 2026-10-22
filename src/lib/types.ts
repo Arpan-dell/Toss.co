@@ -51,6 +51,7 @@ export interface Tenant {
   serviceRadiusKm: number; // the business picks up within this distance of its store (1-20 km)
   listed: boolean; // shown in the public "Find a laundry" directory
   weighAtPickup: boolean; // drivers must enter the scale reading when they pick up
+  weighAt: "door" | "store" | "basket"; // where clothes are weighed (migration 0043; before it, from weighAtPickup)
   delivers: boolean; // ready orders go back to the customer with a driver; off: the customer collects at the store
   sortWhites: boolean; // drivers bag and weigh whites and coloured clothes separately (needs weighAtPickup)
   otherCostPerKg: number; // water, power, labour per kg washed (for profit)
@@ -228,6 +229,7 @@ export interface Order {
   contactName?: string; // booked by the laundry for someone without an account
   contactPhone?: string;
   roundAccountId?: string; // the hostel/PG round it belongs to
+  weighPending?: boolean; // collected, to be weighed at the store (migration 0043)
   deliveryCode?: string; // 4 digits the customer reads to the driver at the door
   deliveryVerified?: boolean;
   deliveryAttempts?: number; // "customer not home" count

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseKg, repriceForWeight, weightGapPct } from "./weighing";
+import { parseKg, repriceForWeight, weighPlace, weightGapPct } from "./weighing";
 
 describe("parseKg", () => {
   it("reads what drivers type", () => {
@@ -49,5 +49,16 @@ describe("repriceForWeight outside India", () => {
     // 1 kg at $3/kg was raised to the $30 minimum; at 6 kg it's $18 → still the $30 minimum, not $180
     expect(repriceForWeight({ weightKg: 1, amountDue: 30 }, 6, 3, { currency: "USD", minOrder: 30 }).amountDue).toBe(30);
     expect(repriceForWeight({ weightKg: 1, amountDue: 30 }, 12, 3, { currency: "USD", minOrder: 30 }).amountDue).toBe(36);
+  });
+});
+
+describe("where clothes are weighed", () => {
+  it("reads the setting, and falls back to the older on/off switch", () => {
+    expect(weighPlace({ weigh_at: "store" })).toBe("store");
+    expect(weighPlace({ weigh_at: "basket", weigh_at_pickup: false })).toBe("basket");
+    expect(weighPlace({ weigh_at_pickup: false })).toBe("basket");
+    expect(weighPlace({ weigh_at_pickup: true })).toBe("door");
+    expect(weighPlace(null)).toBe("door");
+    expect(weighPlace({ weigh_at: "garage" })).toBe("door");
   });
 });

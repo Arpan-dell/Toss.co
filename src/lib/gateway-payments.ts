@@ -526,7 +526,7 @@ export async function setAutopay(tenantId: string, customerId: string, on: boole
  */
 export async function autoChargeOrder(orderId: string): Promise<"paid" | "skipped" | "failed"> {
   const { data: o } = await db().from("orders").select("*").eq("id", orderId).maybeSingle();
-  if (!o || o.status !== "COMPLETED" || o.payment_status !== "UNPAID" || o.account_id || !o.customer_id || !(Number(o.amount_due) > 0)) return "skipped";
+  if (!o || o.status !== "COMPLETED" || o.payment_status !== "UNPAID" || o.account_id || !o.customer_id || !(Number(o.amount_due) > 0) || o.weigh_pending) return "skipped";
   const { data: p, error } = await db().from("customer_payment_profiles").select("*").eq("tenant_id", o.tenant_id).eq("customer_id", o.customer_id).maybeSingle();
   if (error || !p?.autopay || !p.payment_method_id) return "skipped";
   const gw = await tenantGateway(o.tenant_id as string);

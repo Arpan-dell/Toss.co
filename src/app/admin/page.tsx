@@ -4,6 +4,7 @@ import { Onboarding } from "@/components/onboarding";
 import { realBaskets } from "@/lib/rounds";
 import { dispatchDue } from "@/lib/bookings";
 import { cancelBookingAsManager } from "@/lib/actions/bookings";
+import { WeightForm } from "./orders/[id]/weight-form";
 import { currentTier, planGate } from "@/components/plan-gate";
 import { sendForDelivery } from "@/lib/actions/delivery";
 import { markReady } from "@/lib/actions/service";
@@ -71,6 +72,8 @@ export default async function LiveBoard() {
   const later = (o: { pickupAfter?: string }) => !!o.pickupAfter && new Date(o.pickupAfter).getTime() - 30 * 60_000 > current.getTime();
   const scheduled = active.filter((o) => o.status === "PENDING" && later(o)).sort((a, b) => a.pickupAfter!.localeCompare(b.pickupAfter!));
   const pending = active.filter((o) => o.status === "PENDING" && !later(o));
+  // collected without a weight: the laundry weighs them at the store, then the customer gets the bill
+  const toWeigh = all.filter((o) => o.weighPending && o.status === "COMPLETED").slice(0, 20);
   const enRoute = active.filter((o) => o.status === "ACCEPTED");
   const outstanding = all
     .filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID")
@@ -113,6 +116,27 @@ export default async function LiveBoard() {
         />
         <StatTile label="Unpaid bills" value={fmt.money(outstanding)} />
       </div>
+
+      {toWeigh.length > 0 && (
+        <Card id="to-weigh" title={`To weigh at the store (${toWeigh.length})`} action={<Badge tone="warn">Bill waits for the weight</Badge>}>
+          <ul className="divide-y divide-border">
+            {toWeigh.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                <span className="min-w-0 text-sm">
+                  <OrderLink order={o} />
+                  <span className="ml-2 text-secondary">{o.contactName ?? o.address}</span>
+                  {o.weightKg > 0 && <span className="ml-2 text-muted">· basket said {fmt.weight(o.weightKg)}</span>}
+                </span>
+                <WeightForm
+                  orderId={o.id}
+                  current={0}
+                  bags={tenant?.sortWhites ? { whites: 0, coloured: 0 } : undefined}
+                />
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {scheduled.length > 0 && (
         <Card title={`Booked for later (${scheduled.length})`} action={<Badge tone="info">Goes to a driver 30 min before</Badge>}>

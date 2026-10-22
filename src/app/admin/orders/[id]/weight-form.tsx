@@ -27,10 +27,10 @@ export function WeightForm({ orderId, current, bags }: { orderId: string; curren
         </>
       ) : (
         <>
-          <label className="sr-only" htmlFor="kg">
+          <label className="sr-only" htmlFor={`kg-${orderId}`}>
             Weight in kg
           </label>
-          <input id="kg" name="kg" inputMode="decimal" defaultValue={current} required className={input} />
+          <input id={`kg-${orderId}`} name="kg" inputMode="decimal" defaultValue={current || ""} placeholder="kg" required className={input} />
         </>
       )}
       <button disabled={pending} className="btn-primary rounded-full px-4 py-2 text-sm font-medium disabled:opacity-70">

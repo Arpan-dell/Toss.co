@@ -21,6 +21,9 @@ export async function markReady(fd: FormData) {
   const session = await requireManager();
   const orderId = text(fd, "orderId");
   const supabase = await createClient();
+  // collected to be weighed at the store: weigh it first (the bill can't be sent without a weight)
+  const { data: o } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
+  if (o?.weigh_pending) return;
   // RLS + the column grant keep this to the manager's own completed orders
   const { data } = await supabase
     .from("orders")

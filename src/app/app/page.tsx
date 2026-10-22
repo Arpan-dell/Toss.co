@@ -55,7 +55,9 @@ export default async function CustomerOverview() {
     )
     .slice(0, 3);
   // pickups on a business account (PG, hostel) are paid monthly by the account, not here
-  const unpaid = orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID" && !o.accountId);
+  // collected and still to be weighed at the store: no bill yet
+  const weighing = orders.filter((o) => o.status === "COMPLETED" && o.weighPending);
+  const unpaid = orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID" && !o.accountId && !o.weighPending);
   const verifying = orders.filter((o) => o.paymentStatus === "PENDING");
   const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? "there";
   const [business, offer] = await Promise.all([getTenantById(customer?.tenantId), getOpenOffer(session.userId, customer?.tenantId)]);
@@ -351,7 +353,12 @@ export default async function CustomerOverview() {
       )}
 
       <Card title="Invoices due">
-        {unpaid.length === 0 && verifying.length === 0 && <EmptyState>You&apos;re all paid up.</EmptyState>}
+        {weighing.length > 0 && (
+          <p className="mb-4 rounded-[8px] border border-border px-3 py-2 text-sm text-secondary">
+            ⚖️ Being weighed at {business?.name ?? "your laundry"}: {weighing.map((o) => `#${o.deviceOrderId}`).join(", ")}. Your bill appears here once it&apos;s weighed.
+          </p>
+        )}
+        {unpaid.length === 0 && verifying.length === 0 && weighing.length === 0 && <EmptyState>You&apos;re all paid up.</EmptyState>}
         {unpaid.length > 0 && !canPay && !gateway && (
           <p className="mb-4 rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
             {business

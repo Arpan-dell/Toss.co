@@ -30,6 +30,9 @@
   --accent-rgb: 255 106 31;
   --accent-2: #ffa531;
   --accent-contrast: #130800;
+  /* a third, contrasting colour used sparingly (heading marks, the hero frame, glows): teal, the logo's shirt */
+  --accent-3: #2dd4bf;
+  --accent-3-rgb: 45 212 191;
   --good: #4ade80;
   --good-bg: rgb(74 222 128 / 0.12);
   --warn: #fbbf24;
@@ -44,9 +47,9 @@
   --gradient: linear-gradient(135deg, #ff6a1f 0%, #ff8a2a 50%, #ffa531 100%);
   --glow-1: #ff6a1f;
   --glow-2: #ffa531;
-  --glow-3: #ff3d00;
+  --glow-3: #2dd4bf;
   --glow-4: #ffc46b;
-  --text-sheen: linear-gradient(90deg, #fff1e6, #ff6a1f, #ffa531, #fff1e6);
+  --text-sheen: linear-gradient(90deg, #fff1e6, #ff6a1f, #ffa531, #2dd4bf, #fff1e6);
 }
 
 [data-theme="light"] {
@@ -66,6 +69,9 @@
   --accent-rgb: 31 94 255;
   --accent-2: #0ea5e9;
   --accent-contrast: #ffffff;
+  /* the third colour in light mode: a soft terracotta, warm against the blue */
+  --accent-3: #e2703a;
+  --accent-3-rgb: 226 112 58;
   --good: #15803d;
   --good-bg: rgb(21 128 61 / 0.1);
   --warn: #b45309;
@@ -86,9 +92,9 @@
   --header-bg: rgb(246 243 237 / 0.8);
   --glow-1: #1f5eff;
   --glow-2: #0ea5e9;
-  --glow-3: #7aa2ff;
+  --glow-3: #e2703a;
   --glow-4: #3b82f6;
-  --text-sheen: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #0b1430);
+  --text-sheen: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #e2703a, #0b1430);
 }
 
 @theme inline {
@@ -104,6 +110,7 @@
   --color-muted: var(--text-muted);
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
   --color-accent-contrast: var(--accent-contrast);
   --color-good: var(--good);
   --color-good-bg: var(--good-bg);
@@ -387,7 +394,7 @@ html[data-theme] { background-color: var(--bg); }
 ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 
 /* ---------- Light theme touches ---------- */
-[data-theme="light"] .text-gradient:not([data-theme="dark"] *) { background-image: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #0b1430); }
+[data-theme="light"] .text-gradient:not([data-theme="dark"] *) { background-image: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #e2703a, #0b1430); }
 /* framer-motion writes the nav glass inline; light mode needs a much denser white to stay legible */
 [data-theme="light"] .nav-glass { background: rgb(250 248 244 / 0.85) !important; box-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -22px rgb(11 20 48 / 0.35) !important; }
 

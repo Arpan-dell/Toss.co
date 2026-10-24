@@ -162,7 +162,7 @@ export function PageTitle({ children, kicker }: { children: React.ReactNode; kic
     <div>
       {kicker && (
         <p className="flex items-center gap-2 font-mono text-[11px] tracking-[0.14em] text-muted uppercase">
-          <span aria-hidden className="size-1.5 bg-accent" />
+          <span aria-hidden className="size-1.5 bg-accent-3" />
           {kicker}
         </p>
       )}

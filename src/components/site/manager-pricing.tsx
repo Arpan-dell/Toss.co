@@ -525,7 +525,7 @@ export function ManagerPricing({ plan }: { plan: PublicPlan | null }) {
             transition={{ duration: 0.6, ease: EASE }}
             className="flex items-center gap-3 font-mono text-[11px] tracking-[0.18em] text-accent uppercase"
           >
-            <span className="h-px w-8 bg-accent" /> For laundry managers
+            <span className="h-px w-8 bg-accent-3" /> For laundry managers
           </motion.p>
           <h2 className="mt-4 text-[clamp(2.1rem,3.6vw,3.3rem)] leading-[1] font-black tracking-[-0.04em] text-fg">
             {["Your", "whole", "laundry,"].map((w, i) => (

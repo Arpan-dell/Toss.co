@@ -12,7 +12,7 @@ import { TossOrbit } from "./toss-orbit";
 const LINES = [["Laundry", "that"], ["calls", "its", "own"]];
 
 function Corner({ className }: { className: string }) {
-  return <span aria-hidden className={`absolute size-[0.32em] border-accent ${className}`} />;
+  return <span aria-hidden className={`absolute size-[0.32em] border-accent-3 ${className}`} />;
 }
 
 export function HeroOrbit() {
@@ -33,7 +33,7 @@ export function HeroOrbit() {
       <div className="mx-auto grid min-h-[100dvh] max-w-7xl items-center gap-6 px-4 pt-32 pb-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:gap-4 lg:px-8 lg:pt-28 lg:pb-12">
         <div className="relative z-10">
           <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.18em] text-accent uppercase">
-            <span className="h-px w-8 bg-accent" /> One basket. Two bots. Every account in sync.
+            <span className="h-px w-8 bg-accent-3" /> One basket. Two bots. Every account in sync.
           </p>
           <h1 id="hero-title" className="mt-6 text-[clamp(3rem,7.4vw,6.4rem)] leading-[0.95] font-black tracking-[-0.045em] text-fg">
             {LINES.map((line, li) => (

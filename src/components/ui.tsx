@@ -19,7 +19,7 @@ export function Card({ title, action, children, className = "", id }: {
       {(title || action) && (
         <header className="mb-4 flex items-center gap-3">
           {title && <h2 className="shrink-0 font-mono text-[11px] font-medium tracking-[0.12em] text-secondary uppercase">{title}</h2>}
-          <span aria-hidden className="h-px flex-1 border-t border-dotted border-border-strong" />
+          <span aria-hidden className="h-px flex-1 border-t border-dotted border-[rgb(var(--accent-3-rgb)/0.4)]" />
           {action}
         </header>
       )}
@@ -30,7 +30,8 @@ export function Card({ title, action, children, className = "", id }: {
 
 export function StatTile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="border-t-2 border-fg pt-3">
+    <div className="relative pt-3.5">
+      <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-[linear-gradient(90deg,var(--text)_55%,var(--accent-3))]" />
       <p className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">{label}</p>
       <p className="mt-1.5 font-mono text-[1.75rem] leading-none font-semibold tracking-tight tabular-nums text-fg">
         <CountUp value={value} />

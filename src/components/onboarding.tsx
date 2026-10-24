@@ -12,7 +12,7 @@ export function Onboarding({ title, steps }: { title: string; steps: OnboardingS
   const done = steps.length - left;
   const next = steps.find((s) => !s.done);
   return (
-    <section aria-labelledby="onboarding-title" className="rounded-[10px] border border-l-4 border-border border-l-accent bg-surface-solid p-5">
+    <section aria-labelledby="onboarding-title" className="rounded-[10px] border border-l-4 border-border border-l-accent-3 bg-surface-solid p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">Get started · {done} of {steps.length} done</p>

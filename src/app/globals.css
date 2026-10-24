@@ -30,9 +30,10 @@
   --accent-rgb: 255 106 31;
   --accent-2: #ffa531;
   --accent-contrast: #130800;
-  /* a third, contrasting colour used sparingly (heading marks, the hero frame, glows): teal, the logo's shirt */
-  --accent-3: #2dd4bf;
-  --accent-3-rgb: 45 212 191;
+  /* a third, contrasting colour used in small touches (heading marks, the hero frame, stat lines, card rules,
+     the scroll bar, glows): a soft violet, cool against the orange and in the same family as the chart colour */
+  --accent-3: #9d8cff;
+  --accent-3-rgb: 157 140 255;
   --good: #4ade80;
   --good-bg: rgb(74 222 128 / 0.12);
   --warn: #fbbf24;
@@ -47,9 +48,9 @@
   --gradient: linear-gradient(135deg, #ff6a1f 0%, #ff8a2a 50%, #ffa531 100%);
   --glow-1: #ff6a1f;
   --glow-2: #ffa531;
-  --glow-3: #2dd4bf;
+  --glow-3: #9d8cff;
   --glow-4: #ffc46b;
-  --text-sheen: linear-gradient(90deg, #fff1e6, #ff6a1f, #ffa531, #2dd4bf, #fff1e6);
+  --text-sheen: linear-gradient(90deg, #fff1e6, #ff6a1f, #ffa531, #9d8cff, #fff1e6);
 }
 
 [data-theme="light"] {
@@ -247,7 +248,7 @@ html[data-theme] { background-color: var(--bg); }
     inset: 0 0 auto 0;
     height: 2px;
     z-index: 60;
-    background: var(--gradient);
+    background: linear-gradient(90deg, var(--accent), var(--accent-2) 60%, var(--accent-3));
     transform-origin: left;
     box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.8);
     animation: progress linear both;

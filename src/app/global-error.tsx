@@ -8,7 +8,7 @@ export default function GlobalError({ error, retry }: { error: Error & { digest?
   useEffect(() => reportClientError(error), [error]);
   return (
     <html lang="en">
-      <body style={{ fontFamily: "system-ui, sans-serif", background: "#f5f7fc", color: "#0b1430", display: "grid", placeItems: "center", minHeight: "100vh", margin: 0 }}>
+      <body style={{ fontFamily: "system-ui, sans-serif", background: "#f1eee8", color: "#0b1430", display: "grid", placeItems: "center", minHeight: "100vh", margin: 0 }}>
         <div style={{ maxWidth: 420, padding: 24 }}>
           <h1 style={{ fontSize: 22, margin: 0 }}>Toss is having trouble right now</h1>
           <p style={{ color: "#3a4566" }}>Please try again in a moment.</p>

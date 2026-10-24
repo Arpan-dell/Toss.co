@@ -52,9 +52,10 @@
 [data-theme="light"] {
   color-scheme: light;
   --ink-rgb: 11 20 48;
-  --bg: #f5f7fc;
-  --surface: rgb(255 255 255 / 0.85);
-  --surface-solid: #ffffff;
+  /* a soft, warm off-white: easier on the eyes than pure white (cards are a shade lighter, never #fff) */
+  --bg: #f1eee8;
+  --surface: rgb(251 249 245 / 0.86);
+  --surface-solid: #faf8f4;
   --surface-2: rgb(11 20 48 / 0.045);
   --border: rgb(11 20 48 / 0.1);
   --border-strong: rgb(11 20 48 / 0.18);
@@ -82,7 +83,7 @@
   --btn-fg: #ffffff;
   --btn-glow: rgb(31 94 255 / 0.25);
   --btn-glow-hover: rgb(31 94 255 / 0.4);
-  --header-bg: rgb(255 255 255 / 0.75);
+  --header-bg: rgb(246 243 237 / 0.8);
   --glow-1: #1f5eff;
   --glow-2: #0ea5e9;
   --glow-3: #7aa2ff;
@@ -388,7 +389,7 @@ html[data-theme] { background-color: var(--bg); }
 /* ---------- Light theme touches ---------- */
 [data-theme="light"] .text-gradient:not([data-theme="dark"] *) { background-image: linear-gradient(90deg, #0b1430, #1f5eff, #0ea5e9, #0b1430); }
 /* framer-motion writes the nav glass inline; light mode needs a much denser white to stay legible */
-[data-theme="light"] .nav-glass { background: rgb(255 255 255 / 0.82) !important; box-shadow: 0 1px 0 rgb(255 255 255 / 0.9) inset, 0 18px 40px -22px rgb(11 20 48 / 0.35) !important; }
+[data-theme="light"] .nav-glass { background: rgb(250 248 244 / 0.85) !important; box-shadow: 0 1px 0 rgb(255 255 255 / 0.7) inset, 0 18px 40px -22px rgb(11 20 48 / 0.35) !important; }
 
 /* ---------- Maps (components/area-map.tsx) ---------- */
 .map-pin { display: block; width: 14px; height: 14px; background: var(--surface-solid); border: 3px solid var(--accent); box-shadow: 0 2px 6px rgb(0 0 0 / 0.35); }

@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { checkDodoProducts, createStripeWebhook, deleteStripeWebhook, testKeys, type GatewayKeys, type Provider } from "../gateways";
 import { platformToken, refreshIntent, setAutopay, startCardSetup, startOrderPayment, startRenewal, startSubscriptionPayment, stopRenewal, webhookUrl } from "../gateway-payments";
 import { planState } from "../plan";
+import { payerPhone } from "../payer";
+import { normalizePhone } from "../phone";
+import { countryOf } from "../regions";
 import { checkPassword } from "../password-check";
 import { getPlatformSettings, getTenantById, getTenantCreditBalance } from "../data";
 import { subscriptionQuote, withBasketCredit } from "../pricing";
@@ -122,8 +125,7 @@ export async function paySubscriptionOnline(months: number): Promise<{ url?: str
   const { amount: before, pct } = subscriptionQuote(monthly, platform, months, currency);
   const { credit, toPay } = usd ? { credit: 0, toPay: before } : withBasketCredit(before, await getTenantCreditBalance(tenant.id), platform.creditSubMaxPct);
   // the payer's mobile number, so the gateway doesn't ask for it (Indian gateways must collect one)
-  const { data: me } = await supabaseAdmin().from("customers").select("phone").eq("id", session.userId).maybeSingle();
-  return startSubscriptionPayment(tenant.id, { months, amount: toPay, currency, discountPct: pct, creditUsed: credit, business: tenant.name, email: session.email, phone: (me?.phone as string) ?? undefined });
+  return startSubscriptionPayment(tenant.id, { months, amount: toPay, currency, discountPct: pct, creditUsed: credit, business: tenant.name, email: session.email, phone: await payerPhone(session.userId!, tenant.country) });
 }
 
 /** Manager: renew the plan automatically every month (one month's price, charged when the paid time runs out). */
@@ -136,14 +138,13 @@ export async function startPlanRenewal(): Promise<{ url?: string; error?: string
   const monthly = usd ? (tenant.parentTenantId ? platform.usdBranchPrice : platform.usdMonthlyPrice) : tenant.parentTenantId ? platform.branchPrice : platform.monthlyPrice;
   const { amount } = subscriptionQuote(monthly, platform, 1, currency);
   const plan = planState(tenant);
-  const { data: me } = await supabaseAdmin().from("customers").select("phone").eq("id", session.userId).maybeSingle();
   return startRenewal(tenant.id, {
     amount,
     currency,
     business: tenant.name,
     firstChargeAt: plan.state === "TRIAL" || plan.state === "ACTIVE" ? new Date(plan.until!) : undefined,
     email: session.email,
-    phone: (me?.phone as string) ?? undefined,
+    phone: await payerPhone(session.userId!, tenant.country),
   });
 }
 
@@ -316,4 +317,16 @@ export async function setAlsoDirect(fd: FormData) {
   const session = await requireManager();
   await supabaseAdmin().from("tenants").update({ also_direct: text(fd, "on") === "1" }).eq("id", session.tenantId);
   done();
+}
+
+/** Manager: save the mobile number the payment pages pre-fill (asked once on Billing when none is known). */
+export async function savePayerPhone(_prev: FormState, fd: FormData): Promise<FormState> {
+  const session = await requireManager();
+  const tenant = await getTenantById(session.tenantId);
+  const phone = normalizePhone(text(fd, "phone"), countryOf(tenant?.country).dial || "91");
+  if (!phone) return { error: "Enter a valid mobile number." };
+  const { error } = await supabaseAdmin().from("customers").update({ phone }).eq("id", session.userId);
+  if (error) return { error: error.code === "23505" ? "That number is already used by another Toss account." : "Couldn't save it. Try again." };
+  revalidatePath("/admin/billing");
+  return { message: "Saved. Payment pages will fill it in for you." };
 }

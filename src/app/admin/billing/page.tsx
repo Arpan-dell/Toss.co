@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge, Card, EmptyState, PageTitle } from "@/components/ui";
 import { GatewayPay } from "@/components/gateway-pay";
-import { paySubscriptionOnline, startPlanRenewal, stopPlanRenewal } from "@/lib/actions/gateway";
+import { paySubscriptionOnline, savePayerPhone, startPlanRenewal, stopPlanRenewal } from "@/lib/actions/gateway";
+import { ActionForm, Field, fieldClass } from "@/components/action-form";
+import { payerPhone } from "@/lib/payer";
 import { getRenewal, platformGatewayName, refreshIntent } from "@/lib/gateway-payments";
-import { getPlatformSettings, getTenantById, getTenantCreditBalance, listSubscriptionPayments } from "@/lib/data";
+import { getPlatformSettings, getTenantById, getTenantCreditBalance, listSubscriptionPayments, now } from "@/lib/data";
 import { myFormat } from "@/lib/my-format";
 import { moneyIn, subscriptionFormat } from "@/lib/region-format";
 import { planState } from "@/lib/plan";
@@ -52,6 +54,12 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
   // back from the gateway: what it confirmed (never what the URL says)
   const back = typeof params.intent === "string" ? await refreshIntent(params.intent, { tenantId: tenant.id }) : null;
   const badge = STATE_BADGE[plan.state];
+  // a payment always adds on top: from the end of the trial or the paid time, or from today if that's passed
+  const runningUntil = (plan.state === "TRIAL" || plan.state === "ACTIVE") && plan.until ? new Date(plan.until) : null;
+  const extendedTo = new Date(Math.max(now().getTime(), runningUntil?.getTime() ?? 0));
+  extendedTo.setMonth(extendedTo.getMonth() + months);
+  // the payment page pre-fills this number; ask once if Toss doesn't know one
+  const phoneKnown = !!(await payerPhone(session.userId, tenant.country));
   // renew automatically every month at the one-month price (needs Toss's gateway, like paying by hand)
   const renewGateway = online ?? (await platformGatewayName(sub.region.currency));
   const renewal = renewGateway ? await getRenewal(tenant.id).catch(() => null) : null;
@@ -125,6 +133,25 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
                   {pct}% off for paying {months} months at once: <s className="opacity-70">{sub.money(full)}</s>{" "}
                   <span className="font-semibold">{sub.money(beforeCredit)}</span>. You save {sub.money(saved)}.
                 </p>
+              )}
+              <p className="text-sm text-secondary">
+                {runningUntil ? (
+                  <>
+                    Your plan runs until <span className="text-fg">{fmt.date(runningUntil.toISOString())}</span>. Paying now adds {months} month{months > 1 ? "s" : ""} on top, so it runs
+                    until <span className="font-semibold text-fg">{fmt.date(extendedTo.toISOString())}</span>. Nothing you&apos;ve paid for is lost.
+                  </>
+                ) : (
+                  <>
+                    Paying now turns Pro on until <span className="font-semibold text-fg">{fmt.date(extendedTo.toISOString())}</span>.
+                  </>
+                )}
+              </p>
+              {!phoneKnown && (
+                <ActionForm action={savePayerPhone} submitLabel="Save">
+                  <Field label="Mobile number for payments" hint="Saved once, so the payment page fills it in instead of asking every time.">
+                    <input name="phone" type="tel" inputMode="tel" autoComplete="tel" required className={fieldClass} />
+                  </Field>
+                </ActionForm>
               )}
               <GatewayPay key={months} start={paySubscriptionOnline.bind(null, months)} amountLabel={sub.money(amount)} gatewayName={online!} />
             </div>

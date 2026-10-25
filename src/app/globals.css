@@ -16,13 +16,14 @@
   --btn-fg: #130800;
   --btn-glow: rgb(255 106 31 / 0.3);
   --btn-glow-hover: rgb(255 106 31 / 0.5);
-  --header-bg: rgb(10 10 11 / 0.65);
-  --bg: #0a0a0b;
-  --surface: rgb(255 255 255 / 0.04);
-  --surface-solid: #141416;
-  --surface-2: rgb(255 255 255 / 0.07);
-  --border: rgb(255 255 255 / 0.1);
-  --border-strong: rgb(255 255 255 / 0.2);
+  /* a warm charcoal rather than pure black: softer, and it lets the orange and the gold glow without glare */
+  --header-bg: rgb(16 14 12 / 0.7);
+  --bg: #100e0c;
+  --surface: rgb(255 246 235 / 0.04);
+  --surface-solid: #191613;
+  --surface-2: rgb(255 246 235 / 0.07);
+  --border: rgb(255 246 235 / 0.1);
+  --border-strong: rgb(255 246 235 / 0.19);
   --text: #f6f3ee;
   --text-secondary: #c9c4bc;
   --text-muted: #918b82;
@@ -30,10 +31,10 @@
   --accent-rgb: 255 106 31;
   --accent-2: #ffa531;
   --accent-contrast: #130800;
-  /* a third, contrasting colour used in small touches (heading marks, the hero frame, stat lines, card rules,
-     the scroll bar, glows): a soft violet, cool against the orange and in the same family as the chart colour */
-  --accent-3: #9d8cff;
-  --accent-3-rgb: 157 140 255;
+  /* a third colour used in small touches (heading marks, the hero frame, stat lines, card rules, the scroll bar,
+     glows): a soft champagne gold, quieter than the orange, like a metallic detail on a dark product */
+  --accent-3: #e6c58f;
+  --accent-3-rgb: 230 197 143;
   --good: #4ade80;
   --good-bg: rgb(74 222 128 / 0.12);
   --warn: #fbbf24;
@@ -48,9 +49,9 @@
   --gradient: linear-gradient(135deg, #ff6a1f 0%, #ff8a2a 50%, #ffa531 100%);
   --glow-1: #ff6a1f;
   --glow-2: #ffa531;
-  --glow-3: #9d8cff;
+  --glow-3: #e6c58f;
   --glow-4: #ffc46b;
-  --text-sheen: linear-gradient(90deg, #fff1e6, #ff6a1f, #ffa531, #9d8cff, #fff1e6);
+  --text-sheen: linear-gradient(90deg, #fff1e6, #ff6a1f, #ffa531, #e6c58f, #fff1e6);
 }
 
 [data-theme="light"] {

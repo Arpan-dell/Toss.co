@@ -18,7 +18,7 @@ export function MainCta({ href, children, className, glow = false }: { href: str
   return (
     <Magnetic intensity={0.2} springOptions={SPRING} actionArea="global" range={200}>
       <div className="relative">
-        {glow && <GlowEffect colors={["var(--glow-1)", "var(--glow-2)", "var(--glow-3)", "var(--glow-4)"]} mode="static" blur="medium" duration={3} scale={1.06} className="rounded-full" />}
+        {glow && <GlowEffect colors={["var(--glow-1)", "var(--glow-2)", "var(--glow-3)", "var(--glow-4)"]} mode="colorShift" blur="medium" duration={3} scale={1.06} className="rounded-full" />}
         <Tag href={href} className={`relative inline-flex items-center ${className}`}>
           {inner}
         </Tag>

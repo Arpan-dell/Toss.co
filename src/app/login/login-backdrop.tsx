@@ -3,13 +3,13 @@
 import Image from "next/image";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import { useEffect } from "react";
-import { useReducedMotion } from "@/lib/use-reduced-motion";
 
 // Line-art solar system behind the sign-in card: the planets line up through the middle of the screen, so they
 // show softly through the frosted glass. One image per theme (cream on black, navy on light). It drifts a little
 // against the pointer so the glass in front reads as a separate layer.
 export function LoginBackdrop() {
-  const reduce = useReducedMotion();
+  // still, for smoothness (it used to drift with the pointer); flip to useReducedMotion() to bring the drift back
+  const reduce = true;
   const px = useMotionValue(0);
   const py = useMotionValue(0);
   const x = useSpring(useTransform(px, [-0.5, 0.5], [18, -18]), { stiffness: 60, damping: 20 });

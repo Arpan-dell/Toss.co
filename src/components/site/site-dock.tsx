@@ -73,7 +73,7 @@ export function SiteDock({ page }: { page?: "laundries" | "info" }) {
                   <DockIcon>
                     <item.icon size="100%" weight={on ? "fill" : "regular"} />
                   </DockIcon>
-                  {on && <motion.span layoutId="dock-dot" className="absolute -bottom-2 size-1 rounded-full bg-accent" />}
+                  {on && <span className="absolute -bottom-2 size-1 rounded-full bg-accent" />}
                 </DockItem>
               );
             })}

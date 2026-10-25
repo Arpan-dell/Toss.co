@@ -25,17 +25,29 @@ export function Effects() {
       },
       { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
     );
-    const scan = () =>
-      document.querySelectorAll<HTMLElement>("[data-reveal]:not(.is-visible)").forEach((el) => {
-        if (reduce) el.classList.add("is-visible");
-        else io.observe(el);
-      });
-    scan();
-    // Client-side navigation swaps page content; pick up newly rendered elements. Batched to one scan per
-    // frame: count-ups and live data mutate the DOM constantly and must not each trigger a full query.
+    const watch = (el: HTMLElement) => {
+      if (el.classList.contains("is-visible")) return;
+      if (reduce) el.classList.add("is-visible");
+      else io.observe(el);
+    };
+    const scanIn = (root: ParentNode) => {
+      if (root instanceof HTMLElement && root.hasAttribute("data-reveal")) watch(root);
+      root.querySelectorAll?.<HTMLElement>("[data-reveal]").forEach(watch);
+    };
+    scanIn(document);
+    // Client-side navigation swaps page content: look only inside the nodes that were added (count-ups, live
+    // data and animations change the page constantly; re-scanning the whole page each time made it stutter).
+    let added: Node[] = [];
     let queued = 0;
-    const mo = new MutationObserver(() => {
-      if (!queued) queued = requestAnimationFrame(() => ((queued = 0), scan()));
+    const mo = new MutationObserver((records) => {
+      for (const r of records) for (const n of r.addedNodes) if (n.nodeType === 1) added.push(n);
+      if (added.length && !queued)
+        queued = requestAnimationFrame(() => {
+          queued = 0;
+          const batch = added;
+          added = [];
+          for (const n of batch) if ((n as Element).isConnected) scanIn(n as Element);
+        });
     });
     mo.observe(document.body, { childList: true, subtree: true });
 

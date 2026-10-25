@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   Briefcase,
   Broadcast,
@@ -94,7 +93,7 @@ export function PortalDock({ items }: { items: PortalNavItem[] }) {
               <DockIcon>
                 <Glyph size="100%" weight={on ? "fill" : "regular"} />
               </DockIcon>
-              {on && <motion.span layoutId="portal-dock-dot" className="absolute -bottom-2 size-1 rounded-full bg-accent" />}
+              {on && <span className="absolute -bottom-2 size-1 rounded-full bg-accent" />}
             </DockItem>
           );
         })}

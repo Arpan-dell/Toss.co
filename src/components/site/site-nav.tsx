@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AnimatePresence, motion, useMotionTemplate, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { List, X } from "@phosphor-icons/react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useDocked } from "./use-docked";
@@ -23,11 +23,6 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const docked = useDocked();
   const hidden = docked && !open;
-  const { scrollY } = useScroll();
-  const tint = useTransform(scrollY, [0, 50], [0.02, 0.08]);
-  const blur = useTransform(scrollY, [0, 50], [8, 24]);
-  const background = useMotionTemplate`rgba(255, 255, 255, ${tint})`;
-  const backdropFilter = useMotionTemplate`blur(${blur}px) saturate(160%)`;
 
   return (
     <motion.header
@@ -39,8 +34,7 @@ export function SiteNav({ logo }: { logo: React.ReactNode }) {
     >
       <motion.nav
         aria-label="Main"
-        style={{ background, backdropFilter, WebkitBackdropFilter: backdropFilter }}
-        className={`nav-glass mx-auto max-w-5xl border border-ink/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_20px_50px_-20px_rgb(0_0_0/0.6)] transition-[border-radius] duration-300 ${open ? "rounded-3xl" : "rounded-full"}`}
+        className={`nav-glass mx-auto bg-[var(--header-bg)] max-w-5xl border border-ink/10 shadow-[inset_0_1px_0_rgb(255_255_255/0.08),0_20px_50px_-20px_rgb(0_0_0/0.6)] transition-[border-radius] duration-300 ${open ? "rounded-3xl" : "rounded-full"}`}
       >
         <div className="flex h-16 items-center justify-between gap-4 pr-2 pl-5">
           <Link href="/" aria-label="Toss home" className="shrink-0">

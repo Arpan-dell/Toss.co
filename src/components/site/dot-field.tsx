@@ -21,7 +21,8 @@ export function DotField({ originX = 0.72, originY = 0.5, className = "" }: { or
     const el = canvas.current;
     const ctx = el?.getContext("2d");
     if (!el || !ctx) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // always one still frame: the moving heartbeat cost too much on slower phones and laptops (smoothness first)
+    const reduce = true;
 
     let w = 0;
     let h = 0;

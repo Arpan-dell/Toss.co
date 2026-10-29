@@ -507,3 +507,32 @@ select optgroup {
    ordinary laptops and phones. Surfaces use their solid theme colours instead. */
 [class*="backdrop-blur"], .glass-auth, .nav-glass { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
 .glass-auth { background: var(--surface-solid) !important; }
+
+/* ---------- Tossy, the guide (components/guide) ----------
+   A blink every few seconds and a little mouth movement while talking: transforms only, so it costs nothing. */
+.tossy-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tossy-blink 5s infinite;
+}
+@keyframes tossy-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+.tossy-talk {
+  transform-box: fill-box;
+  transform-origin: center top;
+  animation: tossy-talk 0.32s ease-in-out 4 alternate;
+}
+@keyframes tossy-talk {
+  from { transform: scaleY(1); }
+  to { transform: scaleY(0.45); }
+}
+.tossy-hop { animation: tossy-hop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+@keyframes tossy-hop {
+  from { opacity: 0; transform: translateY(10px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tossy-eyes, .tossy-talk, .tossy-hop { animation: none; }
+}

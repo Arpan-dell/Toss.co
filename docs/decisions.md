@@ -173,6 +173,11 @@ Newest areas last. Each entry: **Chose** · **Why** · **Not chosen (and why)**.
 - **Why a request flow, not an instant "delete" button:** an account has invoices and money history that the law requires us to keep, so a person must decide what can go. The page says exactly what is deleted and what stays.
 - The Shipping & Exchange page exists because Razorpay's review requires it.
 
+### Tossy, the guide character
+- **Chose:** give the existing assistant a face (Tossy, a little basket drawn in plain SVG in the theme's colours) and a guided tour: a spotlight on each page's real cards with Tossy explaining them, page by page. It says hello once on a new device, and "show me around" / "explain this page" (also in Hinglish) start it from the chat.
+- **Why built in, not a tour library:** no extra download, it uses the site's own colours and components, and the steps point at real headings, so a renamed card only needs one line changed in `src/lib/guide/tours.ts`.
+- Cards that are empty today are skipped, and nothing animates per frame (only a blink), to keep pages smooth.
+
 ### One standing rule for commits
 - Commit and push every change to the public repo, with no co-author or attribution line.
 

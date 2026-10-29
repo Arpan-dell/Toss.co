@@ -107,7 +107,7 @@ export default async function LiveBoard() {
 
       <NeedsAttention alerts={alerts} locked={lockedAlerts} />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div data-guide="stats" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Waiting for a driver" value={String(pending.length)} />
         <StatTile label="Driver on the way" value={String(enRoute.length)} hint={outNow ? `+ ${outNow} out for delivery` : undefined} />
         <StatTile

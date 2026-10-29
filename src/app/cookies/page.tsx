@@ -19,12 +19,13 @@ const STORAGE: [string, string][] = [
   ["Theme (toss-theme)", "A backup copy of your light or dark choice, for browsers that block the cookie."],
   ["Assistant conversation", "The chat with the in-app assistant, for the current tab only; cleared when you close it. Never a password."],
   ["Cookie notice", "That you've seen the notice about cookies, so it doesn't show again."],
+  ["Tossy's hello (toss-guide)", "That you've met Tossy, the in-app guide, so its offer of a tour doesn't pop up again."],
   ["Inside Telegram", "When you open Toss from the Telegram bot, a flag for that tab so Telegram's script keeps working as you move between pages."],
 ];
 
 export default function CookiesPage() {
   return (
-    <InfoPage kicker="Cookie Policy" title="Only the cookies we need." updated="21 October 2026">
+    <InfoPage kicker="Cookie Policy" title="Only the cookies we need." updated="29 October 2026">
       <p>
         Toss uses a few essential cookies and some browser storage to work. <b>We don&apos;t use advertising or tracking cookies</b>,
         and we don&apos;t let other companies put cookies on our pages. We count page visits with a cookie-free tool that stores nothing on your

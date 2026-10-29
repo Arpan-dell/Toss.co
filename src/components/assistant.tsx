@@ -1,39 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ArrowSquareOut, ArrowUp, Robot, X } from "@phosphor-icons/react";
+import { ArrowSquareOut, ArrowUp, X } from "@phosphor-icons/react";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
+import { GuideTour, GuideWelcome, markGuideSeen } from "@/components/guide/guide";
+import { Mascot } from "@/components/guide/mascot";
 import { NewPasswordInput } from "@/components/password-checklist";
 import { setTheme } from "@/components/theme-toggle";
 import { changePassword } from "@/lib/actions/account";
 import { askAssistant } from "@/lib/actions/assistant";
 import { differs, isPasswordRequest, matchIntent, newPasswordFrom, nowText, understand, type AssistantRole } from "@/lib/assistant/intents";
 import type { AssistantReply } from "@/lib/assistant/tools";
+import { TOURS, tourRequest, tourSteps, type TourStep } from "@/lib/guide/tours";
 
-// The in-app assistant: a robot button in the corner of every portal that opens a chat at the side (a sheet from
+// The in-app assistant, Tossy: a little basket character in the corner of every portal that opens a chat at the side (a sheet from
 // the bottom on phones). It answers from the account's own data and can act: switch the theme, open a page, or
-// change the password. Theme and password requests are handled right here in the browser, so a password typed
+// change the password. Tossy also gives guided tours ("show me around", or "explain this page"), and says hello
+// with an offer of one the first time someone opens a portal. Theme and password requests are handled right here in the browser, so a password typed
 // into the chat ("change my password to …") is never sent anywhere; it only prefills the secure form below.
 
 type Msg = { id: number; from: "user" | "bot"; text: string; reply?: AssistantReply; understood?: string };
 
 const GREETING: Record<AssistantRole, string> = {
-  CUSTOMER: "Hi! Ask me about your basket, pickups, bills or credit. I can also switch the theme or change your password.",
-  MANAGER: "Hi! Ask me about today's business, any order, unpaid bills, or where a driver is. I can also switch the theme or change your password.",
-  OWNER: "Hi! Ask me about the businesses on Toss or subscription payments. I can also switch the theme or change your password.",
+  CUSTOMER: "Hi, I'm Tossy! Ask me about your basket, pickups, bills or credit, or say \"show me around\" for a tour. I can also switch the theme or change your password.",
+  MANAGER: "Hi, I'm Tossy! Ask me about today's business, any order, unpaid bills, or where a driver is, or say \"show me around\" for a tour. I can also switch the theme or change your password.",
+  OWNER: "Hi, I'm Tossy! Ask me about the businesses on Toss or subscription payments. I can also switch the theme or change your password.",
 };
 const START_CHIPS: Record<AssistantRole, string[]> = {
-  CUSTOMER: ["How full is my basket?", "My active pickup", "What do I owe?", "Switch to dark mode"],
-  MANAGER: ["Today's summary", "What needs attention?", "Where are my drivers?", "Switch to dark mode"],
+  CUSTOMER: ["Show me around", "Explain this page", "How full is my basket?", "My active pickup", "What do I owe?"],
+  MANAGER: ["Show me around", "Explain this page", "Today's summary", "What needs attention?", "Where are my drivers?"],
   OWNER: ["Platform summary", "Pending subscription payments", "Switch to dark mode"],
 };
 const STORE = "toss-assistant";
 
 export function Assistant({ role }: { role: AssistantRole }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // the guided tour that's running, if any (a new key restarts it from the first step)
+  const [tour, setTour] = useState<{ key: number; steps: TourStep[] } | null>(null);
   // the conversation survives page changes in this tab (the panel starts closed, so server and browser match)
   const [msgs, setMsgs] = useState<Msg[]>(() => {
     if (typeof window === "undefined") return [];
@@ -73,6 +80,16 @@ export function Assistant({ role }: { role: AssistantRole }) {
 
   const push = (m: Omit<Msg, "id">) => setMsgs((all) => [...all, { ...m, id: nextId.current++ }]);
 
+  // start a tour: the whole portal, or just the page on screen; false when there's nothing to show
+  const startTour = (scope: "all" | "page"): boolean => {
+    const steps = tourSteps(role, scope, pathname);
+    if (!steps.length) return false;
+    markGuideSeen(role);
+    setOpen(false);
+    setTour({ key: Date.now(), steps });
+    return true;
+  };
+
   // the theme, worded from what's on screen now: "already in dark mode" instead of switching to it again
   const theme = (mode: "dark" | "light" | "toggle" | "status"): string => {
     const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
@@ -99,6 +116,12 @@ export function Assistant({ role }: { role: AssistantRole }) {
       return;
     }
     push({ from: "user", text });
+    // a tour: "show me around", "explain this page", "kaise use kare"
+    const wants = TOURS[role] ? (tourRequest(text) ?? tourRequest(fixed)) : null;
+    if (wants) {
+      if (startTour(wants)) return push({ from: "bot", text: wants === "page" ? "Here's what's on this page. Follow me!" : "Let's go! Follow me." });
+      return push({ from: "bot", text: "I don't have a walkthrough for this page yet. Want the full tour instead?", reply: { text: "", chips: ["Show me around"] } });
+    }
     // theme, date and time: instant, no server round trip
     const asTyped = matchIntent(text, role);
     const local = asTyped ?? (differs(text, fixed) ? matchIntent(fixed, role) : null);
@@ -118,29 +141,34 @@ export function Assistant({ role }: { role: AssistantRole }) {
     <>
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          markGuideSeen(role); // met Tossy: no hello pop-up from now on
+          setOpen((o) => !o);
+        }}
         aria-expanded={open}
         aria-controls="toss-assistant"
-        aria-label={open ? "Close the assistant" : "Ask the Toss assistant"}
-        className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] z-50 grid size-14 place-items-center rounded-full bg-accent text-accent-contrast shadow-[0_12px_32px_-8px_rgb(var(--accent-rgb)/0.7)] transition-transform hover:scale-105 active:scale-95 sm:right-6 sm:bottom-6"
+        aria-label={open ? "Close Tossy" : "Ask Tossy, your Toss guide"}
+        data-guide="assistant"
+        className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] z-50 grid size-14 place-items-center rounded-full border border-border bg-surface-solid text-fg shadow-[0_12px_32px_-8px_rgb(var(--accent-rgb)/0.7)] transition-transform hover:scale-105 active:scale-95 sm:right-6 sm:bottom-6"
       >
-        {open ? <X size={24} weight="bold" /> : <Robot size={28} weight="fill" />}
+        {open ? <X size={22} weight="bold" /> : <Mascot size={40} />}
       </button>
+
+      {!open && !tour && TOURS[role] && <GuideWelcome role={role} onStart={() => startTour("all")} />}
+      {tour && <GuideTour key={tour.key} steps={tour.steps} onEnd={() => setTour(null)} />}
 
       {open && (
         <section
           id="toss-assistant"
           role="dialog"
-          aria-label="Toss assistant"
+          aria-label="Tossy, your Toss guide"
           className="fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-50 flex h-[min(36rem,calc(100dvh-8rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-solid shadow-[0_30px_80px_-20px_rgb(0_0_0/0.55)] sm:inset-x-auto sm:right-6 sm:bottom-24 sm:h-[min(38rem,calc(100dvh-8rem))] sm:w-[24rem]"
         >
           <header className="flex items-center gap-3 border-b border-border px-4 py-3">
-            <span className="grid size-9 place-items-center rounded-full bg-accent/15 text-accent">
-              <Robot size={20} weight="fill" />
-            </span>
+            <Mascot size={36} talking={pending} />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-fg">Toss assistant</p>
-              <p className="truncate text-xs text-muted">Answers from your account · can switch theme, change password</p>
+              <p className="text-sm font-semibold text-fg">Tossy</p>
+              <p className="truncate text-xs text-muted">Your Toss guide · answers from your account</p>
             </div>
             {msgs.length > 0 && (
               <button type="button" onClick={() => setMsgs([])} className="rounded-full px-2 py-1 text-xs text-muted hover:bg-ink/[0.06] hover:text-fg">

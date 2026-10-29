@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "./locale";
+
 import { useState, useTransition } from "react";
 import type { Autopay } from "@/lib/gateway-payments";
 
@@ -24,10 +26,11 @@ export function AutopayCard({
   const [tip, setTip] = useState(status?.tipPct ?? (india ? 0 : 15));
   const [error, setError] = useState<string>();
   const [pending, go] = useTransition();
+  const tr = useT();
 
   const tipPicker = (
     <fieldset>
-      <legend className="mb-1.5 text-xs text-secondary">Tip for your driver, added to each bill</legend>
+      <legend className="mb-1.5 text-xs text-secondary">{tr("Tip for your driver, added to each bill")}</legend>
       <div className="flex flex-wrap gap-2">
         {TIPS.map((t) => (
           <button
@@ -45,7 +48,7 @@ export function AutopayCard({
             }}
             className={`rounded-full border px-3 py-1 text-sm ${tip === t ? "border-accent/60 bg-accent/15 text-accent" : "border-border text-secondary"}`}
           >
-            {t ? `${t}%` : "No tip"}
+            {t ? `${t}%` : tr("No tip")}
           </button>
         ))}
       </div>
@@ -57,7 +60,7 @@ export function AutopayCard({
       setError(undefined);
       const r = await start(tip);
       if (r.url) window.location.assign(r.url);
-      else setError(r.error ?? "Couldn't open the card page.");
+      else setError(tr(r.error ?? "Couldn't open the card page."));
     });
 
   if (!status) {
@@ -65,15 +68,16 @@ export function AutopayCard({
       <div className="space-y-4">
         <p className="text-sm text-secondary">
           {india
-            ? `Save your card once. When ${business} has your laundry ready, the bill is paid from it automatically and you get a receipt. Your bank tells you a day before each charge (RBI rule), up to ₹15,000 a bill.`
-            : `Save a card, Apple Pay or Google Pay once. When ${business} has your laundry ready, the bill is paid automatically and you get a receipt. No checkout each time.`}
+            ? tr("Save your card once. When {business} has your laundry ready, the bill is paid from it automatically and you get a receipt. Your bank tells you a day before each charge (RBI rule), up to ₹15,000 a bill.", { business })
+            : tr("Save a card, Apple Pay or Google Pay once. When {business} has your laundry ready, the bill is paid automatically and you get a receipt. No checkout each time.", { business })}
         </p>
         {tipPicker}
         <button type="button" disabled={pending} onClick={save} className="btn-primary rounded-full px-5 py-2 text-sm font-medium disabled:opacity-70">
-          {pending ? "Opening…" : "Set up automatic payments →"}
+          {pending ? tr("Opening…") : `${tr("Set up automatic payments")} →`}
         </button>
         <p className="text-xs text-muted">
-          Secured by {india ? "Razorpay" : "Stripe"}. Toss never sees your card number. Turn it off anytime.{india ? " Razorpay checks the card with a ₹1 payment." : ""}
+          {tr("Secured by {gateway}. Toss never sees your card number. Turn it off anytime.", { gateway: india ? "Razorpay" : "Stripe" })}
+          {india ? ` ${tr("Razorpay checks the card with a ₹1 payment.")}` : ""}
         </p>
         {error && (
           <p role="alert" className="text-sm text-critical">
@@ -93,19 +97,23 @@ export function AutopayCard({
   return (
     <div className="space-y-4">
       <p className="text-sm text-secondary">
-        <span className="font-medium text-fg capitalize">{status.brand ?? "Card"}</span>
+        <span className="font-medium text-fg capitalize">{status.brand ?? tr("Card")}</span>
         {status.last4 ? ` •••• ${status.last4}` : ""}
-        {status.exp ? ` · expires ${status.exp}` : ""}
+        {status.exp ? ` · ${tr("expires {date}", { date: status.exp })}` : ""}
         {" · "}
-        {status.on ? <span className="text-good">charged automatically when your laundry is ready</span> : <span className="text-muted">automatic payments are off</span>}
+        {status.on ? (
+          <span className="text-good">{tr("charged automatically when your laundry is ready")}</span>
+        ) : (
+          <span className="text-muted">{tr("automatic payments are off")}</span>
+        )}
       </p>
       {tipPicker}
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" disabled={pending} onClick={() => toggle(!status.on)} className="btn-ghost rounded-full px-4 py-1.5 text-sm disabled:opacity-70">
-          {status.on ? "Turn off" : "Turn on"}
+          {tr(status.on ? "Turn off" : "Turn on")}
         </button>
         <button type="button" disabled={pending} onClick={save} className="text-sm text-accent hover:text-accent-2 disabled:opacity-70">
-          Use a different card
+          {tr("Use a different card")}
         </button>
       </div>
       {error && (

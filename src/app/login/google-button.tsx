@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { GoogleLogo } from "@phosphor-icons/react";
+import { useT } from "@/components/locale";
 
 // "Continue with Google": /auth/google sends the browser to Google, which returns to /auth/callback. Signing in and
 // signing up are the same tap; a new Google account becomes a customer and adds its mobile number after.
@@ -9,6 +10,7 @@ const DEFAULT_CLASS =
   "flex w-full items-center justify-center gap-2.5 rounded-full border border-border-strong bg-surface-solid px-4 py-3 text-sm font-medium text-fg transition-colors hover:bg-ink/[0.04] disabled:opacity-70";
 
 export function GoogleButton({ next, className = DEFAULT_CLASS }: { next?: string; className?: string }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -23,7 +25,7 @@ export function GoogleButton({ next, className = DEFAULT_CLASS }: { next?: strin
       .catch(() => undefined);
     if (settings && !settings.external?.google) {
       setBusy(false);
-      return setError("Google sign-in isn't switched on yet. Use your email for now.");
+      return setError(t("Google sign-in isn't switched on yet. Use your email for now."));
     }
     // The sign-in starts on the server so its PKCE cookie is HttpOnly. /auth/google is a route handler that
     // redirects to Google, so this has to be a full page navigation, not a client-side route change.
@@ -40,7 +42,7 @@ export function GoogleButton({ next, className = DEFAULT_CLASS }: { next?: strin
         className={className}
       >
         <GoogleLogo size={18} weight="bold" aria-hidden />
-        {busy ? "Opening Google…" : "Continue with Google"}
+        {t(busy ? "Opening Google…" : "Continue with Google")}
       </button>
       {error && (
         <p role="alert" className="mt-2 text-center text-xs text-critical">

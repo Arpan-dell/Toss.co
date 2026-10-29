@@ -1,6 +1,7 @@
 "use client";
 
 import { Moon, Sun } from "@phosphor-icons/react";
+import { useT } from "./locale";
 import { Tip } from "./ui";
 
 export const THEME_KEY = "toss-theme";
@@ -61,12 +62,13 @@ export function switchTheme(e: React.MouseEvent) {
 // Light/dark button. The icon is picked by CSS (light: variant), so it is right on first paint with no
 // hydration mismatch.
 export function ThemeToggle({ className = "" }: { className?: string }) {
+  const t = useT();
   return (
-    <Tip label="Switch theme">
+    <Tip label={t("Switch theme")}>
       <button
         type="button"
         onClick={switchTheme}
-        aria-label="Switch between light and dark theme"
+        aria-label={t("Switch between light and dark theme")}
         className={`grid size-10 shrink-0 place-items-center rounded-full text-secondary transition-colors hover:bg-ink/[0.07] hover:text-fg ${className}`}
       >
         <Sun size={20} weight="bold" className="light:hidden" />

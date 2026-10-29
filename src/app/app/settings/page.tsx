@@ -11,6 +11,7 @@ import { PREF_KEYS, PREF_OPTIONS } from "@/lib/prefs";
 import { formatPhone } from "@/lib/phone";
 import { requireRole } from "@/lib/session";
 import { getTelegramOidcConfig } from "@/lib/telegram-oidc";
+import { getT } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -31,6 +32,7 @@ const toneClass = {
 
 export default async function CustomerSettings({ searchParams }: PageProps<"/app/settings">) {
   const session = await requireRole("CUSTOMER");
+  const t = await getT();
   const [customer, device, params] = await Promise.all([
     getCustomer(session.userId),
     getDeviceForCustomer(session.userId),
@@ -42,24 +44,24 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
 
   return (
     <div className="stagger mx-auto w-full max-w-2xl space-y-6">
-      <PageTitle kicker="Account">Settings</PageTitle>
+      <PageTitle kicker={t("Account")}>{t("Settings")}</PageTitle>
 
       {result && (
         <p role="status" className={`rounded-[8px] border px-4 py-3 text-sm ${toneClass[result.tone]}`}>
-          {result.text}
+          {t(result.text)}
         </p>
       )}
 
-      <Card title="Laundry preferences">
-        <p className="mb-4 text-sm text-secondary">How you like your clothes done. Your laundry sees this with every pickup.</p>
-        <ActionForm action={savePrefs} submitLabel="Save preferences">
+      <Card title={t("Laundry preferences")}>
+        <p className="mb-4 text-sm text-secondary">{t("How you like your clothes done. Your laundry sees this with every pickup.")}</p>
+        <ActionForm action={savePrefs} submitLabel={t("Save preferences")}>
           {PREF_KEYS.map((k) => (
             <fieldset key={k}>
-              <legend className="mb-1.5 text-sm text-secondary">{PREF_OPTIONS[k].label}</legend>
+              <legend className="mb-1.5 text-sm text-secondary">{t(PREF_OPTIONS[k].label)}</legend>
               <div className="flex flex-wrap gap-2">
                 <label className="cursor-pointer rounded-full border border-border px-3 py-1.5 text-sm text-secondary has-[:checked]:border-accent/60 has-[:checked]:bg-accent/15 has-[:checked]:text-accent">
                   <input type="radio" name={k} value="" defaultChecked={!prefs[k]} className="sr-only" />
-                  No preference
+                  {t("No preference")}
                 </label>
                 {Object.entries(PREF_OPTIONS[k].options).map(([v, label]) => (
                   <label
@@ -67,37 +69,37 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
                     className="cursor-pointer rounded-full border border-border px-3 py-1.5 text-sm text-secondary has-[:checked]:border-accent/60 has-[:checked]:bg-accent/15 has-[:checked]:text-accent has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent"
                   >
                     <input type="radio" name={k} value={v} defaultChecked={prefs[k] === v} className="sr-only" />
-                    {label}
+                    {t(label)}
                   </label>
                 ))}
               </div>
             </fieldset>
           ))}
           <label className="block text-sm text-secondary">
-            Anything else? (optional)
-            <textarea name="notes" maxLength={200} rows={2} defaultValue={prefs.notes ?? ""} placeholder="e.g. wash the red shirt separately" className={`${fieldClass} mt-1.5`} />
+            {t("Anything else? (optional)")}
+            <textarea name="notes" maxLength={200} rows={2} defaultValue={prefs.notes ?? ""} placeholder={t("e.g. wash the red shirt separately")} className={`${fieldClass} mt-1.5`} />
           </label>
         </ActionForm>
       </Card>
 
-      <Card title="Account">
+      <Card title={t("Account")}>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <dl className="grid grid-cols-[80px_1fr] gap-y-2 text-sm">
-            <dt className="text-muted">Name</dt>
+            <dt className="text-muted">{t("Name")}</dt>
             <dd>{customer?.name ?? "—"}</dd>
-            <dt className="text-muted">Email</dt>
+            <dt className="text-muted">{t("Email")}</dt>
             <dd>{customer?.email ?? session.email}</dd>
-            <dt className="text-muted">Mobile</dt>
+            <dt className="text-muted">{t("Mobile")}</dt>
             <dd className="flex flex-wrap items-center gap-2">
-              {customer?.phone ? formatPhone(customer.phone) : <span className="text-warn">Not added</span>}
-              {customer?.phoneVerified && <Badge tone="good" icon="✓">Verified by Telegram</Badge>}
+              {customer?.phone ? formatPhone(customer.phone) : <span className="text-warn">{t("Not added")}</span>}
+              {customer?.phoneVerified && <Badge tone="good" icon="✓">{t("Verified by Telegram")}</Badge>}
             </dd>
           </dl>
-          {customer && <IdChip label="Customer ID" value={customer.customerCode} />}
+          {customer && <IdChip label={t("Customer ID")} value={customer.customerCode} />}
         </div>
         <details className="mt-4 text-sm" open={!customer?.phone}>
-          <summary className="cursor-pointer text-xs text-muted">{customer?.phone ? "Change mobile number" : "Add your mobile number"}</summary>
-          <ActionForm action={updatePhone} submitLabel="Save number" className="mt-3 flex max-w-md flex-wrap items-start gap-2">
+          <summary className="cursor-pointer text-xs text-muted">{t(customer?.phone ? "Change mobile number" : "Add your mobile number")}</summary>
+          <ActionForm action={updatePhone} submitLabel={t("Save number")} className="mt-3 flex max-w-md flex-wrap items-start gap-2">
             <input
               name="phone"
               type="tel"
@@ -109,31 +111,34 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
               className={`${fieldClass} flex-1`}
             />
           </ActionForm>
-          <p className="mt-2 text-xs text-muted">Your laundry finds you by this number. Linking Telegram marks it verified.</p>
+          <p className="mt-2 text-xs text-muted">{t("Your laundry finds you by this number. Linking Telegram marks it verified.")}</p>
         </details>
       </Card>
 
       <ChangePasswordCard email={customer?.email ?? session.email} />
       <YourDataCard />
 
-      <Card title="Your laundry" action={business ? <Badge tone="good" icon="✓">Connected</Badge> : <Badge tone="warn" icon="!">Not connected</Badge>}>
+      <Card title={t("Your laundry")} action={business ? <Badge tone="good" icon="✓">{t("Connected")}</Badge> : <Badge tone="warn" icon="!">{t("Not connected")}</Badge>}>
         {business ? (
           <div className="space-y-4 text-sm">
             <p>
-              You&apos;re a customer of <span className="font-medium text-fg">{business.name}</span> (Business ID{" "}
-              <span className="font-mono">{business.joinCode}</span>). Your pickups are billed at ₹{business.pricePerKg}/kg.
+              {t("You're a customer of {business} (Business ID {id}). Your pickups are billed at ₹{price}/kg.", {
+                business: business.name,
+                id: business.joinCode,
+                price: business.pricePerKg,
+              })}
             </p>
             <details className="text-secondary">
-              <summary className="cursor-pointer text-xs text-muted">Switch to a different laundry</summary>
+              <summary className="cursor-pointer text-xs text-muted">{t("Switch to a different laundry")}</summary>
               <div className="mt-3 max-w-md">
                 <JoinBusiness compact />
-                <p className="mt-2 text-xs text-muted">Past orders stay with the laundry that handled them.</p>
+                <p className="mt-2 text-xs text-muted">{t("Past orders stay with the laundry that handled them.")}</p>
               </div>
             </details>
           </div>
         ) : (
           <div className="max-w-md space-y-3 text-sm text-secondary">
-            <p>Enter your laundry&apos;s Business ID to connect your account to it.</p>
+            <p>{t("Enter your laundry's Business ID to connect your account to it.")}</p>
             <JoinBusiness compact />
           </div>
         )}
@@ -142,20 +147,19 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
       <Card
         title="Telegram"
         action={
-          customer?.telegramId ? <Badge tone="good" icon="✓">Linked</Badge> : <Badge tone="warn" icon="!">Not linked</Badge>
+          customer?.telegramId ? <Badge tone="good" icon="✓">{t("Linked")}</Badge> : <Badge tone="warn" icon="!">{t("Not linked")}</Badge>
         }
       >
         {customer?.telegramId ? (
           <p className="text-sm text-secondary">
-            Linked to Telegram ID <span className="font-mono text-fg">{customer.telegramId}</span>. Orders from the
-            basket you claimed in Telegram show up here automatically.
+            {t("Linked to Telegram ID {id}. Orders from the basket you claimed in Telegram show up here automatically.", { id: customer.telegramId })}
           </p>
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-secondary">
-              The easiest way: open the <span className="text-fg">Toss Control</span> bot in Telegram and tap <span className="text-fg">📱 Open Toss</span>. Your
-              account links itself. Or log in with Telegram below and share your number to verify it. Use the Telegram
-              account that claimed your basket, and your past and future orders will appear here.
+              {t(
+                "The easiest way: open the Toss Control bot in Telegram and tap 📱 Open Toss. Your account links itself. Or log in with Telegram below and share your number to verify it. Use the Telegram account that claimed your basket, and your past and future orders will appear here.",
+              )}
             </p>
             {telegramReady ? (
               // Plain link, not <Link>: this must be a full navigation to the redirecting API route.
@@ -166,25 +170,25 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
                 <svg aria-hidden viewBox="0 0 24 24" className="size-4 fill-current">
                   <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" />
                 </svg>
-                Log in with Telegram
+                {t("Log in with Telegram")}
               </a>
             ) : (
-              <p className="text-xs text-muted">Telegram linking isn&apos;t set up on this server yet.</p>
+              <p className="text-xs text-muted">{t("Telegram linking isn't set up on this server yet.")}</p>
             )}
           </div>
         )}
       </Card>
 
-      <Card title="Basket">
+      <Card title={t("Basket")}>
         {device ? (
           <dl className="grid grid-cols-[120px_1fr] gap-y-2 text-sm">
-            <dt className="text-muted">Basket</dt>
+            <dt className="text-muted">{t("Basket")}</dt>
             <dd>{deviceLabel(device)}</dd>
-            <dt className="text-muted">Device ID</dt>
+            <dt className="text-muted">{t("Device ID")}</dt>
             <dd className="font-mono">{device.deviceId}</dd>
             {device.targetKg !== undefined && (
               <>
-                <dt className="text-muted">Target weight</dt>
+                <dt className="text-muted">{t("Target weight")}</dt>
                 <dd>{device.targetKg} kg</dd>
               </>
             )}
@@ -197,17 +201,17 @@ export default async function CustomerSettings({ searchParams }: PageProps<"/app
           </dl>
         ) : (
           <p className="text-sm text-muted">
-            No basket linked yet. It appears here once your Telegram account is linked and the basket places an order.
+            {t("No basket linked yet. It appears here once your Telegram account is linked and the basket places an order.")}
           </p>
         )}
       </Card>
       {!business && (
-        <Card title="Run a laundry business?">
+        <Card title={t("Run a laundry business?")}>
           <p className="text-sm text-secondary">
-            Register your business on Toss to manage pickups, drivers and payments. You get a free trial.
+            {t("Register your business on Toss to manage pickups, drivers and payments. You get a free trial.")}
           </p>
           <Link href="/app/register-business" className="btn-ghost mt-4 inline-flex rounded-full px-4 py-2 text-sm">
-            Register my business →
+            {t("Register my business")} →
           </Link>
         </Card>
       )}

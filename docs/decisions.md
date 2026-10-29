@@ -178,6 +178,13 @@ Newest areas last. Each entry: **Chose** · **Why** · **Not chosen (and why)**.
 - **Why built in, not a tour library:** no extra download, it uses the site's own colours and components, and the steps point at real headings, so a renamed card only needs one line changed in `src/lib/guide/tours.ts`.
 - Cards that are empty today are skipped, and nothing animates per frame (only a blink), to keep pages smooth.
 
+### English and Hindi
+- **Chose:** our own small translator instead of a library or Google Translate. The English text in the code is the key (`t("My orders")`), and `src/lib/i18n/hi.ts` holds the Hindi; anything without a Hindi line stays English, so nothing breaks while pages are translated one by one.
+- **Why not Google Translate:** it would send customers' names and addresses to Google, its Hindi is stiff, and it fights with React.
+- The choice is a `toss-lang` cookie on both hosts (like the theme), switched with the हिं / EN button in the header or by telling Tossy "hindi mein karo". Hindi is written the way people talk, keeping words everyone uses (पिकअप, ऑर्डर, पेमेंट).
+- Done so far: menus, Tossy and its tours, sign-in, the whole customer portal, payments. Next: the manager pages, then the public website (which stays static, so it will get `/hi` pages).
+- Menu names were made plainer at the same time: Today, Drivers, Stock, My plan, Home, My orders.
+
 ### One standing rule for commits
 - Commit and push every change to the public repo, with no co-author or attribution line.
 

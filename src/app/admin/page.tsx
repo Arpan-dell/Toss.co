@@ -24,7 +24,7 @@ import { formatterFor, regionOf } from "@/lib/region-format";
 import { after } from "next/server";
 import { reconcileFor } from "@/lib/gateway-payments";
 
-export const metadata: Metadata = { title: "Live board" };
+export const metadata: Metadata = { title: "Today" };
 
 const STALE_PENDING_MINS = 15;
 
@@ -101,7 +101,7 @@ export default async function LiveBoard() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Command centre">Live board</PageTitle>
+      <PageTitle kicker="Live board">Today</PageTitle>
 
       <Onboarding title={`Welcome${tenant ? `, ${tenant.name}` : ""}. Five steps to your first pickup`} steps={setup} />
 

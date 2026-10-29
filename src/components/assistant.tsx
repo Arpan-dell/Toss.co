@@ -8,12 +8,14 @@ import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import { GuideTour, GuideWelcome, markGuideSeen } from "@/components/guide/guide";
 import { Mascot } from "@/components/guide/mascot";
 import { NewPasswordInput } from "@/components/password-checklist";
+import { setLanguage, useLocale, useT } from "@/components/locale";
 import { setTheme } from "@/components/theme-toggle";
 import { changePassword } from "@/lib/actions/account";
 import { askAssistant } from "@/lib/actions/assistant";
 import { differs, isPasswordRequest, matchIntent, newPasswordFrom, nowText, understand, type AssistantRole } from "@/lib/assistant/intents";
 import type { AssistantReply } from "@/lib/assistant/tools";
 import { TOURS, tourRequest, tourSteps, type TourStep } from "@/lib/guide/tours";
+import { languageRequest } from "@/lib/i18n";
 
 // The in-app assistant, Tossy: a little basket character in the corner of every portal that opens a chat at the side (a sheet from
 // the bottom on phones). It answers from the account's own data and can act: switch the theme, open a page, or
@@ -38,6 +40,8 @@ const STORE = "toss-assistant";
 export function Assistant({ role }: { role: AssistantRole }) {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useT();
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   // the guided tour that's running, if any (a new key restarts it from the first step)
   const [tour, setTour] = useState<{ key: number; steps: TourStep[] } | null>(null);
@@ -94,19 +98,29 @@ export function Assistant({ role }: { role: AssistantRole }) {
   const theme = (mode: "dark" | "light" | "toggle" | "status"): string => {
     const current = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
     const other = current === "dark" ? "light" : "dark";
-    if (mode === "status") return `You're in ${current} mode right now. Say "switch to ${other} mode" to change it.`;
-    if (mode === current) return `You're already in ${current} mode.`;
-    return `Done, you're in ${setTheme(mode)} mode now.`;
+    if (mode === "status") return t(`You're in ${current} mode right now. Say "switch to ${other} mode" to change it.`);
+    if (mode === current) return t(`You're already in ${current} mode.`);
+    return t(`Done, you're in ${setTheme(mode)} mode now.`);
   };
 
   const act = (reply: AssistantReply) => {
     if (reply.action?.type === "navigate") router.push(reply.action.href);
   };
 
-  const send = (raw: string) => {
+  // shown: what the chat shows for a tapped suggestion (in the site's language); raw is what gets understood
+  const send = (raw: string, shown?: string) => {
     const text = raw.trim();
     if (!text || pending) return;
     setDraft("");
+    // "hindi mein karo", "switch to English"
+    const lang = languageRequest(text);
+    if (lang) {
+      push({ from: "user", text: shown ?? text });
+      if (lang === locale) return push({ from: "bot", text: lang === "hi" ? "हम पहले से हिंदी में हैं।" : "We're already in English." });
+      push({ from: "bot", text: lang === "hi" ? "ठीक है, हिंदी में बदल रहा हूँ…" : "Okay, switching to English…" });
+      setTimeout(() => setLanguage(lang), 400);
+      return;
+    }
     const fixed = understand(text); // Hinglish and typos, for the requests handled right here
     // password: handled here, the typed password only prefills the form and is masked in the chat
     if (isPasswordRequest(text) || isPasswordRequest(fixed)) {
@@ -115,7 +129,7 @@ export function Assistant({ role }: { role: AssistantRole }) {
       push({ from: "bot", text: "Let's change it here. Your passwords stay on this page; I never see them.", reply: { text: "", action: { type: "password", newPassword: pw } } });
       return;
     }
-    push({ from: "user", text });
+    push({ from: "user", text: shown ?? text });
     // a tour: "show me around", "explain this page", "kaise use kare"
     const wants = TOURS[role] ? (tourRequest(text) ?? tourRequest(fixed)) : null;
     if (wants) {
@@ -147,7 +161,7 @@ export function Assistant({ role }: { role: AssistantRole }) {
         }}
         aria-expanded={open}
         aria-controls="toss-assistant"
-        aria-label={open ? "Close Tossy" : "Ask Tossy, your Toss guide"}
+        aria-label={open ? t("Close Tossy") : t("Ask Tossy, your Toss guide")}
         data-guide="assistant"
         className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] z-50 grid size-14 place-items-center rounded-full border border-border bg-surface-solid text-fg shadow-[0_12px_32px_-8px_rgb(var(--accent-rgb)/0.7)] transition-transform hover:scale-105 active:scale-95 sm:right-6 sm:bottom-6"
       >
@@ -161,39 +175,39 @@ export function Assistant({ role }: { role: AssistantRole }) {
         <section
           id="toss-assistant"
           role="dialog"
-          aria-label="Tossy, your Toss guide"
+          aria-label={t("Tossy, your Toss guide")}
           className="fixed inset-x-2 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-50 flex h-[min(36rem,calc(100dvh-8rem))] flex-col overflow-hidden rounded-2xl border border-border bg-surface-solid shadow-[0_30px_80px_-20px_rgb(0_0_0/0.55)] sm:inset-x-auto sm:right-6 sm:bottom-24 sm:h-[min(38rem,calc(100dvh-8rem))] sm:w-[24rem]"
         >
           <header className="flex items-center gap-3 border-b border-border px-4 py-3">
             <Mascot size={36} talking={pending} />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-fg">Tossy</p>
-              <p className="truncate text-xs text-muted">Your Toss guide · answers from your account</p>
+              <p className="truncate text-xs text-muted">{t("Your Toss guide · answers from your account")}</p>
             </div>
             {msgs.length > 0 && (
               <button type="button" onClick={() => setMsgs([])} className="rounded-full px-2 py-1 text-xs text-muted hover:bg-ink/[0.06] hover:text-fg">
-                Clear
+                {t("Clear")}
               </button>
             )}
           </header>
 
           <div ref={list} className="flex-1 space-y-3 overflow-y-auto px-4 py-4" aria-live="polite">
-            <Bubble from="bot">{GREETING[role]}</Bubble>
-            {!msgs.length && <Chips items={START_CHIPS[role]} onPick={send} />}
+            <Bubble from="bot">{t(GREETING[role])}</Bubble>
+            {!msgs.length && <Chips items={[...START_CHIPS[role], locale === "hi" ? "Switch to English" : "हिंदी में बदलें"]} onPick={send} />}
             {msgs.map((m) => (
               <div key={m.id} className="space-y-2">
                 {m.understood && (
                   <p className="text-xs text-muted">
-                    Did you mean: <button type="button" onClick={() => send(m.understood!)} className="font-medium text-accent italic hover:underline">{m.understood}</button>
+                    {t("Did you mean:")} <button type="button" onClick={() => send(m.understood!)} className="font-medium text-accent italic hover:underline">{m.understood}</button>
                   </p>
                 )}
-                <Bubble from={m.from}>{m.text}</Bubble>
+                <Bubble from={m.from}>{m.from === "bot" ? t(m.text) : m.text}</Bubble>
                 {m.reply && <ReplyExtras reply={m.reply} onPick={send} />}
               </div>
             ))}
             {pending && (
               <Bubble from="bot">
-                <span className="inline-flex gap-1" aria-label="Thinking">
+                <span className="inline-flex gap-1" aria-label={t("Thinking")}>
                   <i className="size-1.5 animate-bounce rounded-full bg-muted" />
                   <i className="size-1.5 animate-bounce rounded-full bg-muted [animation-delay:120ms]" />
                   <i className="size-1.5 animate-bounce rounded-full bg-muted [animation-delay:240ms]" />
@@ -213,13 +227,13 @@ export function Assistant({ role }: { role: AssistantRole }) {
               ref={input}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="Ask anything…"
-              aria-label="Message the assistant"
+              placeholder={t("Ask anything…")}
+              aria-label={t("Message the assistant")}
               maxLength={500}
               autoComplete="off"
               className="min-w-0 flex-1 rounded-full border border-border bg-ink/[0.03] px-4 py-2.5 text-sm placeholder:text-muted focus:border-accent/60 focus:outline-none"
             />
-            <button type="submit" disabled={!draft.trim() || pending} aria-label="Send" className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-accent-contrast disabled:opacity-40">
+            <button type="submit" disabled={!draft.trim() || pending} aria-label={t("Send")} className="grid size-10 shrink-0 place-items-center rounded-full bg-accent text-accent-contrast disabled:opacity-40">
               <ArrowUp size={18} weight="bold" />
             </button>
           </form>
@@ -243,19 +257,21 @@ function Bubble({ from, children }: { from: "user" | "bot"; children: React.Reac
   );
 }
 
-function Chips({ items, onPick }: { items: readonly string[]; onPick: (s: string) => void }) {
+// a suggestion shows in the site's language but is understood as written
+function Chips({ items, onPick }: { items: readonly string[]; onPick: (s: string, shown?: string) => void }) {
+  const t = useT();
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((c) => (
-        <button key={c} type="button" onClick={() => onPick(c)} className="rounded-full border border-border px-3 py-1.5 text-xs text-secondary hover:border-accent/50 hover:text-fg">
-          {c}
+        <button key={c} type="button" onClick={() => onPick(c, t(c))} className="rounded-full border border-border px-3 py-1.5 text-xs text-secondary hover:border-accent/50 hover:text-fg">
+          {t(c)}
         </button>
       ))}
     </div>
   );
 }
 
-function ReplyExtras({ reply, onPick }: { reply: AssistantReply; onPick: (s: string) => void }) {
+function ReplyExtras({ reply, onPick }: { reply: AssistantReply; onPick: (s: string, shown?: string) => void }) {
   return (
     <>
       {reply.rows && reply.rows.length > 0 && (
@@ -290,16 +306,17 @@ function ReplyExtras({ reply, onPick }: { reply: AssistantReply; onPick: (s: str
 }
 
 function PasswordInChat({ newPassword }: { newPassword?: string }) {
+  const t = useT();
   return (
     <div className="max-w-[92%] rounded-xl border border-border p-3">
-      <ActionForm action={changePassword} submitLabel="Change password" className="space-y-2.5" submitClassName="btn-primary w-full rounded-full px-4 py-2 text-sm font-medium disabled:opacity-70">
-        <Field label="Current password">
+      <ActionForm action={changePassword} submitLabel={t("Change password")} className="space-y-2.5" submitClassName="btn-primary w-full rounded-full px-4 py-2 text-sm font-medium disabled:opacity-70">
+        <Field label={t("Current password")}>
           <input name="current" type="password" autoComplete="current-password" required className={fieldClass} />
         </Field>
-        <Field label="New password">
+        <Field label={t("New password")}>
           <NewPasswordInput name="next" className={fieldClass} defaultValue={newPassword} />
         </Field>
-        <Field label="Confirm new password">
+        <Field label={t("Confirm new password")}>
           <input name="confirm" type="password" autoComplete="new-password" required maxLength={72} className={fieldClass} />
         </Field>
       </ActionForm>

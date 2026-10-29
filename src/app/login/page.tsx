@@ -4,6 +4,9 @@ import { Logo } from "@/components/ui";
 import { AuthForm } from "./auth-form";
 import { LoginBackdrop } from "./login-backdrop";
 import { siteHref } from "@/lib/hosts";
+import { LanguageToggle, LocaleProvider } from "@/components/locale";
+import { translator } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 export const metadata: Metadata = { title: "Sign in" };
 
@@ -16,12 +19,18 @@ const NOTICES: Record<string, string> = {
 };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { notice, next } = await searchParams;
+  const [{ notice, next }, locale] = await Promise.all([searchParams, getLocale()]);
+  const t = translator(locale);
+  const said = typeof notice === "string" ? NOTICES[notice] : undefined;
   return (
+    <LocaleProvider locale={locale}>
     <main id="main" tabIndex={-1} className="outline-none relative isolate grid min-h-[100dvh] flex-1 place-items-center px-4 py-10">
       <LoginBackdrop />
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageToggle />
+      </div>
       <AuthForm
-        notice={typeof notice === "string" ? NOTICES[notice] : undefined}
+        notice={said ? t(said) : undefined}
         next={typeof next === "string" ? next : undefined}
         logo={
           <Link href={siteHref("/")} aria-label="Toss home" className="w-fit">
@@ -30,5 +39,6 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         }
       />
     </main>
+    </LocaleProvider>
   );
 }

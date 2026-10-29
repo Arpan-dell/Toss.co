@@ -14,6 +14,7 @@ const COOKIES: [string, string, string][] = [
   ["Sign-in (sb-…-auth-token)", "Keeps you signed in, and checks each request is really you. Can't be read by scripts on the page.", "Until you sign out (renewed while you use Toss)"],
   ["Telegram sign-in (short-lived)", "Only while you sign in with Telegram: protects that sign-in from being hijacked.", "10 minutes"],
   ["Theme (toss-theme)", "Remembers light or dark mode, only after you pick one, so both of our web addresses open the same way.", "1 year"],
+  ["Language (toss-lang)", "Remembers English or Hindi, only after you pick one, so both of our web addresses open in the same language.", "1 year"],
 ];
 const STORAGE: [string, string][] = [
   ["Theme (toss-theme)", "A backup copy of your light or dark choice, for browsers that block the cookie."],

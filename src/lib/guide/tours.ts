@@ -17,7 +17,7 @@ const MANAGER: TourStep[] = [
     title: "Hi, I'm Tossy!",
     text: "I'm the little basket that runs this place. Let me walk you through your laundry's dashboard. It takes about two minutes, and you can stop any time.",
   },
-  { path: "/admin", target: "heading:Live board", title: "Your live board", text: "This is home. Everything happening in your laundry right now shows up here, and it updates by itself. You never need to refresh." },
+  { path: "/admin", target: "main h1", title: "Today", text: "This is your home page. Everything happening in your laundry right now shows here, and it updates by itself." },
   { path: "/admin", target: '[aria-labelledby="onboarding-title"]', optional: true, title: "Your setup checklist", text: "These steps get you to your first pickup. Each one has a button that takes you straight there, and the list disappears once everything's done." },
   { path: "/admin", target: "heading:Needs attention", optional: true, title: "Needs attention", text: "Pickups nobody has taken, late orders and other things that need you. If this is empty, all is well." },
   { path: "/admin", target: '[data-guide="stats"]', title: "Today at a glance", text: "Pickups waiting for a driver, drivers on the way, how many baskets are online, and how much customers still owe you." },
@@ -34,7 +34,7 @@ const MANAGER: TourStep[] = [
     path: "/admin/fleet",
     target: "heading:Drivers",
     title: "Your drivers",
-    text: "Each driver's status, live location and the kilometres they've covered today, yesterday and this month. Drivers work from the Toss Handy bot on Telegram.",
+    text: "See each driver: are they free or busy, where they are, and how many km they drove today, yesterday and this month. Drivers use the Toss Handy bot on Telegram.",
   },
   { path: "/admin/fleet", target: "heading:Baskets", optional: true, title: "Baskets", text: "Your customers' Toss baskets: how full each one is and whether it's online." },
   {
@@ -44,7 +44,7 @@ const MANAGER: TourStep[] = [
     text: "Collection rounds every few days for hostels, PGs and offices, with one monthly bill. Rounds due together become one trip for the same driver.",
   },
   { path: "/admin/driver-pay", target: "main h1", title: "Driver pay", text: "What each driver has earned, worked out from their trips, so paying them is one look away." },
-  { path: "/admin/stock", target: "main h1", title: "Supplies", text: "Detergent, softener, bags. Keep count here and see what's running low before it runs out." },
+  { path: "/admin/stock", target: "main h1", title: "Stock", text: "Detergent, softener, bags. Keep count here and see what's running low before it runs out." },
   { path: "/admin/profit", target: "main h1", title: "Profit", text: "What you actually made in the last 30 days, after your running costs, and which customers earn you the most per kg." },
   { path: "/admin/ai", target: "main h1", title: "Toss AI", text: "Your business adviser: busy days coming up, customers drifting away, unpaid bills, and what to do about them next." },
   {
@@ -53,7 +53,7 @@ const MANAGER: TourStep[] = [
     title: "Settings",
     text: "Set up once, check now and then: your price, how customers pay you, your pickup area, weighing at the door or at the store, and more.",
   },
-  { path: "/admin/billing", target: "heading:Your plan", title: "Your Toss plan", text: "Your trial or plan, and paying for it. Paying early adds time on top, so nothing you've paid for is lost." },
+  { path: "/admin/billing", target: "heading:Your plan", title: "My plan", text: "Your free trial or plan, and paying for it. Paying early adds more days on top, so you never lose what you paid for." },
   {
     path: "/admin",
     target: '[data-guide="assistant"]',
@@ -73,7 +73,7 @@ const CUSTOMER: TourStep[] = [
   { path: "/app", target: "heading:My basket", optional: true, title: "Your basket", text: "How full your Toss basket is. When it reaches your target weight, it books a pickup all by itself." },
   { path: "/app", target: "heading:Invoices due", optional: true, title: "Bills", text: "Anything you owe, with a button to pay online. Payments are confirmed straight away." },
   { path: "/app", target: "heading:Pay automatically", optional: true, title: "Pay automatically", text: "Save a card once and your bills get paid by themselves after each wash. You can switch it off any time." },
-  { path: "/app/orders", target: "main h1", title: "Order history", text: "Every wash you've had: weight, price, receipts and invoices." },
+  { path: "/app/orders", target: "main h1", title: "My orders", text: "Every wash you've had: weight, price and bills." },
   { path: "/app", target: 'nav:/laundries', optional: true, title: "Find a laundry", text: "Looking for a laundry near you, or moving? Find one on Toss from here." },
   { path: "/app/settings", target: "heading:Telegram", optional: true, title: "Telegram", text: "Link Telegram to get pickup updates and control your basket from your phone with the Toss Control bot." },
   { path: "/app/settings", target: "heading:Laundry preferences", optional: true, title: "Your preferences", text: "Your address, how you like your clothes washed, and your basket's target weight." },
@@ -105,11 +105,13 @@ export function tourRequest(raw: string): "all" | "page" | null {
   if (!t) return null;
   const page =
     /\b(this|current|is|yeh|ye|iss?)\b ?(page|screen)\b/.test(t) && /\b(explain|what|kya|samjha|batao|bata|about|show|guide|help)\b/.test(t);
-  if (page || /^(explain|what is) (this|the) (page|screen)$/.test(t)) return "page";
+  // Devanagari isn't a "word" character to \b, so the Hindi patterns go without it
+  if (page || /^(explain|what is) (this|the) (page|screen)$/.test(t) || /(यह|ये|इस) (पेज|पन्ना|पन्ने|स्क्रीन)/.test(t)) return "page";
   if (
     /\b(show me around|give me a tour|take me on a tour|start the tour|tour|walk ?through|walk me through|guide me|onboard me)\b/.test(t) ||
     /\bhow (do i|to|can i) use (this|toss|the (site|website|app|dashboard))\b/.test(t) ||
-    /\b(kaise use|kaise chalate|kaise chalaye|kaise chalau|samjhao|sikhao|ghumao)\b/.test(t)
+    /\b(kaise use|kaise chalate|kaise chalaye|kaise chalau|samjhao|sikhao|ghumao)\b/.test(t) ||
+    /घुमाओ|सिखाओ|समझाओ|कैसे (इस्तेमाल|यूज़|यूज|चलाएं|चलाऊं|चलाते)|टूर/.test(t)
   )
     return "all";
   return null;

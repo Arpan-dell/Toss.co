@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "./locale";
+
 import { useState, useTransition } from "react";
 import { burstFromEvent } from "@/lib/fx";
 
@@ -19,14 +21,15 @@ export function GatewayPay({
   const [tipValue, setTipValue] = useState(0);
   const [error, setError] = useState<string>();
   const [pending, go] = useTransition();
+  const t = useT();
 
   return (
     <div className="space-y-3">
       {tip && (
         <fieldset>
-          <legend className="mb-1.5 text-xs text-secondary">Add a tip for your driver? (optional)</legend>
+          <legend className="mb-1.5 text-xs text-secondary">{t("Add a tip for your driver? (optional)")}</legend>
           <div className="flex flex-wrap gap-2">
-            {[{ value: 0, label: "No tip" }, ...tip.suggestions].map((s) => (
+            {[{ value: 0, label: t("No tip") }, ...tip.suggestions].map((s) => (
               <button
                 key={s.value}
                 type="button"
@@ -49,14 +52,14 @@ export function GatewayPay({
           go(async () => {
             const r = await start(tipValue);
             if (r.url) window.location.assign(r.url);
-            else setError(r.error ?? "Couldn't open the payment page.");
+            else setError(t(r.error ?? "Couldn't open the payment page."));
           });
         }}
         className="btn-primary rounded-full px-5 py-2 text-sm font-medium disabled:opacity-70"
       >
-        {pending ? "Opening…" : `Pay ${amountLabel}${tipValue ? ` + ${tip?.symbol ?? ""}${tipValue} tip` : ""} →`}
+        {pending ? t("Opening…") : `${t("Pay {amount}", { amount: amountLabel })}${tipValue ? ` + ${tip?.symbol ?? ""}${tipValue} ${t("tip")}` : ""} →`}
       </button>
-      <p className="text-xs text-muted">Secure payment by {gatewayName}. Confirmed automatically; no reference to type.</p>
+      <p className="text-xs text-muted">{t("Secure payment by {gateway}. Confirmed automatically; no reference to type.", { gateway: gatewayName })}</p>
       {error && (
         <p role="alert" className="text-sm text-critical">
           {error}

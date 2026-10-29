@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { OrderStatus, PaymentStatus } from "@/lib/types";
 import { CountUp } from "./count-up";
 import { orderStage } from "@/lib/order-stage";
+import { Tr } from "./locale";
 
 // Dashboard visual system ("dispatch ledger"): flat solid panels with hairline borders, monospace labels
 // with a dotted leader like a laundry ticket, figures in mono on a heavy top rule, and square-cornered status
@@ -102,10 +103,10 @@ const orderStatusMeta: Record<OrderStatus, { tone: Tone; icon: string; label: st
 export function OrderStatusBadge({ status, order }: { status: OrderStatus; order?: Parameters<typeof orderStage>[0] }) {
   if (order) {
     const s = orderStage(order);
-    return <Badge tone={s.tone} live={s.live}>{s.label}</Badge>;
+    return <Badge tone={s.tone} live={s.live}><Tr>{s.label}</Tr></Badge>;
   }
   const m = orderStatusMeta[status];
-  return <Badge tone={m.tone} icon={m.icon} live={m.live}>{m.label}</Badge>;
+  return <Badge tone={m.tone} icon={m.icon} live={m.live}><Tr>{m.label}</Tr></Badge>;
 }
 
 const paymentMeta: Record<PaymentStatus, { tone: Tone; icon: string; label: string }> = {
@@ -117,22 +118,22 @@ const paymentMeta: Record<PaymentStatus, { tone: Tone; icon: string; label: stri
 
 export function PaymentBadge({ status }: { status: PaymentStatus }) {
   const m = paymentMeta[status];
-  return <Badge tone={m.tone} icon={m.icon}>{m.label}</Badge>;
+  return <Badge tone={m.tone} icon={m.icon}><Tr>{m.label}</Tr></Badge>;
 }
 
 export function OnlineBadge({ online }: { online: boolean }) {
   return online ? (
-    <Badge tone="good" live>Online</Badge>
+    <Badge tone="good" live><Tr>Online</Tr></Badge>
   ) : (
-    <Badge tone="critical" icon="○">Offline</Badge>
+    <Badge tone="critical" icon="○"><Tr>Offline</Tr></Badge>
   );
 }
 
 // Firmware v1 baskets only report weight when they place an order and never send a target,
 // so both values are optional.
 export function FillBar({ weightKg, targetKg }: { weightKg?: number; targetKg?: number }) {
-  if (weightKg === undefined) return <p className="text-xs text-muted">No live weight yet. Needs firmware v2.</p>;
-  if (!targetKg) return <p className="text-xs tabular-nums text-muted">Last reading {weightKg.toFixed(1)} kg</p>;
+  if (weightKg === undefined) return <p className="text-xs text-muted"><Tr>No live weight yet. Needs firmware v2.</Tr></p>;
+  if (!targetKg) return <p className="text-xs tabular-nums text-muted"><Tr vars={{ kg: weightKg.toFixed(1) }}>{"Last reading {kg} kg"}</Tr></p>;
 
   const pct = Math.min(100, Math.round((weightKg / targetKg) * 100));
   return (

@@ -8,7 +8,7 @@ import { getTenantById, listOrders, listSupplies, now, type Supply } from "@/lib
 import { getSession } from "@/lib/session";
 import { myFormat } from "@/lib/my-format";
 
-export const metadata: Metadata = { title: "Supplies" };
+export const metadata: Metadata = { title: "Stock" };
 
 const UNITS: Supply["unit"][] = ["ml", "l", "g", "kg", "pcs"];
 const qty = (n: number, unit: string) => `${Number.isInteger(Math.round(n * 10) / 10) ? Math.round(n) : (Math.round(n * 10) / 10).toFixed(1)} ${unit}`;
@@ -81,7 +81,7 @@ export default async function Stock() {
 
   return (
     <div className="stagger mx-auto w-full max-w-4xl space-y-6">
-      <PageTitle kicker="Pro">Supplies</PageTitle>
+      <PageTitle kicker="Pro">Stock</PageTitle>
 
       <Card title="Stock">
         {supplies.length === 0 ? (

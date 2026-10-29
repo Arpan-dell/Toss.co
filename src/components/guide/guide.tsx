@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { X } from "@phosphor-icons/react";
 import type { AssistantRole } from "@/lib/assistant/intents";
 import type { TourStep } from "@/lib/guide/tours";
+import { useT } from "@/components/locale";
 import { Mascot } from "./mascot";
 
 // Tossy's guided tour. Each step opens its page if needed, waits for the thing it talks about to appear, scrolls it
@@ -27,6 +28,7 @@ export function markGuideSeen(role: AssistantRole) {
 
 /** The first-visit hello beside the assistant button: "New here? I can show you around." */
 export function GuideWelcome({ role, onStart }: { role: AssistantRole; onStart: () => void }) {
+  const t = useT();
   const [show, setShow] = useState(false);
   useEffect(() => {
     let seen = true;
@@ -53,17 +55,17 @@ export function GuideWelcome({ role, onStart }: { role: AssistantRole; onStart: 
         <Mascot size={44} talking />
         <div className="min-w-0">
           <p id="tossy-hello" className="text-sm font-semibold text-fg">
-            Hi, I&apos;m Tossy!
+            {t("Hi, I'm Tossy!")}
           </p>
-          <p className="mt-0.5 text-sm text-secondary">New here? I can show you around in two minutes.</p>
+          <p className="mt-0.5 text-sm text-secondary">{t("New here? I can show you around in two minutes.")}</p>
         </div>
       </div>
       <div className="mt-3 flex justify-end gap-2">
         <button type="button" onClick={() => close(false)} className="btn-ghost rounded-full px-3.5 py-1.5 text-xs text-secondary">
-          Not now
+          {t("Not now")}
         </button>
         <button type="button" onClick={() => close(true)} className="btn-primary rounded-full px-3.5 py-1.5 text-xs font-medium">
-          Show me around
+          {t("Show me around")}
         </button>
       </div>
     </div>
@@ -73,17 +75,19 @@ export function GuideWelcome({ role, onStart }: { role: AssistantRole; onStart: 
 type Box = { x: number; y: number; w: number; h: number; vw: number; vh: number };
 
 /** The first visible element for a step's target (see tours.ts for the forms a target takes). */
-function findTarget(spec: string): Element | null {
+function findTarget(spec: string, t: (s: string) => string): Element | null {
   let found: Element[];
   if (spec.startsWith("heading:")) {
-    const want = spec.slice("heading:".length).toLowerCase();
+    // the heading as written, or as shown in Hindi
+    const text = spec.slice("heading:".length);
+    const wants = [text.toLowerCase(), t(text).toLowerCase()];
     found = [...document.querySelectorAll("main h1, main h2")]
-      .filter((h) => (h.textContent ?? "").trim().toLowerCase().startsWith(want))
+      .filter((h) => wants.some((w) => (h.textContent ?? "").trim().toLowerCase().startsWith(w)))
       // a page title points at its title block; a card heading at its whole card
       .map((h) => (h.tagName === "H1" ? h.parentElement : (h.closest("section") ?? h.parentElement)))
       .filter((e): e is HTMLElement => !!e);
   } else if (spec.startsWith("nav:")) {
-    found = [...document.querySelectorAll(`nav[aria-label="Dashboard"] a[href="${CSS.escape(spec.slice("nav:".length))}"]`)];
+    found = [...document.querySelectorAll(`nav[data-nav] a[href="${CSS.escape(spec.slice("nav:".length))}"]`)];
   } else {
     found = [...document.querySelectorAll(spec)];
   }
@@ -97,6 +101,7 @@ function findTarget(spec: string): Element | null {
 export function GuideTour({ steps, onEnd }: { steps: TourStep[]; onEnd: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useT();
   const [i, setI] = useState(0);
   const [dir, setDir] = useState<1 | -1>(1);
   // the step whose target has been looked for, and what was found (null: show it in the middle)
@@ -130,7 +135,7 @@ export function GuideTour({ steps, onEnd }: { steps: TourStep[]; onEnd: () => vo
     let timer: ReturnType<typeof setTimeout>;
     const look = () => {
       if (!alive) return;
-      const el = step.target ? findTarget(step.target) : null;
+      const el = step.target ? findTarget(step.target, t) : null;
       if (step.target && !el && performance.now() - startedAt < WAIT_MS) {
         timer = setTimeout(look, 120);
         return;
@@ -154,7 +159,7 @@ export function GuideTour({ steps, onEnd }: { steps: TourStep[]; onEnd: () => vo
       alive = false;
       clearTimeout(timer);
     };
-  }, [step, i, dir, pathname, router, steps.length]);
+  }, [step, i, dir, pathname, router, steps.length, t]);
 
   // keep the spotlight on its target while the page scrolls, resizes or reflows
   const el = found?.i === i ? found.el : null;
@@ -257,18 +262,18 @@ export function GuideTour({ steps, onEnd }: { steps: TourStep[]; onEnd: () => vo
             <Mascot size={52} talking />
             <div className="min-w-0 flex-1">
               <p className="font-mono text-[10px] tracking-[0.14em] text-muted uppercase">
-                Tossy · {i + 1} of {steps.length}
+                {t("Tossy · {n} of {total}", { n: i + 1, total: steps.length })}
               </p>
               <p id="tossy-step-title" className="mt-0.5 text-[15px] font-semibold text-fg">
-                {step.title}
+                {t(step.title)}
               </p>
             </div>
-            <button type="button" onClick={onEnd} aria-label="End the tour" className="btn-ghost grid size-8 shrink-0 place-items-center self-start rounded-full text-muted">
+            <button type="button" onClick={onEnd} aria-label={t("End the tour")} className="btn-ghost grid size-8 shrink-0 place-items-center self-start rounded-full text-muted">
               <X size={14} weight="bold" />
             </button>
           </div>
           <p id="tossy-step-text" aria-live="polite" className="mt-2.5 text-sm leading-relaxed text-secondary">
-            {step.text}
+            {t(step.text)}
           </p>
           <div className="mt-4 flex items-center gap-2">
             <div aria-hidden className="mr-auto h-1 w-20 overflow-hidden rounded-full bg-ink/10">
@@ -276,11 +281,11 @@ export function GuideTour({ steps, onEnd }: { steps: TourStep[]; onEnd: () => vo
             </div>
             {i > 0 && (
               <button type="button" onClick={() => go(-1)} className="btn-ghost rounded-full px-3.5 py-1.5 text-xs text-secondary">
-                Back
+                {t("Back")}
               </button>
             )}
             <button ref={nextBtn} type="button" onClick={() => go(1)} className="btn-primary rounded-full px-4 py-1.5 text-xs font-medium">
-              {last ? "Done" : i === 0 && steps.length > 1 ? "Let's go" : "Next"}
+              {t(last ? "Done" : i === 0 && steps.length > 1 ? "Let's go" : "Next")}
             </button>
           </div>
         </div>

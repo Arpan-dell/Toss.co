@@ -1,5 +1,6 @@
 import type { Order } from "@/lib/types";
 import { myFormat } from "@/lib/my-format";
+import { getT } from "@/lib/i18n/server";
 
 type Step = { label: string; at?: string; done: boolean };
 
@@ -30,7 +31,7 @@ function steps(order: Order): Step[] {
 }
 
 export async function StatusTimeline({ order }: { order: Order }) {
-  const fmt = await myFormat();
+  const [fmt, t] = await Promise.all([myFormat(), getT()]);
   const all = steps(order);
   const current = all.findIndex((s) => !s.done);
 
@@ -51,8 +52,8 @@ export async function StatusTimeline({ order }: { order: Order }) {
           </span>
           <div>
             <p className={`text-sm ${s.done ? "text-fg" : i === current ? "font-medium text-fg" : "text-muted"}`}>
-              {s.label}
-              {i === current && <span className="ml-2 text-xs text-accent">up next</span>}
+              {t(s.label)}
+              {i === current && <span className="ml-2 text-xs text-accent">{t("up next")}</span>}
             </p>
             {s.at && <p className="text-xs text-muted">{fmt.dateTime(s.at)}</p>}
           </div>

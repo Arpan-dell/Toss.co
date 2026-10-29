@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { FormState } from "@/lib/actions/shared";
+import { useT } from "./locale";
 
 // A form bound to a (prev, formData) server action, with inline success/error feedback.
 export function ActionForm({
@@ -18,21 +19,23 @@ export function ActionForm({
   submitClassName?: string;
 }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(action, {});
+  // replies from the server are English; the fixed ones have a Hindi line
+  const t = useT();
   return (
     <form action={formAction} className={className}>
       {children}
       {state.error && (
         <p role="alert" className="rounded-[8px] border border-critical/30 bg-critical-bg px-3 py-2 text-sm text-critical">
-          {state.error}
+          {t(state.error)}
         </p>
       )}
       {state.message && (
         <p role="status" className="rounded-[8px] border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
-          {state.message}
+          {t(state.message)}
         </p>
       )}
       <button disabled={pending} className={submitClassName}>
-        {pending ? "Saving…" : submitLabel}
+        {pending ? t("Saving…") : submitLabel}
       </button>
     </form>
   );

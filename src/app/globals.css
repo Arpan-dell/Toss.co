@@ -122,7 +122,7 @@
   --color-critical-bg: var(--critical-bg);
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
-  --font-sans: var(--font-outfit);
+  --font-sans: var(--font-outfit), var(--font-devanagari), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 

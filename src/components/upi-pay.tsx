@@ -1,5 +1,7 @@
 "use client";
 
+import { useT } from "./locale";
+
 import { useState, useSyncExternalStore } from "react";
 import { burstFromEvent } from "@/lib/fx";
 import { detectUpiPlatform, upiAppLinks, type UpiPlatform } from "@/lib/upi";
@@ -30,6 +32,7 @@ export function UpiPay({
   buttonLabel?: string;
   startOpen?: boolean;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(startOpen);
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -51,7 +54,7 @@ export function UpiPay({
         }}
         className="btn-primary rounded-full px-5 py-2 text-sm font-medium"
       >
-        {buttonLabel ?? `Pay ${amountLabel} →`}
+        {buttonLabel ?? `${t("Pay {amount}", { amount: amountLabel })} →`}
       </button>
     );
   }
@@ -62,7 +65,7 @@ export function UpiPay({
   const qr = (
     <div
       className="mx-auto w-44 overflow-hidden rounded-[8px] bg-white p-2 [&>svg]:h-auto [&>svg]:w-full"
-      aria-label={`UPI QR code to pay ${amountLabel} to ${payeeName}`}
+      aria-label={t("UPI QR code to pay {amount} to {name}", { amount: amountLabel, name: payeeName })}
       role="img"
       dangerouslySetInnerHTML={{ __html: qrSvg }}
     />
@@ -75,7 +78,7 @@ export function UpiPay({
         <div>
           <p className="text-3xl font-semibold tracking-tight tabular-nums">{amountLabel}</p>
           <p className="text-sm text-secondary">
-            to <span className="text-fg">{payeeName}</span>
+            {t("to")} <span className="text-fg">{payeeName}</span>
           </p>
         </div>
         <button
@@ -89,17 +92,17 @@ export function UpiPay({
               /* clipboard blocked: the UPI ID is visible to copy by hand */
             }
           }}
-          title="Copy UPI ID"
+          title={t("Copy UPI ID")}
           className="rounded-[6px] border border-border px-2.5 py-1 font-mono text-xs text-secondary hover:text-fg"
-          aria-label={`Copy UPI ID ${payeeUpiId}`}
+          aria-label={`${t("Copy UPI ID")} ${payeeUpiId}`}
         >
-          {payeeUpiId} · {copied ? "copied ✓" : "copy"}
+          {payeeUpiId} · {copied ? `${t("copied")} ✓` : t("copy")}
         </button>
       </div>
 
       {isPhone ? (
         <div className="mt-4">
-          <p className="mb-2 text-xs text-muted">Choose your UPI app. The amount and UPI ID are filled in; just tap Pay.</p>
+          <p className="mb-2 text-xs text-muted">{t("Choose your UPI app. The amount and UPI ID are filled in; just tap Pay.")}</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {apps.map((app) => (
               <a
@@ -120,7 +123,7 @@ export function UpiPay({
             ))}
           </div>
           <button type="button" onClick={() => setShowQr((v) => !v)} className="mt-3 text-xs text-accent hover:text-accent-2">
-            {showQr ? "Hide QR code" : "Paying from another phone? Show QR code"}
+            {t(showQr ? "Hide QR code" : "Paying from another phone? Show QR code")}
           </button>
           {showQr && <div className="mt-3">{qr}</div>}
         </div>
@@ -128,8 +131,7 @@ export function UpiPay({
         <div className="mt-4 grid items-center gap-4 sm:grid-cols-[176px_1fr]">
           {qr}
           <p className="text-sm text-secondary">
-            Scan with <span className="text-fg">Google Pay, PhonePe, Paytm, BHIM</span> or any UPI app. The amount and UPI ID
-            fill in automatically. On your phone, this page shows a button for each app instead.
+            {t("Scan with Google Pay, PhonePe, Paytm, BHIM or any UPI app. The amount and UPI ID fill in automatically. On your phone, this page shows a button for each app instead.")}
           </p>
         </div>
       )}

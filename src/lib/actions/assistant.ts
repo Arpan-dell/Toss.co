@@ -8,6 +8,7 @@ import { listDrivers } from "../data";
 import { logError } from "../log";
 import { allow } from "../rate-limit";
 import { getSession } from "../session";
+import { getT } from "../i18n/server";
 
 // The in-app assistant. Recognised requests are answered by plain rules with no AI call; anything else goes to the
 // free Gemini model, which only picks which tool to run (or answers a general "how does Toss work" question). The
@@ -19,6 +20,13 @@ import { getSession } from "../session";
 type Turn = { role: "user" | "assistant"; text: string };
 
 export async function askAssistant(message: string, history: Turn[] = []): Promise<AssistantReply> {
+  // fixed replies in the site's language (replies built from data stay English for now)
+  const t = await getT();
+  const reply = await answer(message, history);
+  return { ...reply, text: t(reply.text) };
+}
+
+async function answer(message: string, history: Turn[]): Promise<AssistantReply> {
   const session = await getSession();
   if (!session) return { text: "Please sign in again." };
   const role = session.role as AssistantRole;

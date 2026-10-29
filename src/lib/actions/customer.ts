@@ -13,6 +13,7 @@ import { friendlyError, text, type FormState } from "./shared";
 import { pricePerKgFrom } from "../region-format";
 import { countryOf } from "../regions";
 import { readPrefs } from "../prefs";
+import { getT } from "../i18n/server";
 
 async function requireCustomer() {
   const session = await getSession();
@@ -30,7 +31,7 @@ export async function joinBusiness(_prev: FormState, formData: FormData): Promis
   const { data, error } = await supabase.rpc("join_tenant", { p_code: code });
   if (error) return { error: friendlyError(error) };
   revalidatePath("/app", "layout");
-  return { message: `You're now connected to ${(data as { name: string }).name}.` };
+  return { message: (await getT())("You're now connected to {business}.", { business: (data as { name: string }).name }) };
 }
 
 // Sets or changes the customer's mobile number. A new number is unverified until Telegram confirms it.
@@ -49,7 +50,7 @@ export async function updatePhone(_prev: FormState, formData: FormData): Promise
     return { error: error.code === "23505" ? "That mobile number is already used by another Toss account." : friendlyError(error) };
   }
   revalidatePath("/app", "layout");
-  return { message: `Saved. Your number is now ${formatPhone(phone)}.` };
+  return { message: (await getT())("Saved. Your number is now {phone}.", { phone: formatPhone(phone) }) };
 }
 
 // Turns this account into the manager of a new laundry business (starts a free trial).

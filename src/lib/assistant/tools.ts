@@ -31,6 +31,7 @@ import { countryOf } from "../regions";
 import { realBaskets } from "../rounds";
 import { driverRouteKm } from "../driver-routes";
 import { supabaseAdmin } from "../supabase/admin";
+import { getLocale } from "../i18n/server";
 
 // What the assistant does for each request. Every read goes through the signed-in user's own database client, so
 // row-level security decides what they see: a customer only their own pickups, a manager only their business.
@@ -147,7 +148,7 @@ async function customerTool(intent: Intent, session: Session): Promise<Assistant
     const { from, to, label } = periodRange(intent.period, now());
     const [drivers, orders, tenant] = await Promise.all([listDrivers(), listOrders(), getTenantById(session.tenantId)]);
     if (!tenant) return { text: "This account isn't linked to a business yet." };
-    if (!drivers.length) return { text: "You haven't added any drivers yet.", links: [{ label: "Fleet", href: "/admin/fleet" }] };
+    if (!drivers.length) return { text: "You haven't added any drivers yet.", links: [{ label: "Drivers", href: "/admin/fleet" }] };
     const km = await driverRouteKm(orders, tenant, from.toISOString(), to.toISOString());
     const named = namedIn(drivers, intent.who);
     const list = named.length ? named : drivers;
@@ -542,6 +543,8 @@ function inCurrency(snap: Snapshot, currency: string): Snapshot {
   return JSON.parse(JSON.stringify(snap).replace(/\(₹\)/g, `(${currency})`).replace(/₹/g, `${currency} `)) as Snapshot;
 }
 async function analyze(question: string, session: Session): Promise<AssistantReply> {
+  // the site in Hindi: answer in Hindi too, whatever language the question came in
+  const hindi = (await getLocale().catch(() => "en")) === "hi";
   let snap: Snapshot;
   let who: string;
   let names: string[] = []; // real names behind "Driver 1, 2 …" / "Business 1, 2 …"
@@ -600,7 +603,7 @@ async function analyze(question: string, session: Session): Promise<AssistantRep
     const { data } = await geminiJson<{ answer: string; uses_numbers: boolean }>({
       system: `You are the assistant inside Toss, a smart laundry service, talking to ${who}. Answer ANY sensible question: about their account, their business, laundry, running a small business, or general knowledge.
 For facts about their account use ONLY the numbers below and never invent any; if a number isn't there, say plainly what you can't see and where in the app to look. For advice, give a clear answer first (yes / no when it's a yes-or-no question), the 1-2 numbers that decide it, then one concrete next step. For general questions, answer from general knowledge.
-Write simple, friendly English that someone with basic English understands; if they wrote in Hindi or Hinglish, reply in the same simple Hinglish. At most 5 short sentences, no headings, no markdown. Refer to people exactly as labelled ("${label} 1", "${label} 2"). Set uses_numbers to true only if your answer relies on the account numbers below.
+${hindi ? "They use Toss in Hindi: reply in simple, everyday Hindi written in Devanagari, keeping words people say in English as they are (pickup, order, UPI, driver)." : "Write simple, friendly English that someone with basic English understands; if they wrote in Hindi or Hinglish, reply in the same simple Hinglish."} At most 5 short sentences, no headings, no markdown. Refer to people exactly as labelled ("${label} 1", "${label} 2"). Set uses_numbers to true only if your answer relies on the account numbers below.
 Facts about Toss: ${ABOUT_TOSS}
 
 Numbers:

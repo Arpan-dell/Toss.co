@@ -5,6 +5,7 @@ import { now } from "@/lib/data";
 import { isLate } from "@/lib/turnaround";
 import { EmptyState, OrderStatusBadge, PaymentBadge } from "./ui";
 import { myFormat } from "@/lib/my-format";
+import { getT } from "@/lib/i18n/server";
 
 export const invoiceHref = (orderId: string) => `/invoice/${encodeURIComponent(orderId)}`;
 
@@ -15,20 +16,20 @@ export async function OrderTable({ orders, showAddress = false, emptyText = "No 
   emptyText?: string;
   linkToAdmin?: boolean;
 }) {
-  const fmt = await myFormat();
-  if (orders.length === 0) return <EmptyState>{emptyText}</EmptyState>;
+  const [fmt, t] = await Promise.all([myFormat(), getT()]);
+  if (orders.length === 0) return <EmptyState>{t(emptyText)}</EmptyState>;
   return (
     <div className="-mx-5 overflow-x-auto">
       <table className="w-full min-w-[640px] text-sm">
         <thead>
           <tr className="border-b border-border text-left text-[11px] tracking-[0.12em] text-muted uppercase">
-            <th className="px-5 py-2 font-medium">Order</th>
-            <th className="px-3 py-2 font-medium">Placed</th>
-            {showAddress && <th className="px-3 py-2 font-medium">Address</th>}
-            <th className="px-3 py-2 text-right font-medium">Weight</th>
-            <th className="px-3 py-2 text-right font-medium">Amount</th>
-            <th className="px-3 py-2 font-medium">Status</th>
-            <th className="px-5 py-2 font-medium">Payment</th>
+            <th className="px-5 py-2 font-medium">{t("Order")}</th>
+            <th className="px-3 py-2 font-medium">{t("Placed")}</th>
+            {showAddress && <th className="px-3 py-2 font-medium">{t("Address")}</th>}
+            <th className="px-3 py-2 text-right font-medium">{t("Weight")}</th>
+            <th className="px-3 py-2 text-right font-medium">{t("Amount")}</th>
+            <th className="px-3 py-2 font-medium">{t("Status")}</th>
+            <th className="px-5 py-2 font-medium">{t("Payment")}</th>
           </tr>
         </thead>
         <tbody>
@@ -50,7 +51,7 @@ export async function OrderTable({ orders, showAddress = false, emptyText = "No 
               </td>
               <td className="px-3 py-2.5">
                 <OrderStatusBadge status={o.status} order={o} />
-                {linkToAdmin && isLate(o, now()) && <span className="ml-1.5 rounded-[4px] bg-critical-bg px-1.5 py-0.5 text-[10px] font-medium text-critical">Late</span>}
+                {linkToAdmin && isLate(o, now()) && <span className="ml-1.5 rounded-[4px] bg-critical-bg px-1.5 py-0.5 text-[10px] font-medium text-critical">{t("Late")}</span>}
               </td>
               <td className="px-5 py-2.5">
                 <span className="flex items-center gap-2">
@@ -58,7 +59,7 @@ export async function OrderTable({ orders, showAddress = false, emptyText = "No 
                   {o.paymentStatus === "PAID" && (
                     // Plain link: the route returns a PDF.
                     <a href={invoiceHref(o.id)} target="_blank" rel="noreferrer" className="text-xs text-accent hover:text-accent-2">
-                      Invoice
+                      {t("Invoice")}
                     </a>
                   )}
                 </span>

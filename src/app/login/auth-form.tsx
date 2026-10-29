@@ -9,6 +9,7 @@ import { PasswordChecklist } from "@/components/password-checklist";
 import { PASSWORD_MAX } from "@/lib/password-rules";
 import { GoogleButton } from "./google-button";
 import { useReducedMotion } from "@/lib/use-reduced-motion";
+import { useT } from "@/components/locale";
 
 type Mode = "signin" | "signup";
 const EASE = [0.16, 1, 0.3, 1] as const;
@@ -42,6 +43,7 @@ const WELCOME: Record<Mode, { title: string; body: string; cta: string }> = {
 // the form on one side and a welcome pane on the other. Switching modes swaps the sides: the two halves glide past
 // each other while the slanted pane and its bevel sweep across, and the text in each half cross-fades.
 export function AuthForm({ notice, next, logo }: { notice?: string; next?: string; logo: React.ReactNode }) {
+  const t = useT();
   const [mode, setMode] = useState<Mode>("signin");
   const [showPw, setShowPw] = useState(false);
   const [pw, setPw] = useState("");
@@ -71,8 +73,8 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
 
   const form = (
     <motion.div key={`form-${mode}`} {...fade} className="flex flex-col justify-center">
-      <h1 className="text-2xl font-bold tracking-tight text-fg">{signin ? "Sign in" : "Create account"}</h1>
-      <p className="mt-1 mb-6 text-sm text-secondary">Track your pickups and pay invoices in one place.</p>
+      <h1 className="text-2xl font-bold tracking-tight text-fg">{t(signin ? "Sign in" : "Create account")}</h1>
+      <p className="mt-1 mb-6 text-sm text-secondary">{t("Track your pickups and pay invoices in one place.")}</p>
 
       {notice && !state.error && !state.message && (
         <p className="mb-4 rounded-xl border border-ink/15 bg-ink/[0.05] px-3 py-2 text-sm text-secondary">{notice}</p>
@@ -84,20 +86,20 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
       />
       {!signin && (
         <p className="mt-2 text-center text-xs text-muted">
-          By continuing with Google you agree to the{" "}
+          {t("By continuing with Google you agree to the")}{" "}
           <Link href="/terms" className="underline underline-offset-2 hover:text-fg">
-            Terms
+            {t("Terms")}
           </Link>{" "}
-          and{" "}
+          {t("and")}{" "}
           <Link href="/privacy" className="underline underline-offset-2 hover:text-fg">
-            Privacy Policy
+            {t("Privacy Policy")}
           </Link>
-          .
+          {t(".")}
         </p>
       )}
       <div className="my-5 flex items-center gap-3" aria-hidden>
         <span className="h-px flex-1 bg-gradient-to-r from-transparent to-ink/25" />
-        <span className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">or use email</span>
+        <span className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">{t("or use email")}</span>
         <span className="h-px flex-1 bg-gradient-to-l from-transparent to-ink/25" />
       </div>
 
@@ -106,7 +108,7 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
         {!signin && (
           <>
             <Field icon={User}>
-              <input name="name" autoComplete="name" placeholder="Full name" aria-label="Full name" required className={inputClass} />
+              <input name="name" autoComplete="name" placeholder={t("Full name")} aria-label={t("Full name")} required className={inputClass} />
             </Field>
             <Field icon={Phone} prefix="+91">
               <input
@@ -114,8 +116,8 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
                 type="tel"
                 inputMode="tel"
                 autoComplete="tel-national"
-                placeholder="Mobile number"
-                aria-label="Mobile number"
+                placeholder={t("Mobile number")}
+                aria-label={t("Mobile number")}
                 required
                 className={inputClass}
               />
@@ -123,15 +125,15 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
           </>
         )}
         <Field icon={EnvelopeSimple}>
-          <input name="email" type="email" autoComplete="email" placeholder="Email" aria-label="Email" required className={inputClass} />
+          <input name="email" type="email" autoComplete="email" placeholder={t("Email")} aria-label={t("Email")} required className={inputClass} />
         </Field>
         <Field icon={LockSimple}>
           <input
             name="password"
             type={showPw ? "text" : "password"}
             autoComplete={signin ? "current-password" : "new-password"}
-            placeholder="Password"
-            aria-label="Password"
+            placeholder={t("Password")}
+            aria-label={t("Password")}
             aria-describedby={signin ? undefined : "signup-pw-rules"}
             maxLength={signin ? undefined : PASSWORD_MAX}
             value={pw}
@@ -142,7 +144,7 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
           <button
             type="button"
             onClick={() => setShowPw((s) => !s)}
-            aria-label={showPw ? "Hide password" : "Show password"}
+            aria-label={t(showPw ? "Hide password" : "Show password")}
             aria-pressed={showPw}
             className="shrink-0 text-muted transition-colors hover:text-fg"
           >
@@ -154,15 +156,15 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
           <label className="flex items-start gap-2.5 pt-2 text-sm text-secondary">
             <input type="checkbox" name="consent" value="yes" required className="mt-0.5 size-4 shrink-0 accent-[var(--accent)]" />
             <span>
-              I agree to the{" "}
+              {t("I agree to the")}{" "}
               <Link href="/terms" className="text-fg underline underline-offset-2">
-                Terms of Service
+                {t("Terms of Service")}
               </Link>{" "}
-              and{" "}
+              {t("and")}{" "}
               <Link href="/privacy" className="text-fg underline underline-offset-2">
-                Privacy Policy
+                {t("Privacy Policy")}
               </Link>
-              .
+              {t(".")}
             </span>
           </label>
         )}
@@ -170,33 +172,33 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
         {signin && (
           <p className="pt-1 text-right text-xs">
             <Link href="/login/forgot" className="text-secondary hover:text-fg hover:underline">
-              Forgot password?
+              {t("Forgot password?")}
             </Link>
           </p>
         )}
 
         {state.error && (
           <p role="alert" className="rounded-xl border border-critical/30 bg-critical-bg px-3 py-2 text-sm text-critical">
-            {state.error}
+            {t(state.error)}
           </p>
         )}
         {state.message && (
           <p role="status" className="rounded-xl border border-good/30 bg-good-bg px-3 py-2 text-sm text-good">
-            {state.message}
+            {t(state.message)}
           </p>
         )}
 
         <div className="pt-3">
           <button disabled={pending} className="btn-primary w-full rounded-full px-4 py-3 text-sm font-semibold disabled:opacity-70">
-            {pending ? "Please wait…" : signin ? "Sign in" : "Create account"}
+            {t(pending ? "Please wait…" : signin ? "Sign in" : "Create account")}
           </button>
         </div>
       </form>
 
       <p className="mt-5 text-center text-xs text-muted">
-        {signin ? "New to Toss? " : "Already a member? "}
+        {t(signin ? "New to Toss?" : "Already a member?")}{" "}
         <button type="button" onClick={() => setMode(other)} className="font-medium text-fg underline-offset-4 hover:text-accent hover:underline">
-          {signin ? "Create an account" : "Sign in"}
+          {t(signin ? "Create an account" : "Sign in")}
         </button>
       </p>
     </motion.div>
@@ -206,10 +208,10 @@ export function AuthForm({ notice, next, logo }: { notice?: string; next?: strin
     <motion.div key={`welcome-${mode}`} {...fade} className="flex h-full flex-col justify-between">
       <div className={signin ? "self-end" : ""}>{logo}</div>
       <div className={signin ? "text-right" : ""}>
-        <h2 className="text-4xl leading-[1.02] font-black tracking-tight text-fg uppercase">{WELCOME[mode].title}</h2>
-        <p className={`mt-3 max-w-[30ch] text-sm leading-relaxed text-secondary ${signin ? "ml-auto" : ""}`}>{WELCOME[mode].body}</p>
+        <h2 className="text-4xl leading-[1.02] font-black tracking-tight text-fg uppercase">{t(WELCOME[mode].title)}</h2>
+        <p className={`mt-3 max-w-[30ch] text-sm leading-relaxed text-secondary ${signin ? "ml-auto" : ""}`}>{t(WELCOME[mode].body)}</p>
         <button type="button" data-ripple onClick={() => setMode(other)} className={`${ghostButton} mt-6`}>
-          {WELCOME[mode].cta}
+          {t(WELCOME[mode].cta)}
           <ArrowRight size={14} weight="bold" className="transition-transform group-hover:translate-x-1" />
         </button>
       </div>

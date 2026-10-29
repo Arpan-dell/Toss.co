@@ -25,11 +25,12 @@ import { roundMoney } from "@/lib/regions";
 import { requireRole } from "@/lib/session";
 import { buildUpiUri, isValidUpiId } from "@/lib/upi";
 import { myFormat } from "@/lib/my-format";
+import { getT } from "@/lib/i18n/server";
 import { after } from "next/server";
 import { reconcileFor } from "@/lib/gateway-payments";
 
 export default async function CustomerOverview() {
-  const fmt = await myFormat();
+  const [fmt, t] = await Promise.all([myFormat(), getT()]);
   const session = await requireRole("CUSTOMER");
   // a payment made and closed without coming back: ask the gateway after this page is sent (shows on next view)
   after(() => reconcileFor({ customerId: session.userId }).catch(() => 0));
@@ -59,7 +60,7 @@ export default async function CustomerOverview() {
   const weighing = orders.filter((o) => o.status === "COMPLETED" && o.weighPending);
   const unpaid = orders.filter((o) => o.status === "COMPLETED" && o.paymentStatus === "UNPAID" && !o.accountId && !o.weighPending);
   const verifying = orders.filter((o) => o.paymentStatus === "PENDING");
-  const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? "there";
+  const firstName = customer?.name?.split(" ")[0] ?? session.email?.split("@")[0] ?? t("there");
   const [business, offer] = await Promise.all([getTenantById(customer?.tenantId), getOpenOffer(session.userId, customer?.tenantId)]);
   // no basket needed: book a pickup, or join your hostel's next collection
   const rounds = business ? await listRounds(business.id) : [];
@@ -116,14 +117,14 @@ export default async function CustomerOverview() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Overview">Hi, {firstName}</PageTitle>
+      <PageTitle kicker={t("Overview")}>{t("Hi, {name}", { name: firstName })}</PageTitle>
 
       <Onboarding
-        title="Get your first pickup going"
+        title={t("Get your first pickup going")}
         steps={[
-          { done: !!customer?.tenantId, title: "Join your laundry", hint: "Enter the Business ID your laundry gave you, or find one near you.", href: "/laundries", cta: "Find a laundry" },
-          { done: !!customer?.telegramId, title: "Link your Telegram", hint: "So orders from your basket and updates show up here.", href: "/app/settings", cta: "Link Telegram" },
-          { done: orders.length > 0, title: "Book your first pickup", hint: "Book one below (no basket needed), or let your Toss basket book it when it's full.", href: "/app", cta: "Book a pickup" },
+          { done: !!customer?.tenantId, title: t("Join your laundry"), hint: t("Enter the Business ID your laundry gave you, or find one near you."), href: "/laundries", cta: t("Find a laundry") },
+          { done: !!customer?.telegramId, title: t("Link your Telegram"), hint: t("So orders from your basket and updates show up here."), href: "/app/settings", cta: t("Link Telegram") },
+          { done: orders.length > 0, title: t("Book your first pickup"), hint: t("Book one below (no basket needed), or let your Toss basket book it when it's full."), href: "/app", cta: t("Book a pickup") },
         ]}
       />
 
@@ -132,27 +133,27 @@ export default async function CustomerOverview() {
           role="status"
           className="relative rounded-[10px] border border-l-4 border-border border-l-good bg-surface-solid p-5"
         >
-          <p className="font-mono text-[11px] tracking-[0.14em] text-good uppercase">We miss you</p>
+          <p className="font-mono text-[11px] tracking-[0.14em] text-good uppercase">{t("We miss you")}</p>
           <p className="mt-1 text-xl font-semibold">
-            {offer.percent}% off your next pickup from {business.name}
+            {t("{pct}% off your next pickup from {business}", { pct: offer.percent, business: business.name })}
           </p>
           <p className="mt-1 text-sm text-secondary">
-            Just fill your basket. The discount is applied automatically. Valid until {fmt.date(offer.expiresAt)}.
+            {t("Just fill your basket. The discount is applied automatically. Valid until {date}.", { date: fmt.date(offer.expiresAt) })}
           </p>
         </div>
       )}
 
       {credit && !credit.expired && credit.left > 0 && (
         <div role="status" className="relative rounded-[10px] border border-l-4 border-border border-l-accent bg-surface-solid p-5">
-          <p className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">Basket credit</p>
+          <p className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">{t("Basket credit")}</p>
           <p className="mt-1 text-xl font-semibold tabular-nums">
-            {fmt.money(credit.left)} left <span className="text-sm font-normal text-muted">of {fmt.money(credit.granted)}</span>
+            {t("{amount} left", { amount: fmt.money(credit.left) })} <span className="text-sm font-normal text-muted">{t("of {amount}", { amount: fmt.money(credit.granted) })}</span>
           </p>
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-ink/10" aria-hidden>
             <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (credit.left / Math.max(credit.granted, 1)) * 100)}%` }} />
           </div>
           <p className="mt-2 text-sm text-secondary">
-            Comes off your pickups automatically, a little each time. Valid until {fmt.date(credit.expiresAt)}.
+            {t("Comes off your pickups automatically, a little each time. Valid until {date}.", { date: fmt.date(credit.expiresAt) })}
           </p>
         </div>
       )}
@@ -160,60 +161,61 @@ export default async function CustomerOverview() {
       {customer && !customer.phone && (
         <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-l-4 border-border border-l-warn bg-surface-solid p-4">
           <p className="text-sm text-secondary">
-            <span className="font-medium text-fg">Add your mobile number.</span> Your laundry&apos;s driver uses it to reach you at pickup,
-            and it links your Telegram basket to this account.
+            <span className="font-medium text-fg">{t("Add your mobile number.")}</span>{" "}
+            {t("Your laundry's driver uses it to reach you at pickup, and it links your Telegram basket to this account.")}
           </p>
           <Link href="/app/settings" className="btn-primary rounded-full px-4 py-2 text-sm font-medium">
-            Add number
+            {t("Add number")}
           </Link>
         </div>
       )}
 
-      <Card title={business ? "Your laundry" : "Connect to your laundry"}>
+      <Card title={business ? t("Your laundry") : t("Connect to your laundry")}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           {business ? (
             <div>
               <p className="text-lg font-medium">{business.name}</p>
               <p className="text-sm text-secondary">
-                Business ID <span className="font-mono text-fg">{business.joinCode}</span> · ₹{business.pricePerKg}/kg
+                {t("Business ID")} <span className="font-mono text-fg">{business.joinCode}</span> · ₹{business.pricePerKg}/kg
               </p>
               <Link href="/laundries" className="mt-1 inline-block text-sm text-accent hover:underline">
-                Compare laundries near you →
+                {t("Compare laundries near you")} →
               </Link>
             </div>
           ) : (
             <div className="max-w-md flex-1 space-y-3">
               <p className="text-sm text-secondary">
-                Ask your laundry for its <span className="text-fg">Business ID</span> and enter it here to see your pickups and pay
-                them.
+                {t("Ask your laundry for its Business ID and enter it here to see your pickups and pay them.")}
               </p>
               <JoinBusiness compact />
               <p className="border-t border-dotted border-border-strong pt-3 text-sm text-secondary">
-                Don&apos;t know a laundry yet?{" "}
+                {t("Don't know a laundry yet?")}{" "}
                 <Link href="/laundries" className="font-medium text-accent hover:underline">
-                  Find one that picks up near you →
+                  {t("Find one that picks up near you")} →
                 </Link>
               </p>
             </div>
           )}
-          {customer && <IdChip label="Your Customer ID" value={customer.customerCode} />}
+          {customer && <IdChip label={t("Your Customer ID")} value={customer.customerCode} />}
         </div>
       </Card>
 
       {returning.length > 0 && (
-        <Card title="Coming back to you">
+        <Card title={t("Coming back to you")}>
           <ul className="divide-y divide-border">
             {returning.map((o) => {
               const collect = !o.deliveryStatus && !!o.readyAt;
-              const headline = !o.readyAt
-                ? "Being washed"
-                : collect
-                  ? "Ready to collect at the store"
-                  : o.deliveryStatus === "OUT"
-                    ? "Out for delivery"
-                    : o.deliveryStatus === "ASSIGNED"
-                      ? "A driver is collecting it from the store"
-                      : "Ready, a driver will bring it soon";
+              const headline = t(
+                !o.readyAt
+                  ? "Being washed"
+                  : collect
+                    ? "Ready to collect at the store"
+                    : o.deliveryStatus === "OUT"
+                      ? "Out for delivery"
+                      : o.deliveryStatus === "ASSIGNED"
+                        ? "A driver is collecting it from the store"
+                        : "Ready, a driver will bring it soon",
+              );
               return (
                 <li key={o.id} className="grid gap-5 py-5 first:pt-0 last:pb-0 sm:grid-cols-2">
                   <div className="space-y-3">
@@ -221,14 +223,14 @@ export default async function CustomerOverview() {
                       <p className="font-mono text-xs text-muted">{orderLabel(o)}</p>
                       <p className="text-lg font-semibold">{headline}</p>
                       {(o.deliveryAttempts ?? 0) > 0 && o.deliveryStatus === "WAITING" && (
-                        <p className="text-sm text-warn">We missed you last time. Your laundry will try again soon.</p>
+                        <p className="text-sm text-warn">{t("We missed you last time. Your laundry will try again soon.")}</p>
                       )}
                     </div>
                     {o.deliveryCode && o.readyAt && (
                       <div className="rounded-[10px] border border-border bg-ink/[0.03] px-4 py-3">
-                        <p className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">Your handover code</p>
+                        <p className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">{t("Your handover code")}</p>
                         <p className="mt-1 font-mono text-3xl font-semibold tracking-[0.3em] tabular-nums">{o.deliveryCode}</p>
-                        <p className="mt-1 text-xs text-secondary">{collect ? "Show it at the store." : "Tell it to the driver at your door."}</p>
+                        <p className="mt-1 text-xs text-secondary">{t(collect ? "Show it at the store." : "Tell it to the driver at your door.")}</p>
                       </div>
                     )}
                   </div>
@@ -241,33 +243,33 @@ export default async function CustomerOverview() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="Active pickup" className="lg:col-span-2" action={active && <OrderStatusBadge status={active.status} order={active} />}>
+        <Card title={t("Active pickup")} className="lg:col-span-2" action={active && <OrderStatusBadge status={active.status} order={active} />}>
           {active ? (
             <div className="grid gap-6 sm:grid-cols-2">
               <StatusTimeline order={active} />
               <dl className="space-y-3 text-sm">
                 <div>
-                  <dt className="text-muted">Order</dt>
+                  <dt className="text-muted">{t("Order")}</dt>
                   <dd className="font-mono">{orderLabel(active)}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted">Weight</dt>
-                  <dd className="tabular-nums">{active.weightKg > 0 ? `${fmt.weight(active.weightKg)} · ${fmt.money(active.amountDue)}` : "Weighed at the door"}</dd>
+                  <dt className="text-muted">{t("Weight")}</dt>
+                  <dd className="tabular-nums">{active.weightKg > 0 ? `${fmt.weight(active.weightKg)} · ${fmt.money(active.amountDue)}` : t("Weighed at the door")}</dd>
                 </div>
                 {active.pickupAfter && (
                   <div>
-                    <dt className="text-muted">{active.roundAccountId ? "Collection" : "Booked for"}</dt>
+                    <dt className="text-muted">{t(active.roundAccountId ? "Collection" : "Booked for")}</dt>
                     <dd>{fmt.dateTime(active.pickupAfter)}</dd>
                   </div>
                 )}
                 <div>
-                  <dt className="text-muted">Pickup address</dt>
+                  <dt className="text-muted">{t("Pickup address")}</dt>
                   <dd>{active.address}</dd>
                 </div>
                 {cancellable && (
                   <form action={cancelMyBooking}>
                     <input type="hidden" name="orderId" value={active.id} />
-                    <button className="btn-ghost rounded-full px-3.5 py-1.5 text-xs text-critical">Cancel this pickup</button>
+                    <button className="btn-ghost rounded-full px-3.5 py-1.5 text-xs text-critical">{t("Cancel this pickup")}</button>
                   </form>
                 )}
               </dl>
@@ -275,11 +277,11 @@ export default async function CustomerOverview() {
           ) : business ? (
             <BookPickup action={bookPickup} address={lastAddress} business={business.name} />
           ) : (
-            <EmptyState>No pickup in progress. Join your laundry first, then book pickups here.</EmptyState>
+            <EmptyState>{t("No pickup in progress. Join your laundry first, then book pickups here.")}</EmptyState>
           )}
         </Card>
 
-        <Card title="My basket" action={device && <OnlineBadge online={isDeviceOnline(device)} />}>
+        <Card title={t("My basket")} action={device && <OnlineBadge online={isDeviceOnline(device)} />}>
           {device ? (
             <div className="space-y-4">
               {device.lastWeightKg !== undefined && (
@@ -290,16 +292,16 @@ export default async function CustomerOverview() {
               )}
               <FillBar weightKg={device.lastWeightKg} targetKg={device.targetKg} />
               <p className="text-xs text-muted">
-                {device.lastSeenAt ? `Last update ${timeAgo(device.lastSeenAt, now())}. ` : ""}Change your target or
-                tare the scale from the Telegram bot.
+                {device.lastSeenAt ? `${t("Last update {ago}.", { ago: timeAgo(device.lastSeenAt, now()) })} ` : ""}
+                {t("Change your target or tare the scale from the Telegram bot.")}
               </p>
             </div>
           ) : (
             <div className="space-y-3 py-4 text-center text-sm text-muted">
-              <p>No basket linked yet. You can still book pickups here.</p>
+              <p>{t("No basket linked yet. You can still book pickups here.")}</p>
               {!customer?.telegramId && (
                 <Link href="/app/settings" className="text-accent transition-colors hover:text-accent-2">
-                  Link your Telegram account →
+                  {t("Link your Telegram account")} →
                 </Link>
               )}
             </div>
@@ -308,28 +310,34 @@ export default async function CustomerOverview() {
       </div>
 
       {business && rounds.length > 0 && (
-        <Card title="Your hostel or PG" action={myRound ? <Badge tone="good">{myRound.name}</Badge> : undefined}>
+        <Card title={t("Your hostel or PG")} action={myRound ? <Badge tone="good">{myRound.name}</Badge> : undefined}>
           <div className="space-y-4">
             {myRound?.nextAt && (
               <div className="rounded-[10px] border border-border p-4">
                 <p className="text-sm text-secondary">
-                  Next collection: <span className="font-semibold text-fg">{fmt.dateTime(myRound.nextAt)}</span>
-                  {myRound.cutoffMinutes > 0 ? ` · sign up until ${fmt.dateTime(new Date(new Date(myRound.nextAt).getTime() - myRound.cutoffMinutes * 60_000).toISOString())}` : ""}
+                  {t("Next collection:")} <span className="font-semibold text-fg">{fmt.dateTime(myRound.nextAt)}</span>
+                  {myRound.cutoffMinutes > 0 ? ` · ${t("sign up until")} ${fmt.dateTime(new Date(new Date(myRound.nextAt).getTime() - myRound.cutoffMinutes * 60_000).toISOString())}` : ""}
                 </p>
                 {myBag ? (
                   <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <Badge tone="good">You&apos;re on it · bag #{myBag.number}</Badge>
+                    <Badge tone="good">{t("You're on it · bag #{n}", { n: myBag.number })}</Badge>
                     {myBag.status === "PENDING" && (
                       <form action={cancelMyBooking}>
                         <input type="hidden" name="orderId" value={myBag.id} />
-                        <button className="text-sm text-secondary hover:text-critical">Not this time</button>
+                        <button className="text-sm text-secondary hover:text-critical">{t("Not this time")}</button>
                       </form>
                     )}
                   </div>
                 ) : (
                   <div className="mt-3">
-                    <ActionForm action={joinNextRound} submitLabel="🧺 I have clothes this time">
-                      <p className="text-xs text-muted">Leave your bag ready; the driver weighs it and you pay for the weight{myRound.billing === "account" ? " on your hostel's monthly bill" : ""}.</p>
+                    <ActionForm action={joinNextRound} submitLabel={`🧺 ${t("I have clothes this time")}`}>
+                      <p className="text-xs text-muted">
+                        {t(
+                          myRound.billing === "account"
+                            ? "Leave your bag ready; the driver weighs it and you pay for the weight on your hostel's monthly bill."
+                            : "Leave your bag ready; the driver weighs it and you pay for the weight.",
+                        )}
+                      </p>
                     </ActionForm>
                   </div>
                 )}
@@ -341,7 +349,7 @@ export default async function CustomerOverview() {
       )}
 
       {business && autopayGateway && (
-        <Card title="Pay automatically">
+        <Card title={t("Pay automatically")}>
           <AutopayCard
             status={autopay}
             start={startAutopay}
@@ -352,18 +360,22 @@ export default async function CustomerOverview() {
         </Card>
       )}
 
-      <Card title="Invoices due">
+      <Card title={t("Invoices due")}>
         {weighing.length > 0 && (
           <p className="mb-4 rounded-[8px] border border-border px-3 py-2 text-sm text-secondary">
-            ⚖️ Being weighed at {business?.name ?? "your laundry"}: {weighing.map((o) => `#${o.deviceOrderId}`).join(", ")}. Your bill appears here once it&apos;s weighed.
+            ⚖️{" "}
+            {t("Being weighed at {business}: {orders}. Your bill appears here once it's weighed.", {
+              business: business?.name ?? t("your laundry"),
+              orders: weighing.map((o) => `#${o.deviceOrderId}`).join(", "),
+            })}
           </p>
         )}
-        {unpaid.length === 0 && verifying.length === 0 && weighing.length === 0 && <EmptyState>You&apos;re all paid up.</EmptyState>}
+        {unpaid.length === 0 && verifying.length === 0 && weighing.length === 0 && <EmptyState>{t("You're all paid up.")}</EmptyState>}
         {unpaid.length > 0 && !canPay && !gateway && (
           <p className="mb-4 rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
             {business
-              ? `${business.name} hasn't set up UPI payments yet. Pay them directly, and they'll mark it paid.`
-              : "Connect to your laundry above to pay these invoices."}
+              ? t("{business} hasn't set up UPI payments yet. Pay them directly, and they'll mark it paid.", { business: business.name })
+              : t("Connect to your laundry above to pay these invoices.")}
           </p>
         )}
         <ul className="divide-y divide-border">
@@ -373,13 +385,13 @@ export default async function CustomerOverview() {
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
                 <div className="text-sm">
                   <p className="font-medium">
-                    Pickup {orderLabel(o)} · {fmt.date(o.createdAt)}
+                    {t("Pickup")} {orderLabel(o)} · {fmt.date(o.createdAt)}
                   </p>
                   <p className="text-muted tabular-nums">
                     {fmt.weight(o.weightKg)} · {fmt.money(o.amountDue)}
                     {o.creditApplied ? (
                       <span className="ml-1.5 text-accent">
-                        (basket credit −{fmt.money(o.creditApplied)})
+                        ({t("basket credit")} −{fmt.money(o.creditApplied)})
                       </span>
                     ) : null}
                   </p>
@@ -397,7 +409,7 @@ export default async function CustomerOverview() {
                     options={other.find((p) => p.order.id === o.id)!.options}
                     amountLabel={fmt.money(o.amountDue)}
                     payeeName={business.upiName ?? business.name}
-                    note={`${business.name} marks it paid when the money arrives.`}
+                    note={t("{business} marks it paid when the money arrives.", { business: business.name })}
                   />
                 )}
                 {pay && business && (
@@ -407,7 +419,7 @@ export default async function CustomerOverview() {
                     amountLabel={fmt.money(o.amountDue)}
                     payeeName={business.upiName ?? business.name}
                     payeeUpiId={business.upiId!}
-                    note={`${business.name} marks it paid when the money arrives.`}
+                    note={t("{business} marks it paid when the money arrives.", { business: business.name })}
                   />
                 )}
               </li>
@@ -417,19 +429,19 @@ export default async function CustomerOverview() {
             <li key={o.id} className="flex flex-wrap items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
               <div className="text-sm">
                 <p className="font-medium">
-                  Pickup {orderLabel(o)} · {fmt.money(o.amountDue)}
+                  {t("Pickup")} {orderLabel(o)} · {fmt.money(o.amountDue)}
                 </p>
                 <p className="text-muted">
                   {o.paymentMethod && o.paymentMethod !== "UPI" ? methodName(o.paymentMethod) : "UPI"} ref <span className="font-mono">{o.paymentRef}</span>
                 </p>
               </div>
-              <Badge tone="warn" icon="…">Awaiting confirmation</Badge>
+              <Badge tone="warn" icon="…">{t("Awaiting confirmation")}</Badge>
             </li>
           ))}
         </ul>
       </Card>
 
-      <Card title="Recent orders" action={<Link href="/app/orders" className="text-sm text-accent transition-colors hover:text-accent-2">View all →</Link>}>
+      <Card title={t("Recent orders")} action={<Link href="/app/orders" className="text-sm text-accent transition-colors hover:text-accent-2">{t("View all")} →</Link>}>
         <OrderTable orders={orders.slice(0, 5)} />
       </Card>
     </div>

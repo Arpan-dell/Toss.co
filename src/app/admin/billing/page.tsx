@@ -15,7 +15,7 @@ import { requireRole } from "@/lib/session";
 import { PlanCompare } from "./plan-compare";
 import { AutoRenew } from "./auto-renew";
 
-export const metadata: Metadata = { title: "Billing" };
+export const metadata: Metadata = { title: "My plan" };
 
 const MONTH_OPTIONS = [1, 3, 6, 12];
 const STATE_BADGE = {
@@ -66,7 +66,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
 
   return (
     <div className="stagger mx-auto w-full max-w-3xl space-y-6">
-      <PageTitle kicker="Toss subscription">Billing</PageTitle>
+      <PageTitle kicker="Toss subscription">My plan</PageTitle>
 
       <Card title="Your plan" action={<Badge tone={badge.tone} icon="●">{badge.label}</Badge>}>
         <p className="text-sm text-secondary">

@@ -14,7 +14,7 @@ import { startOfDay } from "@/lib/route-distance";
 import { realBaskets } from "@/lib/rounds";
 import type { Order } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Fleet" };
+export const metadata: Metadata = { title: "Drivers" };
 
 function signalLabel(rssi: number) {
   if (rssi >= -60) return "Strong";
@@ -53,7 +53,7 @@ export default async function Fleet() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Baskets & drivers">Fleet</PageTitle>
+      <PageTitle kicker="Drivers & baskets">Drivers</PageTitle>
 
       <Card title={`Drivers (${drivers.length})`}>
         <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">

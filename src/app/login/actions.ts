@@ -8,6 +8,7 @@ import { isSupabaseConfigured, supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { allow, clientIp } from "@/lib/rate-limit";
 import { detectCountry } from "@/lib/regions";
+import { getT } from "@/lib/i18n/server";
 
 export interface AuthState {
   error?: string;
@@ -82,7 +83,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   if (error) return { error: error.message };
 
   // With email confirmation on, there is no session until the link is clicked.
-  if (!data.session) return { message: `We sent a confirmation link to ${email}. Open it to finish signing up.` };
+  if (!data.session) return { message: (await getT())("We sent a confirmation link to {email}. Open it to finish signing up.", { email }) };
   redirect(nextFor(formData));
 }
 

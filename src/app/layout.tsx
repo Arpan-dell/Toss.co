@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
-import { Geist_Mono, Outfit } from "next/font/google";
+import { Geist_Mono, Noto_Sans_Devanagari, Outfit } from "next/font/google";
 import { Effects } from "@/components/effects";
 import { CookieNotice } from "@/components/cookie-notice";
 import { themeInitScript } from "@/components/theme-toggle";
+import { LANG_COOKIE } from "@/lib/i18n";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -11,6 +12,15 @@ const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800", "900"],
+});
+
+// Hindi: Outfit has no Devanagari letters, so Hindi text falls through to this (see --font-sans in globals.css).
+// Only downloaded when a page actually shows Devanagari, thanks to the font's unicode-range.
+const devanagari = Noto_Sans_Devanagari({
+  variable: "--font-devanagari",
+  subsets: ["devanagari"],
+  weight: ["400", "500", "600", "700"],
+  preload: false,
 });
 
 const geistMono = Geist_Mono({
@@ -37,13 +47,17 @@ export const viewport: Viewport = {
   ],
 };
 
+// <html lang> for screen readers and the browser's own translate offer: Hindi when the page is in Hindi. Set here
+// before paint because this layout is static and can't read the cookie.
+const langInitScript = `try{if(/(?:^|; )${LANG_COOKIE}=hi(?:;|$)/.test(document.cookie)||(location.pathname+"/").indexOf("/hi/")===0)document.documentElement.lang="hi"}catch(e){}`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" data-theme="light" suppressHydrationWarning className={`${outfit.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" data-theme="light" suppressHydrationWarning className={`${outfit.variable} ${devanagari.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         {/* first thing in <body>, so it still runs before anything paints. Not in a hand-written <head>: chunks
             loaded during hydration are appended to <head>, and React then finds nodes it didn't render there. */}
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript + langInitScript }} />
         <Effects />
         {/* keyboard and screen-reader users jump straight past the navigation */}
         <a href="#main" className="skip-link">

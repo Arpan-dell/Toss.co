@@ -11,6 +11,7 @@ import { parseSlot } from "../rounds";
 import { getSession } from "../session";
 import { supabaseAdmin } from "../supabase/admin";
 import { text, type FormState } from "./shared";
+import { getT } from "../i18n/server";
 
 // Booking pickups without a basket, and hostel/PG rounds (migration 0042). Each action checks the signed-in person
 // first; the writes then run on the server (bookings.ts), limited to that person's own business or account.
@@ -83,8 +84,10 @@ export async function bookPickup(_prev: FormState, fd: FormData): Promise<FormSt
   });
   if ("error" in r) return { error: r.error };
   refresh();
-  if (slot.at) return { message: `Booked. A driver will come at the time you chose. Pickup #${r.number}.` };
-  return { message: r.dispatched ? `Booked. A driver is on the way. Pickup #${r.number}.` : `Booked (pickup #${r.number}). We'll send it to the next driver who's free.` };
+  const t = await getT();
+  const n = { n: r.number };
+  if (slot.at) return { message: t("Booked. A driver will come at the time you chose. Pickup #{n}.", n) };
+  return { message: r.dispatched ? t("Booked. A driver is on the way. Pickup #{n}.", n) : t("Booked (pickup #{n}). We'll send it to the next driver who's free.", n) };
 }
 
 /** Customer: cancel a booking that no driver has taken yet. */

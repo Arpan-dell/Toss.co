@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "./locale";
 
 // A Customer ID / Business ID shown big, with one-tap copy so it's easy to share.
 export function IdChip({ value, label }: { value: string; label: string }) {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -19,13 +21,13 @@ export function IdChip({ value, label }: { value: string; label: string }) {
         }
       }}
       className="group inline-flex items-center gap-3 rounded-[8px] border border-accent/30 bg-accent/[0.07] px-4 py-2 text-left transition-colors hover:border-accent/60"
-      aria-label={`${label} ${value}. Click to copy.`}
+      aria-label={`${label} ${value}. ${t("Click to copy.")}`}
     >
       <span>
         <span className="block text-[10px] tracking-[0.14em] text-muted uppercase">{label}</span>
         <span className="font-mono text-lg font-semibold tracking-wider text-fg">{value}</span>
       </span>
-      <span className="text-xs text-accent">{copied ? "Copied ✓" : "Copy"}</span>
+      <span className="text-xs text-accent">{copied ? `${t("Copied")} ✓` : t("Copy")}</span>
     </button>
   );
 }

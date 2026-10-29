@@ -30,19 +30,19 @@ export type Period = { key: "today" | "yesterday" | "week" | "lastweek" | "month
 /** The pages each role may be sent to, with the words people use for them. */
 export const PAGES: Record<AssistantRole, { href: string; label: string; words: string[] }[]> = {
   CUSTOMER: [
-    { href: "/app", label: "Overview", words: ["home", "overview", "dashboard"] },
-    { href: "/app/orders", label: "Order history", words: ["order history", "orders", "history", "past orders", "invoices", "bills"] },
+    { href: "/app", label: "Home", words: ["home", "overview", "dashboard"] },
+    { href: "/app/orders", label: "My orders", words: ["my orders", "order history", "orders", "history", "past orders", "invoices", "bills"] },
     { href: "/laundries", label: "Find a laundry", words: ["find a laundry", "laundries", "change laundry", "switch laundry"] },
     { href: "/app/settings", label: "Settings", words: ["settings", "profile", "account"] },
   ],
   MANAGER: [
-    { href: "/admin", label: "Live board", words: ["live board", "dashboard", "home", "board"] },
+    { href: "/admin", label: "Today", words: ["today", "live board", "dashboard", "home", "board"] },
     { href: "/admin/orders", label: "Orders", words: ["orders", "order list", "pickups"] },
     { href: "/admin/payments", label: "Payments", words: ["payments", "unpaid", "dues", "collections"] },
     { href: "/admin/customers", label: "Customers", words: ["customers", "clients"] },
-    { href: "/admin/fleet", label: "Fleet", words: ["fleet", "drivers", "baskets", "devices"] },
+    { href: "/admin/fleet", label: "Drivers", words: ["drivers", "fleet", "baskets", "devices"] },
     { href: "/admin/driver-pay", label: "Driver pay", words: ["driver pay", "salary", "salaries", "wages"] },
-    { href: "/admin/stock", label: "Supplies", words: ["supplies", "stock", "inventory", "detergent"] },
+    { href: "/admin/stock", label: "Stock", words: ["stock", "supplies", "inventory", "detergent"] },
     { href: "/admin/profit", label: "Profit", words: ["profit", "earnings", "revenue", "income"] },
     { href: "/admin/ai", label: "Toss AI", words: ["toss ai", "ai", "briefing", "insights"] },
     { href: "/admin/analytics", label: "Analytics", words: ["analytics", "charts", "trends"] },
@@ -50,7 +50,7 @@ export const PAGES: Record<AssistantRole, { href: string; label: string; words: 
     { href: "/admin/accounts", label: "Business accounts", words: ["business accounts", "accounts", "pg", "hostel"] },
     { href: "/admin/branches", label: "Branches", words: ["branches", "branch"] },
     { href: "/admin/business", label: "Business details", words: ["business details", "business", "store", "prices", "price"] },
-    { href: "/admin/billing", label: "Billing", words: ["billing", "subscription", "plan", "pro"] },
+    { href: "/admin/billing", label: "My plan", words: ["my plan", "billing", "subscription", "plan", "pro"] },
     { href: "/admin/settings", label: "Settings", words: ["settings"] },
   ],
   OWNER: [

@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { CheckCircle, Circle } from "@phosphor-icons/react";
 import { PASSWORD_MAX, PASSWORD_RULES } from "@/lib/password-rules";
+import { useT } from "./locale";
 
 // The new-password rules as a live checklist: each one ticks as soon as the typed password meets it. The server
 // checks the same rules (lib/password-rules.ts), so this only saves a round trip.
 export function PasswordChecklist({ value, id }: { value: string; id?: string }) {
+  const t = useT();
   return (
     <ul id={id} aria-live="polite" className="mt-2 grid gap-1 text-xs sm:grid-cols-2">
       {PASSWORD_RULES.map((r) => {
@@ -15,8 +17,8 @@ export function PasswordChecklist({ value, id }: { value: string; id?: string })
           <li key={r.id} className={`flex items-center gap-1.5 ${ok ? "text-good" : "text-muted"}`}>
             {ok ? <CheckCircle size={14} weight="fill" aria-hidden /> : <Circle size={14} aria-hidden />}
             <span>
-              {r.label}
-              <span className="sr-only">{ok ? " (done)" : " (missing)"}</span>
+              {t(r.label)}
+              <span className="sr-only">{t(ok ? " (done)" : " (missing)")}</span>
             </span>
           </li>
         );

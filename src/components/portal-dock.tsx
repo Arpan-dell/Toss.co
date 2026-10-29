@@ -29,6 +29,7 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { Dock, DockIcon, DockItem, DockLabel } from "@/components/core/dock";
+import { useT } from "./locale";
 
 // Layouts are Server Components and can't pass icon components across, so nav items name their icon.
 export const NAV_ICONS = {
@@ -73,8 +74,9 @@ export function isNavItemOn(item: PortalNavItem, items: PortalNavItem[], pathnam
 export function PortalDock({ items }: { items: PortalNavItem[] }) {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useT();
   return (
-    <nav aria-label="Dashboard" className="fixed bottom-3 left-1/2 z-40 hidden max-w-[calc(100vw-1.5rem)] -translate-x-1/2 md:block">
+    <nav data-nav aria-label={t("Dashboard")} className="fixed bottom-3 left-1/2 z-40 hidden max-w-[calc(100vw-1.5rem)] -translate-x-1/2 md:block">
       <Dock className="items-end rounded-2xl border border-ink/15 bg-surface-solid/95 pb-2.5 shadow-[0_20px_50px_-15px_rgb(0_0_0/0.8),inset_0_1px_0_rgb(255_255_255/0.08)] light:shadow-[0_2px_4px_rgb(11_20_48/0.06),0_20px_44px_-14px_rgb(11_20_48/0.4)]">
         {items.map((item) => {
           const on = isNavItemOn(item, items, pathname);

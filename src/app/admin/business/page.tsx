@@ -10,6 +10,7 @@ import { formatterFor, regionOf } from "@/lib/region-format";
 import { requireRole } from "@/lib/session";
 import { ServiceAreaEditor } from "./area-editor";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Business" };
 
 // Settings → Business: who you are and where you are. Price & payments, how you work, and the account have their own pages.
@@ -27,7 +28,7 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
 
       {params.welcome && (
         <p role="status" className="rounded-[8px] border border-good/30 bg-good-bg px-4 py-3 text-sm text-good">
-          Your business is live. Share your Business ID with customers so they can connect to you.
+          <Tr>{"Your business is live. Share your Business ID with customers so they can connect to you."}</Tr>
         </p>
       )}
 
@@ -35,7 +36,7 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
         <div className="flex flex-wrap items-center gap-6">
           <IdChip label="Business ID" value={tenant.joinCode} />
           <p className="max-w-sm text-sm text-secondary">
-            Customers enter this after signing up on Toss. Their baskets, pickups and invoices then show up here, and they pay you directly.
+            <Tr>{"Customers enter this after signing up on Toss. Their baskets, pickups and invoices then show up here, and they pay you directly."}</Tr>
           </p>
         </div>
       </Card>
@@ -74,7 +75,7 @@ export default async function Business({ searchParams }: PageProps<"/admin/busin
 
       <Card title="Service area">
         <p className="mb-4 text-sm text-secondary">
-          Where you pick up from. Toss lists you for customers inside this circle in <span className="text-fg">Find a laundry</span>, on the website and
+          <Tr>{"Where you pick up from. Toss lists you for customers inside this circle in"}</Tr> <span className="text-fg"><Tr>{"Find a laundry"}</Tr></span>, on the website and
           in Telegram.
         </p>
         <ServiceAreaEditor lat={tenant.storeLat} lng={tenant.storeLng} radiusKm={tenant.serviceRadiusKm} listed={tenant.listed} />

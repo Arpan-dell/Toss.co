@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ActionForm, Field, fieldClass } from "@/components/action-form";
 import type { FormState } from "@/lib/actions/shared";
 
+import { Tr } from "@/components/locale";
 // The laundry books a pickup for someone who phoned or messaged: name, number, address, now or a time. If the number
 // belongs to a Toss customer of this laundry, it goes on their account; otherwise on the pickup for the driver.
 export function NewPickup({ action }: { action: (prev: FormState, fd: FormData) => Promise<FormState> }) {
@@ -26,7 +27,7 @@ export function NewPickup({ action }: { action: (prev: FormState, fd: FormData) 
       </Field>
       <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
         <fieldset>
-          <legend className="mb-1.5 text-sm text-secondary">When</legend>
+          <legend className="mb-1.5 text-sm text-secondary"><Tr>{"When"}</Tr></legend>
           <div className="flex flex-wrap gap-2">
             {[
               { v: false, label: "Now" },

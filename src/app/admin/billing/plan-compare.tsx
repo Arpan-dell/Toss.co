@@ -2,6 +2,7 @@ import { Check, Minus } from "@phosphor-icons/react/dist/ssr";
 import { Card } from "@/components/ui";
 import { PLAN_FEATURES } from "@/lib/plan-features";
 
+import { Tr } from "@/components/locale";
 // Free vs Pro, side by side, with the business's current plan marked.
 export function PlanCompare({ current }: { current: "FREE" | "PRO" | null }) {
   const cell = (v: boolean | string) =>
@@ -15,7 +16,7 @@ export function PlanCompare({ current }: { current: "FREE" | "PRO" | null }) {
   const head = (label: string, on: boolean) => (
     <th scope="col" className={`w-24 px-2 py-2 text-center font-mono text-[11px] tracking-[0.12em] uppercase ${on ? "text-accent" : "text-muted"}`}>
       {label}
-      {on && <span className="block text-[9px] tracking-[0.08em] normal-case">your plan</span>}
+      {on && <span className="block text-[9px] tracking-[0.08em] normal-case"><Tr>{"your plan"}</Tr></span>}
     </th>
   );
   return (
@@ -24,7 +25,7 @@ export function PlanCompare({ current }: { current: "FREE" | "PRO" | null }) {
         <thead>
           <tr className="border-b border-border">
             <th scope="col" className="py-2 text-left font-mono text-[11px] tracking-[0.12em] text-muted uppercase">
-              Your dashboard
+              <Tr>{"Your dashboard"}</Tr>
             </th>
             {head("Free", current === "FREE")}
             {head("Pro", current === "PRO")}
@@ -40,7 +41,7 @@ export function PlanCompare({ current }: { current: "FREE" | "PRO" | null }) {
           ))}
         </tbody>
       </table>
-      <p className="mt-3 text-xs text-muted">Your customers are served the same on both plans.</p>
+      <p className="mt-3 text-xs text-muted"><Tr>{"Your customers are served the same on both plans."}</Tr></p>
     </Card>
   );
 }

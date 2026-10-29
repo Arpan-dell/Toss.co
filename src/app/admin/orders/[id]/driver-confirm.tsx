@@ -4,6 +4,7 @@ import { remindDriver } from "@/lib/actions/delivery";
 import { timeAgo } from "@/lib/format";
 import { myFormat } from "@/lib/my-format";
 
+import { Tr } from "@/components/locale";
 // Under the driver's name: did the job reach them? "Got it" (or acting on it) confirms; until then the manager can
 // remind them once, which replaces the earlier message instead of adding another.
 export async function DriverConfirm({
@@ -25,14 +26,14 @@ export async function DriverConfirm({
   if (ackAt) {
     return (
       <span className="mt-1 flex flex-wrap items-center gap-2">
-        <Badge tone="good">✓ Confirmed</Badge>
+        <Badge tone="good"><Tr>{"✓ Confirmed"}</Tr></Badge>
         <span className="text-xs text-muted">{fmt.dateTime(ackAt)}</span>
       </span>
     );
   }
   return (
     <span className="mt-1 flex flex-wrap items-center gap-2">
-      <Badge tone="warn">⏳ Not confirmed yet</Badge>
+      <Badge tone="warn"><Tr>{"⏳ Not confirmed yet"}</Tr></Badge>
       {sentAt && <span className="text-xs text-muted">sent {timeAgo(sentAt, now)}</span>}
       <ConfirmButton
         action={remindDriver}

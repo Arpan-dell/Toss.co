@@ -8,6 +8,7 @@ import { METHOD_LABEL } from "@/lib/pay-methods";
 import { COMMON_TIMEZONES, COUNTRIES, CURRENCIES, countryOf, type PayMethodId, type WeightUnit } from "@/lib/regions";
 import type { PayMethods } from "@/lib/types";
 
+import { Tr } from "@/components/locale";
 export type PaymentsFormValues = {
   country: string;
   currency: string;
@@ -44,10 +45,10 @@ export function PaymentsForm({ v }: { v: PaymentsFormValues }) {
   return (
     <ActionForm action={updatePayments} submitLabel="Save with password">
       <fieldset className="space-y-3">
-        <legend className="mb-1 text-sm font-semibold text-fg">Where you are</legend>
+        <legend className="mb-1 text-sm font-semibold text-fg"><Tr>{"Where you are"}</Tr></legend>
         {!v.regionReady && (
           <p className="rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-xs text-warn">
-            Countries other than India switch on shortly. Until then, prices are in rupees.
+            <Tr>{"Countries other than India switch on shortly. Until then, prices are in rupees."}</Tr>
           </p>
         )}
         <div className="grid gap-3 sm:grid-cols-2">
@@ -88,7 +89,7 @@ export function PaymentsForm({ v }: { v: PaymentsFormValues }) {
             </select>
           </Field>
           <fieldset>
-            <legend className="mb-1.5 block text-sm text-secondary">Weigh in</legend>
+            <legend className="mb-1.5 block text-sm text-secondary"><Tr>{"Weigh in"}</Tr></legend>
             <div className="flex gap-2">
               {(["kg", "lb"] as const).map((u) => (
                 <label
@@ -105,7 +106,7 @@ export function PaymentsForm({ v }: { v: PaymentsFormValues }) {
       </fieldset>
 
       <fieldset className="space-y-3 border-t border-border pt-4">
-        <legend className="mb-1 text-sm font-semibold text-fg">What customers pay</legend>
+        <legend className="mb-1 text-sm font-semibold text-fg"><Tr>{"What customers pay"}</Tr></legend>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={`Price per ${unit} (${currency})`} hint="Applies to new pickups. Existing bills keep their amount.">
             <input name="price" type="number" required min={0.01} max={10000} step="0.01" defaultValue={v.price} key={`${unit}`} className={fieldClass} />
@@ -128,8 +129,8 @@ export function PaymentsForm({ v }: { v: PaymentsFormValues }) {
       </fieldset>
 
       <fieldset className="space-y-3 border-t border-border pt-4">
-        <legend className="mb-1 text-sm font-semibold text-fg">How customers pay you</legend>
-        <p className="text-xs text-muted">Money goes straight to you. Toss never holds it and takes no fees.</p>
+        <legend className="mb-1 text-sm font-semibold text-fg"><Tr>{"How customers pay you"}</Tr></legend>
+        <p className="text-xs text-muted"><Tr>{"Money goes straight to you. Toss never holds it and takes no fees."}</Tr></p>
         {(india || v.upiId) && (
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label={india ? "UPI ID" : "UPI ID (optional)"} hint="Customers in India pay this by UPI.">
@@ -146,7 +147,7 @@ export function PaymentsForm({ v }: { v: PaymentsFormValues }) {
               <MethodFields key={id} id={id} m={m} />
             ))}
             <details className="rounded-[8px] border border-border px-3 py-2" open={others.some((id) => has(m, id))}>
-              <summary className="cursor-pointer text-sm text-secondary">More ways to get paid</summary>
+              <summary className="cursor-pointer text-sm text-secondary"><Tr>{"More ways to get paid"}</Tr></summary>
               <div className="mt-3 space-y-3">
                 {others.map((id) => (
                   <MethodFields key={id} id={id} m={m} />

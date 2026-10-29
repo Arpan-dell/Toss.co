@@ -10,6 +10,7 @@ import { profitReport } from "@/lib/profit-report";
 import { getSession } from "@/lib/session";
 import { myFormat } from "@/lib/my-format";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Profit" };
 
 // Profit per order and per customer (Pro): what each pickup earned after supplies, running costs and driver pay,
@@ -55,11 +56,11 @@ export default async function Profit() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Pro · last 30 days">Profit</PageTitle>
+      <PageTitle kicker="Pro · last 30 days"><Tr>{"Profit"}</Tr></PageTitle>
 
       {noCosts && (
         <p role="status" className="rounded-[10px] border border-warn/30 bg-warn-bg px-4 py-3 text-sm text-warn">
-          Add your supplies (with their cost) and your running costs below, or profit just equals revenue.
+          <Tr>{"Add your supplies (with their cost) and your running costs below, or profit just equals revenue."}</Tr>
         </p>
       )}
 
@@ -73,7 +74,7 @@ export default async function Profit() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Customers by profit per kg">
           {ranked.length === 0 ? (
-            <EmptyState>Customers with two or more pickups this month show here.</EmptyState>
+            <EmptyState><Tr>{"Customers with two or more pickups this month show here."}</Tr></EmptyState>
           ) : (
             <ol className="divide-y divide-border text-sm">
               {[...ranked.slice(0, 5), ...(ranked.length > 8 ? ranked.slice(-3) : [])].map((c, i, all) => (
@@ -113,19 +114,19 @@ export default async function Profit() {
 
       <Card title="Recent orders">
         {rows.length === 0 ? (
-          <EmptyState>No completed pickups in the last 30 days.</EmptyState>
+          <EmptyState><Tr>{"No completed pickups in the last 30 days."}</Tr></EmptyState>
         ) : (
           <div className="-mx-2 overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left font-mono text-[11px] tracking-[0.1em] text-muted uppercase">
-                  <th className="px-2 py-2 font-normal">Order</th>
-                  <th className="px-2 py-2 font-normal">Customer</th>
-                  <th className="px-2 py-2 text-right font-normal">Weight</th>
-                  <th className="px-2 py-2 text-right font-normal">Earned</th>
-                  <th className="px-2 py-2 text-right font-normal">Costs</th>
-                  <th className="px-2 py-2 text-right font-normal">Profit</th>
-                  <th className="px-2 py-2 text-right font-normal">Per kg</th>
+                  <th className="px-2 py-2 font-normal"><Tr>{"Order"}</Tr></th>
+                  <th className="px-2 py-2 font-normal"><Tr>{"Customer"}</Tr></th>
+                  <th className="px-2 py-2 text-right font-normal"><Tr>{"Weight"}</Tr></th>
+                  <th className="px-2 py-2 text-right font-normal"><Tr>{"Earned"}</Tr></th>
+                  <th className="px-2 py-2 text-right font-normal"><Tr>{"Costs"}</Tr></th>
+                  <th className="px-2 py-2 text-right font-normal"><Tr>{"Profit"}</Tr></th>
+                  <th className="px-2 py-2 text-right font-normal"><Tr>{"Per kg"}</Tr></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">

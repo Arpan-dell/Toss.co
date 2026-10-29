@@ -8,6 +8,7 @@ import { getOfferStats, getTenantById } from "@/lib/data";
 import { planState, tierOf } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Win-back offers" };
 
 // Settings → Win-back offers (Pro): an automatic discount for customers who stopped ordering.
@@ -20,14 +21,14 @@ export default async function Winback() {
 
   return (
     <div className="stagger mx-auto w-full max-w-3xl space-y-6">
-      <PageTitle kicker={pro ? "Settings" : "Settings · Pro"}>Win-back offers</PageTitle>
+      <PageTitle kicker={pro ? "Settings" : "Settings · Pro"}><Tr>{"Win-back offers"}</Tr></PageTitle>
       <BackLink />
 
-      <Card title="Win back quiet customers" action={!pro ? <Link href="/admin/billing" className="font-mono text-[10px] text-accent">PRO · UPGRADE →</Link> : undefined}>
+      <Card title="Win back quiet customers" action={!pro ? <Link href="/admin/billing" className="font-mono text-[10px] text-accent"><Tr>{"PRO · UPGRADE →"}</Tr></Link> : undefined}>
         <p className="mb-4 text-sm text-secondary">
           When a customer hasn&apos;t had a pickup for a while, Toss sends them a discount in the Toss Control bot and on their dashboard. It&apos;s
           applied to their next pickup automatically, valid for 14 days.
-          {!pro && <span className="text-warn"> Paused on Toss Free: offers go out again when you upgrade.</span>}
+          {!pro && <span className="text-warn"> <Tr>{"Paused on Toss Free: offers go out again when you upgrade."}</Tr></span>}
           {offers.sent > 0 && (
             <span className="text-fg">
               {" "}
@@ -38,7 +39,7 @@ export default async function Winback() {
         <ActionForm action={updateWinback} submitLabel="Save offer" className="grid gap-3 sm:grid-cols-2 sm:items-end">
           <label className="flex items-center gap-2 text-sm sm:col-span-2">
             <input type="checkbox" name="enabled" defaultChecked={tenant.winbackEnabled} className="size-4 accent-[var(--color-accent)]" />
-            Send win-back offers
+            <Tr>{"Send win-back offers"}</Tr>
           </label>
           <Field label="After this many days without a pickup">
             <input name="days" type="number" min={7} max={365} step={1} required defaultValue={tenant.winbackDays} className={fieldClass} />

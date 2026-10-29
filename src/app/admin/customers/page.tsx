@@ -8,6 +8,7 @@ import { timeAgo } from "@/lib/format";
 import { requireRole } from "@/lib/session";
 import { myFormat } from "@/lib/my-format";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Customers" };
 
 export default async function Customers({ searchParams }: PageProps<"/admin/customers">) {
@@ -45,7 +46,7 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="People">Customers</PageTitle>
+      <PageTitle kicker="People"><Tr>{"Customers"}</Tr></PageTitle>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatTile label="Customers" value={String(all.length)} />
@@ -75,13 +76,13 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
             <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] tracking-[0.12em] text-muted uppercase">
-                  <th className="px-5 py-2 font-medium">Customer</th>
-                  <th className="px-3 py-2 font-medium">Telegram</th>
-                  <th className="px-3 py-2 text-right font-medium">Baskets</th>
-                  <th className="px-3 py-2 text-right font-medium">Orders</th>
-                  <th className="px-3 py-2 text-right font-medium">Paid</th>
-                  <th className="px-3 py-2 text-right font-medium">Owes</th>
-                  <th className="px-3 py-2 font-medium">Last order</th>
+                  <th className="px-5 py-2 font-medium"><Tr>{"Customer"}</Tr></th>
+                  <th className="px-3 py-2 font-medium"><Tr>{"Telegram"}</Tr></th>
+                  <th className="px-3 py-2 text-right font-medium"><Tr>{"Baskets"}</Tr></th>
+                  <th className="px-3 py-2 text-right font-medium"><Tr>{"Orders"}</Tr></th>
+                  <th className="px-3 py-2 text-right font-medium"><Tr>{"Paid"}</Tr></th>
+                  <th className="px-3 py-2 text-right font-medium"><Tr>{"Owes"}</Tr></th>
+                  <th className="px-3 py-2 font-medium"><Tr>{"Last order"}</Tr></th>
                   <th className="px-5 py-2 font-medium" />
                 </tr>
               </thead>
@@ -93,7 +94,7 @@ export default async function Customers({ searchParams }: PageProps<"/admin/cust
                       <p className="font-mono text-xs text-muted">{c.customerCode}</p>
                     </td>
                     <td className="px-3 py-2.5">
-                      {c.telegramId ? <Badge tone="good" icon="✓">Linked</Badge> : <Badge tone="warn" icon="!">Not linked</Badge>}
+                      {c.telegramId ? <Badge tone="good" icon="✓"><Tr>{"Linked"}</Tr></Badge> : <Badge tone="warn" icon="!"><Tr>{"Not linked"}</Tr></Badge>}
                     </td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{baskets}</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{n}</td>

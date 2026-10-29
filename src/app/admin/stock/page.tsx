@@ -8,6 +8,7 @@ import { getTenantById, listOrders, listSupplies, now, type Supply } from "@/lib
 import { getSession } from "@/lib/session";
 import { myFormat } from "@/lib/my-format";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Stock" };
 
 const UNITS: Supply["unit"][] = ["ml", "l", "g", "kg", "pcs"];
@@ -46,9 +47,9 @@ function SupplyFields({ s }: { s?: Supply }) {
       </div>
       <Field label="Used for" hint="Whites only or coloured only needs drivers to bag them apart (Settings → How you work).">
         <select name="appliesTo" defaultValue={s?.appliesTo ?? "ALL"} className={fieldClass}>
-          <option value="ALL">Every wash</option>
-          <option value="WHITES">Whites only (like bleach)</option>
-          <option value="COLOURED">Coloured only (like colour care)</option>
+          <option value="ALL">{"Every wash"}</option>
+          <option value="WHITES">{"Whites only (like bleach)"}</option>
+          <option value="COLOURED">{"Coloured only (like colour care)"}</option>
         </select>
       </Field>
       <Field label="Supplier's WhatsApp (optional)" hint="Adds a one-tap reorder button.">
@@ -81,11 +82,11 @@ export default async function Stock() {
 
   return (
     <div className="stagger mx-auto w-full max-w-4xl space-y-6">
-      <PageTitle kicker="Pro">Stock</PageTitle>
+      <PageTitle kicker="Pro"><Tr>{"Stock"}</Tr></PageTitle>
 
       <Card title="Stock">
         {supplies.length === 0 ? (
-          <EmptyState>Add your detergent, softener and bags below. Stock then comes down with every completed pickup.</EmptyState>
+          <EmptyState><Tr>{"Add your detergent, softener and bags below. Stock then comes down with every completed pickup."}</Tr></EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {supplies.map((s) => {
@@ -101,7 +102,7 @@ export default async function Stock() {
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <p className="font-medium text-fg">
-                        {s.name} {low && <Badge tone="critical">Low</Badge>}
+                        {s.name} {low && <Badge tone="critical"><Tr>{"Low"}</Tr></Badge>}
                       </p>
                       <p className="text-xs text-muted">
                         {[s.perKg > 0 && `${qty(s.perKg, s.unit)} per kg`, s.perOrder > 0 && `${qty(s.perOrder, s.unit)} per order`].filter(Boolean).join(" + ")}
@@ -124,11 +125,11 @@ export default async function Stock() {
                     </ActionForm>
                     {wa && (
                       <a href={wa} target="_blank" rel="noreferrer" className="btn-ghost inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm text-fg">
-                        <WhatsappLogo size={16} weight="fill" className="text-good" aria-hidden /> Reorder
+                        <WhatsappLogo size={16} weight="fill" className="text-good" aria-hidden /> <Tr>{"Reorder"}</Tr>
                       </a>
                     )}
                     <details className="w-full sm:w-auto">
-                      <summary className="cursor-pointer text-sm text-muted hover:text-fg">Edit</summary>
+                      <summary className="cursor-pointer text-sm text-muted hover:text-fg"><Tr>{"Edit"}</Tr></summary>
                       <div className="mt-3 space-y-3 sm:w-96">
                         <ActionForm action={saveSupply} submitLabel="Save">
                           <input type="hidden" name="id" value={s.id} />

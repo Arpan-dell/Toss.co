@@ -11,6 +11,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { myFormat } from "@/lib/my-format";
 import { subscriptionFormat } from "@/lib/region-format";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Branches" };
 
 type Stats = { pickups: number; kg: number; collected: number; due: number; open: number; late: number; online: number };
@@ -30,7 +31,7 @@ export default async function Branches() {
   if (!main || main.tier !== "PRO") {
     return (
       <div className="stagger space-y-6">
-        <PageTitle kicker="Pro">Branches</PageTitle>
+        <PageTitle kicker="Pro"><Tr>{"Branches"}</Tr></PageTitle>
         <BackLink />
         <Card title="Branches are a Pro feature">
           <div className="space-y-4 text-sm text-secondary">
@@ -40,7 +41,7 @@ export default async function Branches() {
               {sub.money(usd ? platform.usdMonthlyPrice : platform.monthlyPrice)}.
             </p>
             <Link href="/admin/billing" className="btn-primary inline-flex rounded-full px-5 py-2.5 text-sm font-medium">
-              Upgrade to Pro →
+              <Tr>{"Upgrade to Pro →"}</Tr>
             </Link>
           </div>
         </Card>
@@ -82,7 +83,7 @@ export default async function Branches() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker={`Pro · ${branches.length} branch${branches.length === 1 ? "" : "es"} · last 30 days`}>Branches</PageTitle>
+      <PageTitle kicker={`Pro · ${branches.length} branch${branches.length === 1 ? "" : "es"} · last 30 days`}><Tr>{"Branches"}</Tr></PageTitle>
       <BackLink />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -97,15 +98,15 @@ export default async function Branches() {
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-border text-left font-mono text-[11px] tracking-[0.1em] text-muted uppercase">
-                <th className="px-2 py-2 font-normal">Branch</th>
-                <th className="px-2 py-2 text-right font-normal">Pickups</th>
-                <th className="px-2 py-2 text-right font-normal">Collected</th>
-                <th className="px-2 py-2 text-right font-normal">To collect</th>
-                <th className="px-2 py-2 text-right font-normal">Open</th>
-                <th className="px-2 py-2 text-right font-normal">Late</th>
-                <th className="px-2 py-2 text-right font-normal">Drivers on</th>
+                <th className="px-2 py-2 font-normal"><Tr>{"Branch"}</Tr></th>
+                <th className="px-2 py-2 text-right font-normal"><Tr>{"Pickups"}</Tr></th>
+                <th className="px-2 py-2 text-right font-normal"><Tr>{"Collected"}</Tr></th>
+                <th className="px-2 py-2 text-right font-normal"><Tr>{"To collect"}</Tr></th>
+                <th className="px-2 py-2 text-right font-normal"><Tr>{"Open"}</Tr></th>
+                <th className="px-2 py-2 text-right font-normal"><Tr>{"Late"}</Tr></th>
+                <th className="px-2 py-2 text-right font-normal"><Tr>{"Drivers on"}</Tr></th>
                 <th className="px-2 py-2 font-normal">
-                  <span className="sr-only">Switch</span>
+                  <span className="sr-only"><Tr>{"Switch"}</Tr></span>
                 </th>
               </tr>
             </thead>
@@ -119,7 +120,7 @@ export default async function Branches() {
                       <span className="font-medium text-fg">{b.name}</span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
                         <span className="font-mono">{b.joinCode}</span>
-                        {b.main && <Badge tone="neutral">Main</Badge>}
+                        {b.main && <Badge tone="neutral"><Tr>{"Main"}</Tr></Badge>}
                         <Badge tone={b.tier === "PRO" ? "good" : b.tier === "FREE" ? "info" : "critical"}>{b.tier === "PRO" ? "Pro" : b.tier === "FREE" ? "Free" : "Suspended"}</Badge>
                       </span>
                     </td>
@@ -138,7 +139,7 @@ export default async function Branches() {
                       ) : (
                         <form action={switchBranch}>
                           <input type="hidden" name="tenantId" value={b.id} />
-                          <button className="btn-ghost rounded-full px-3 py-1 text-xs text-fg">Open →</button>
+                          <button className="btn-ghost rounded-full px-3 py-1 text-xs text-fg"><Tr>{"Open →"}</Tr></button>
                         </form>
                       )}
                     </td>

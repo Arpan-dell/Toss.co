@@ -24,6 +24,7 @@ import { formatterFor, regionOf } from "@/lib/region-format";
 import { after } from "next/server";
 import { reconcileFor } from "@/lib/gateway-payments";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Today" };
 
 const STALE_PENDING_MINS = 15;
@@ -101,9 +102,9 @@ export default async function LiveBoard() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Live board">Today</PageTitle>
+      <PageTitle kicker="Live board"><Tr>{"Today"}</Tr></PageTitle>
 
-      <Onboarding title={`Welcome${tenant ? `, ${tenant.name}` : ""}. Five steps to your first pickup`} steps={setup} />
+      <Onboarding title={<Tr vars={{ name: tenant?.name ?? "" }}>{"Welcome, {name}. Five steps to your first pickup"}</Tr>} steps={setup} />
 
       <NeedsAttention alerts={alerts} locked={lockedAlerts} />
 
@@ -118,7 +119,7 @@ export default async function LiveBoard() {
       </div>
 
       {toWeigh.length > 0 && (
-        <Card id="to-weigh" title={`To weigh at the store (${toWeigh.length})`} action={<Badge tone="warn">Bill waits for the weight</Badge>}>
+        <Card id="to-weigh" title={`To weigh at the store (${toWeigh.length})`} action={<Badge tone="warn"><Tr>{"Bill waits for the weight"}</Tr></Badge>}>
           <ul className="divide-y divide-border">
             {toWeigh.map((o) => (
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
@@ -139,7 +140,7 @@ export default async function LiveBoard() {
       )}
 
       {scheduled.length > 0 && (
-        <Card title={`Booked for later (${scheduled.length})`} action={<Badge tone="info">Goes to a driver 30 min before</Badge>}>
+        <Card title={`Booked for later (${scheduled.length})`} action={<Badge tone="info"><Tr>{"Goes to a driver 30 min before"}</Tr></Badge>}>
           <ul className="divide-y divide-border">
             {scheduled.slice(0, 12).map((o) => (
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
@@ -147,11 +148,11 @@ export default async function LiveBoard() {
                   <span className="font-medium tabular-nums">{fmt.dateTime(o.pickupAfter!)}</span>
                   <span className="ml-2 text-secondary">{o.address}</span>
                   {o.contactName && <span className="ml-2 text-muted">· {o.contactName}</span>}
-                  {o.roundAccountId && <span className="ml-2 text-muted">· hostel round</span>}
+                  {o.roundAccountId && <span className="ml-2 text-muted"><Tr>{"· hostel round"}</Tr></span>}
                 </span>
                 <form action={cancelBookingAsManager}>
                   <input type="hidden" name="orderId" value={o.id} />
-                  <button className="text-xs text-secondary hover:text-critical">Cancel</button>
+                  <button className="text-xs text-secondary hover:text-critical"><Tr>{"Cancel"}</Tr></button>
                 </form>
               </li>
             ))}
@@ -160,7 +161,7 @@ export default async function LiveBoard() {
       )}
 
       {late.length > 0 && (
-        <Card id="late" title={`Running late (${late.length})`} action={<Badge tone="critical">Past promise</Badge>}>
+        <Card id="late" title={`Running late (${late.length})`} action={<Badge tone="critical"><Tr>{"Past promise"}</Tr></Badge>}>
           <ul className="divide-y divide-border">
             {late.map((o) => (
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
@@ -171,7 +172,7 @@ export default async function LiveBoard() {
                 </span>
                 <form action={markReady}>
                   <input type="hidden" name="orderId" value={o.id} />
-                  <button className="btn-ghost rounded-full px-3.5 py-1.5 text-xs font-medium text-fg">Mark ready</button>
+                  <button className="btn-ghost rounded-full px-3.5 py-1.5 text-xs font-medium text-fg"><Tr>{"Mark ready"}</Tr></button>
                 </form>
               </li>
             ))}
@@ -183,15 +184,15 @@ export default async function LiveBoard() {
         <Card title="To wash" action={<span className="text-xs text-muted">{wash.orders} order{wash.orders === 1 ? "" : "s"} not ready yet</span>}>
           <dl className="grid grid-cols-3 gap-4">
             <div className="border-t-2 border-fg pt-3">
-              <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Whites</dt>
+              <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase"><Tr>{"Whites"}</Tr></dt>
               <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.weight(wash.whites)}</dd>
             </div>
             <div className="border-t-2 border-fg pt-3">
-              <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Coloured</dt>
+              <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase"><Tr>{"Coloured"}</Tr></dt>
               <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.weight(wash.coloured)}</dd>
             </div>
             <div className="border-t-2 border-fg pt-3">
-              <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Not sorted</dt>
+              <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase"><Tr>{"Not sorted"}</Tr></dt>
               <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.weight(wash.unsorted)}</dd>
             </div>
           </dl>
@@ -199,7 +200,7 @@ export default async function LiveBoard() {
       )}
 
       {deliveries.length > 0 && (
-        <Card id="deliveries" title={`Deliveries (${deliveries.length})`} action={<span className="text-xs text-muted">Clean clothes going back</span>}>
+        <Card id="deliveries" title={`Deliveries (${deliveries.length})`} action={<span className="text-xs text-muted"><Tr>{"Clean clothes going back"}</Tr></span>}>
           <ul className="divide-y divide-border">
             {deliveries.map((o) => (
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
@@ -207,7 +208,7 @@ export default async function LiveBoard() {
                   <OrderLink order={o} />{" "}
                   <span className="text-muted">{deviceArea(o.deviceId)}</span>
                   {o.deliveryDriverId && <span className="ml-2 text-secondary">{driverName(o.deliveryDriverId)}</span>}
-                  {o.deliveryDriverId && !o.deliveryAckAt && <span className="ml-2 text-xs text-warn">⏳ not confirmed</span>}
+                  {o.deliveryDriverId && !o.deliveryAckAt && <span className="ml-2 text-xs text-warn"><Tr>{"⏳ not confirmed"}</Tr></span>}
                   {(o.deliveryAttempts ?? 0) > 0 && <span className="ml-2 text-xs text-warn">not home ×{o.deliveryAttempts}</span>}
                 </span>
                 <span className="flex items-center gap-2">
@@ -215,7 +216,7 @@ export default async function LiveBoard() {
                   {o.deliveryStatus === "WAITING" && (
                     <form action={sendForDelivery}>
                       <input type="hidden" name="orderId" value={o.id} />
-                      <button className="btn-ghost rounded-full px-3.5 py-1.5 text-xs font-medium text-fg">Send</button>
+                      <button className="btn-ghost rounded-full px-3.5 py-1.5 text-xs font-medium text-fg"><Tr>{"Send"}</Tr></button>
                     </form>
                   )}
                 </span>
@@ -225,9 +226,9 @@ export default async function LiveBoard() {
         </Card>
       )}
 
-      <Card title="Active pickups" action={<Badge tone="good" live>Live</Badge>}>
+      <Card title="Active pickups" action={<Badge tone="good" live><Tr>{"Live"}</Tr></Badge>}>
         {active.length === 0 ? (
-          <EmptyState>No active pickups right now.</EmptyState>
+          <EmptyState><Tr>{"No active pickups right now."}</Tr></EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {active.map((o) => {
@@ -245,7 +246,7 @@ export default async function LiveBoard() {
                   <p className="text-sm tabular-nums">{fmt.weight(o.weightKg)}</p>
                   <p className="w-28 text-sm text-secondary">
                     {driverName(o.driverId)}
-                    {o.driverId && !o.driverAckAt && <span className="block text-[11px] text-warn">⏳ not confirmed</span>}
+                    {o.driverId && !o.driverAckAt && <span className="block text-[11px] text-warn"><Tr>{"⏳ not confirmed"}</Tr></span>}
                   </p>
                   <div className="flex w-56 items-center gap-2">
                     <OrderStatusBadge status={o.status} />
@@ -274,8 +275,8 @@ function NeedsAttention({ alerts, locked }: { alerts: Attention[]; locked: Atten
       <div role="status" className="flex items-center gap-3 rounded-[10px] border border-l-4 border-border border-l-good bg-surface-solid px-5 py-4">
         <span aria-hidden className="grid size-8 place-items-center rounded-full bg-good-bg text-good">✓</span>
         <span>
-          <span className="block font-medium text-fg">All clear</span>
-          <span className="text-sm text-secondary">Nothing needs you right now. New problems show up here by themselves.</span>
+          <span className="block font-medium text-fg"><Tr>{"All clear"}</Tr></span>
+          <span className="text-sm text-secondary"><Tr>{"Nothing needs you right now. New problems show up here by themselves."}</Tr></span>
         </span>
       </div>
     );
@@ -310,7 +311,7 @@ function NeedsAttention({ alerts, locked }: { alerts: Attention[]; locked: Atten
               <span className="block">{locked.map((a) => a.title).join(" · ")}</span>
             </span>
             <Link href="/admin/billing" className="btn-primary shrink-0 rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap">
-              Unlock with Pro →
+              <Tr>{"Unlock with Pro →"}</Tr>
             </Link>
           </li>
         )}

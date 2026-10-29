@@ -15,6 +15,7 @@ import { AskToss, RunNow } from "./parts";
 import { Simulator } from "./simulator";
 import { OptimisticForm, OptimisticRow } from "@/components/optimistic";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Toss AI" };
 // "Re-analyse now" and "Ask Toss AI" wait on Gemini; give them room on the free tier.
 export const maxDuration = 120;
@@ -61,7 +62,7 @@ function HealthRing({ score }: { score: number }) {
       <div className="absolute inset-0 grid place-items-center text-center">
         <div>
           <p className="text-4xl font-semibold tabular-nums">{score}</p>
-          <p className="text-[10px] tracking-[0.14em] text-muted uppercase">Health</p>
+          <p className="text-[10px] tracking-[0.14em] text-muted uppercase"><Tr>{"Health"}</Tr></p>
         </div>
       </div>
     </div>
@@ -133,7 +134,7 @@ export default async function TossAi() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <PageTitle kicker="Toss AI">Your laundry, on autopilot</PageTitle>
+        <PageTitle kicker="Toss AI"><Tr>{"Your laundry, on autopilot"}</Tr></PageTitle>
         <div className="flex flex-wrap items-center gap-2 pb-2 text-xs">
           <Badge tone={conf.tone} icon="●">{conf.text}</Badge>
           <span className="text-muted">
@@ -175,7 +176,7 @@ export default async function TossAi() {
                   <span>
                     {run!.trigger === "daily" ? "Morning briefing" : "Fresh analysis"} · {timeAgo(run!.createdAt, current)}
                   </span>
-                  {ap.enabled && <Badge tone="good" icon="●" live>Autopilot on</Badge>}
+                  {ap.enabled && <Badge tone="good" icon="●" live><Tr>{"Autopilot on"}</Tr></Badge>}
                 </div>
                 <h2 className="text-2xl leading-tight font-semibold sm:text-3xl">{r.headline}</h2>
                 <p className="max-w-3xl text-sm leading-relaxed text-secondary">{r.narrative}</p>
@@ -200,10 +201,9 @@ export default async function TossAi() {
             </div>
           ) : (
             <div className="relative max-w-2xl space-y-4">
-              <h2 className="text-2xl font-semibold sm:text-3xl">Meet Toss AI</h2>
+              <h2 className="text-2xl font-semibold sm:text-3xl"><Tr>{"Meet Toss AI"}</Tr></h2>
               <p className="text-sm leading-relaxed text-secondary">
-                Toss AI studies your pickups, customers, drivers and payments: it forecasts demand (and measures its own accuracy), finds
-                customers drifting away, tracks money stuck in unpaid invoices and acts for you within limits you set.
+                <Tr>{"Toss AI studies your pickups, customers, drivers and payments: it forecasts demand (and measures its own accuracy), finds customers drifting away, tracks money stuck in unpaid invoices and acts for you within limits you set."}</Tr>
               </p>
               <RunNow first />
             </div>
@@ -224,7 +224,7 @@ export default async function TossAi() {
       </div>
 
       {/* ---------- action plan + ask ---------- */}
-      <SectionTitle id="plan" kicker="Do this next">Action plan</SectionTitle>
+      <SectionTitle id="plan" kicker="Do this next"><Tr>{"Action plan"}</Tr></SectionTitle>
       <div className="grid gap-6 lg:grid-cols-5">
         <Card title={`${queue.length} suggested action${queue.length === 1 ? "" : "s"}`} className="lg:col-span-3">
           {queue.length === 0 ? (
@@ -247,11 +247,11 @@ export default async function TossAi() {
                     <div className="flex shrink-0 gap-2">
                       <OptimisticForm action={approveAiAction} hide>
                         <input type="hidden" name="id" value={a.id} />
-                        <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">Do it</button>
+                        <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium"><Tr>{"Do it"}</Tr></button>
                       </OptimisticForm>
                       <OptimisticForm action={dismissAiAction} hide>
                         <input type="hidden" name="id" value={a.id} />
-                        <button className="btn-ghost rounded-full px-3 py-1.5 text-sm text-muted">Skip</button>
+                        <button className="btn-ghost rounded-full px-3 py-1.5 text-sm text-muted"><Tr>{"Skip"}</Tr></button>
                       </OptimisticForm>
                     </div>
                   </div>
@@ -266,17 +266,17 @@ export default async function TossAi() {
       </div>
 
       {/* ---------- forecast ---------- */}
-      <SectionTitle id="forecast" kicker="Demand">Forecast & busy hours</SectionTitle>
+      <SectionTitle id="forecast" kicker="Demand"><Tr>{"Forecast & busy hours"}</Tr></SectionTitle>
       <Card title="Pickups: last 4 weeks and next 2 weeks">
         <ForecastChart history={f.history} next={f.next} />
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-secondary">
-          <span>Trend: <span className={f.trendPct >= 0 ? "text-good" : "text-critical"}>{f.trendPct >= 0 ? "+" : ""}{f.trendPct}% a week</span></span>
-          <span>Next 30 days: <span className="text-fg tabular-nums">~{f.next30.orders} pickups</span></span>
-          {f.accuracyPct != null && <span>Backtested accuracy: <span className="text-fg">{f.accuracyPct}%</span></span>}
+          <span><Tr>{"Trend:"}</Tr> <span className={f.trendPct >= 0 ? "text-good" : "text-critical"}>{f.trendPct >= 0 ? "+" : ""}{f.trendPct}% a week</span></span>
+          <span><Tr>{"Next 30 days:"}</Tr> <span className="text-fg tabular-nums">~{f.next30.orders} pickups</span></span>
+          {f.accuracyPct != null && <span><Tr>{"Backtested accuracy:"}</Tr> <span className="text-fg">{f.accuracyPct}%</span></span>}
         </div>
         <How>
           <p>Each weekday gets its own pattern (e.g. Saturdays vs Mondays) from the last 8 weeks. The overall level is smoothed day by day, plus the trend of the last 4 weeks (damped, so one good week doesn&apos;t run away).</p>
-          <p>The shaded band is where 8 in 10 days should land, based on how far past forecasts missed. Accuracy is measured by hiding the last 14 days, forecasting them from the weeks before, and comparing: 100% minus the total error.</p>
+          <p><Tr>{"The shaded band is where 8 in 10 days should land, based on how far past forecasts missed. Accuracy is measured by hiding the last 14 days, forecasting them from the weeks before, and comparing: 100% minus the total error."}</Tr></p>
         </How>
       </Card>
       <div className="grid gap-6 lg:grid-cols-5">
@@ -284,13 +284,13 @@ export default async function TossAi() {
           <Heatmap cells={ins.heatmap.cells} />
           {ins.heatmap.peak && (
             <p className="mt-3 text-sm text-secondary">
-              Peak: <span className="text-fg">{ins.heatmap.peak.weekday} {hour(ins.heatmap.peak.from)}–{hour(ins.heatmap.peak.to)}</span>, {ins.heatmap.peak.share}% of all pickups in just 3 hours. Have drivers online then.
+              <Tr>{"Peak:"}</Tr> <span className="text-fg">{ins.heatmap.peak.weekday} {hour(ins.heatmap.peak.from)}–{hour(ins.heatmap.peak.to)}</span>, {ins.heatmap.peak.share}% of all pickups in just 3 hours. Have drivers online then.
             </p>
           )}
         </Card>
         <Card title="Unusual days" className="lg:col-span-2">
           {ins.anomalies.length === 0 ? (
-            <p className="text-sm text-muted">No unusual days in the last two weeks: demand stayed within its normal range for each weekday.</p>
+            <p className="text-sm text-muted"><Tr>{"No unusual days in the last two weeks: demand stayed within its normal range for each weekday."}</Tr></p>
           ) : (
             <ul className="space-y-3">
               {ins.anomalies.map((a) => (
@@ -310,29 +310,29 @@ export default async function TossAi() {
       </div>
 
       {/* ---------- customers ---------- */}
-      <SectionTitle id="customers" kicker="People">Customer intelligence</SectionTitle>
+      <SectionTitle id="customers" kicker="People"><Tr>{"Customer intelligence"}</Tr></SectionTitle>
       <Card title="Segments">
         <SegmentBar segments={SEGMENTS.map((s) => ({ name: s, count: ins.customers.segments[s], hint: SEGMENT_HINT[s] }))} />
         <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-secondary">
-          <span>Avg order: <span className="text-fg">{inr(ins.customers.avgOrderValue)}</span></span>
-          <span>30-day retention: <span className="text-fg">{ins.customers.retention30 != null ? `${ins.customers.retention30}%` : "needs more customers"}</span></span>
+          <span><Tr>{"Avg order:"}</Tr> <span className="text-fg">{inr(ins.customers.avgOrderValue)}</span></span>
+          <span><Tr>{"30-day retention:"}</Tr> <span className="text-fg">{ins.customers.retention30 != null ? `${ins.customers.retention30}%` : "needs more customers"}</span></span>
         </div>
       </Card>
       <Card title="Who's drifting away">
         {atRisk.length === 0 ? (
-          <EmptyState>Every repeat customer is on their usual rhythm.</EmptyState>
+          <EmptyState><Tr>{"Every repeat customer is on their usual rhythm."}</Tr></EmptyState>
         ) : (
           <div className="-mx-5 overflow-x-auto">
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] tracking-[0.12em] text-muted uppercase">
-                  <th className="px-5 py-2 font-medium">Customer</th>
-                  <th className="px-3 py-2 font-medium">Segment</th>
-                  <th className="px-3 py-2 text-right font-medium">Orders</th>
-                  <th className="px-3 py-2 text-right font-medium">Last order</th>
-                  <th className="px-3 py-2 text-right font-medium">Usually every</th>
-                  <th className="px-3 py-2 font-medium">Churn risk</th>
-                  <th className="px-5 py-2 text-right font-medium">Worth / year</th>
+                  <th className="px-5 py-2 font-medium"><Tr>{"Customer"}</Tr></th>
+                  <th className="px-3 py-2 font-medium"><Tr>{"Segment"}</Tr></th>
+                  <th className="px-3 py-2 text-right font-medium"><Tr>{"Orders"}</Tr></th>
+                  <th className="px-3 py-2 text-right font-medium"><Tr>{"Last order"}</Tr></th>
+                  <th className="px-3 py-2 text-right font-medium"><Tr>{"Usually every"}</Tr></th>
+                  <th className="px-3 py-2 font-medium"><Tr>{"Churn risk"}</Tr></th>
+                  <th className="px-5 py-2 text-right font-medium"><Tr>{"Worth / year"}</Tr></th>
                 </tr>
               </thead>
               <tbody>
@@ -359,13 +359,13 @@ export default async function TossAi() {
           </div>
         )}
         <How>
-          <p>Each customer is compared with <em>their own</em> rhythm: a weekly customer who&apos;s 2 weeks quiet is a bigger worry than a monthly one. Risk rises from ~50 at 1.5× their usual gap to ~99 at 3×.</p>
-          <p>“Worth / year” is their average order × how often they usually order, over 12 months: what you keep if they stay.</p>
+          <p><Tr>{"Each customer is compared with"}</Tr> <em><Tr>{"their own"}</Tr></em> rhythm: a weekly customer who&apos;s 2 weeks quiet is a bigger worry than a monthly one. Risk rises from ~50 at 1.5× their usual gap to ~99 at 3×.</p>
+          <p><Tr>{"“Worth / year” is their average order × how often they usually order, over 12 months: what you keep if they stay."}</Tr></p>
         </How>
       </Card>
 
       {/* ---------- money ---------- */}
-      <SectionTitle id="money" kicker="Cash">Money</SectionTitle>
+      <SectionTitle id="money" kicker="Cash"><Tr>{"Money"}</Tr></SectionTitle>
       <div className="grid gap-6 lg:grid-cols-5">
         <Card title="Unpaid invoices by age" className="lg:col-span-3">
           <BarList
@@ -373,9 +373,9 @@ export default async function TossAi() {
             rows={ins.money.aging.map((a) => ({ label: a.bucket, value: a.amount, display: `${inr(a.amount)} · ${a.count} invoice${a.count === 1 ? "" : "s"}` }))}
           />
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-sm text-secondary">
-            <span>Collected (30d): <span className="text-fg">{ins.money.collectionPct}%</span></span>
-            <span>Customers pay in: <span className="text-fg">{ins.money.medianDaysToPay != null ? `${ins.money.medianDaysToPay} days (median)` : "—"}</span></span>
-            <span>Expected in 7 days: <span className="text-fg">{inr(ins.money.expectedIn7Days)}</span></span>
+            <span><Tr>{"Collected (30d):"}</Tr> <span className="text-fg">{ins.money.collectionPct}%</span></span>
+            <span><Tr>{"Customers pay in:"}</Tr> <span className="text-fg">{ins.money.medianDaysToPay != null ? `${ins.money.medianDaysToPay} days (median)` : "—"}</span></span>
+            <span><Tr>{"Expected in 7 days:"}</Tr> <span className="text-fg">{inr(ins.money.expectedIn7Days)}</span></span>
           </div>
           <How>
             <p>Age counts from pickup. “Expected in 7 days” uses your customers&apos; real payment speed: the share of past invoices paid within a week, applied to recent unpaid ones (old ones are much less likely).</p>
@@ -383,17 +383,17 @@ export default async function TossAi() {
         </Card>
         <Card title="Weekly revenue (8 weeks)" className="lg:col-span-2">
           <p className="text-2xl font-semibold tabular-nums">{inr(ins.money.weeklyRevenue[ins.money.weeklyRevenue.length - 1]?.revenue ?? 0)}</p>
-          <p className="mb-2 text-xs text-muted">last 7 days</p>
+          <p className="mb-2 text-xs text-muted"><Tr>{"last 7 days"}</Tr></p>
           <Sparkline values={ins.money.weeklyRevenue.map((w) => w.revenue)} labels={ins.money.weeklyRevenue.map((w) => `Week of ${w.week}`)} unit="₹" />
         </Card>
       </div>
 
       {/* ---------- operations ---------- */}
-      <SectionTitle id="operations" kicker="Ground game">Areas & drivers</SectionTitle>
+      <SectionTitle id="operations" kicker="Ground game"><Tr>{"Areas & drivers"}</Tr></SectionTitle>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Top areas (30 days)">
           {ins.areas.length === 0 ? (
-            <EmptyState>Label your baskets on the Fleet page to see areas.</EmptyState>
+            <EmptyState><Tr>{"Label your baskets on the Fleet page to see areas."}</Tr></EmptyState>
           ) : (
             <BarList
               rows={ins.areas.map((a) => ({
@@ -407,23 +407,23 @@ export default async function TossAi() {
         </Card>
         <Card title="Driver performance (30 days)">
           {ins.drivers.length === 0 ? (
-            <EmptyState>Connect drivers to Toss Handy to track performance.</EmptyState>
+            <EmptyState><Tr>{"Connect drivers to Toss Handy to track performance."}</Tr></EmptyState>
           ) : (
             <div className="-mx-5 overflow-x-auto">
               <table className="w-full min-w-[460px] text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] tracking-[0.12em] text-muted uppercase">
-                    <th className="px-5 py-2 font-medium">Driver</th>
-                    <th className="px-3 py-2 text-right font-medium">Pickups</th>
-                    <th className="px-3 py-2 text-right font-medium">Typical time</th>
-                    <th className="px-3 py-2 text-right font-medium">Within 2 h</th>
-                    <th className="px-5 py-2 text-right font-medium">Passed on</th>
+                    <th className="px-5 py-2 font-medium"><Tr>{"Driver"}</Tr></th>
+                    <th className="px-3 py-2 text-right font-medium"><Tr>{"Pickups"}</Tr></th>
+                    <th className="px-3 py-2 text-right font-medium"><Tr>{"Typical time"}</Tr></th>
+                    <th className="px-3 py-2 text-right font-medium"><Tr>{"Within 2 h"}</Tr></th>
+                    <th className="px-5 py-2 text-right font-medium"><Tr>{"Passed on"}</Tr></th>
                   </tr>
                 </thead>
                 <tbody>
                   {ins.drivers.map((d, i) => (
                     <tr key={d.name} className="border-b border-border last:border-0">
-                      <td className="px-5 py-2.5">{d.name}{i === 0 && d.pickups > 0 ? <span className="ml-2 font-mono text-[11px] tracking-[0.12em] text-accent uppercase">Top</span> : null}</td>
+                      <td className="px-5 py-2.5">{d.name}{i === 0 && d.pickups > 0 ? <span className="ml-2 font-mono text-[11px] tracking-[0.12em] text-accent uppercase"><Tr>{"Top"}</Tr></span> : null}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{d.pickups}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{d.medianMins != null ? `${d.medianMins} min` : "—"}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{d.onTimePct != null ? `${d.onTimePct}%` : "—"}</td>
@@ -441,7 +441,7 @@ export default async function TossAi() {
       </div>
 
       {/* ---------- what-if ---------- */}
-      <SectionTitle id="whatif" kicker="Plan ahead">What-if simulator</SectionTitle>
+      <SectionTitle id="whatif" kicker="Plan ahead"><Tr>{"What-if simulator"}</Tr></SectionTitle>
       <Card>
         <Simulator
           base={{
@@ -459,7 +459,7 @@ export default async function TossAi() {
       </Card>
 
       {/* ---------- autopilot ---------- */}
-      <SectionTitle id="autopilot" kicker="Hands-free">Autopilot</SectionTitle>
+      <SectionTitle id="autopilot" kicker="Hands-free"><Tr>{"Autopilot"}</Tr></SectionTitle>
       <Card>
         <ActionForm action={updateAutopilot} submitLabel="Save autopilot" className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -470,7 +470,7 @@ export default async function TossAi() {
             <Toggle name="pricing" label="Pricing" hint="Move your price per kg with demand, only within your limits." defaultChecked={ap.pricing} />
           </div>
           <fieldset className="grid gap-3 sm:grid-cols-4">
-            <legend className="mb-2 text-xs font-medium text-secondary">Guardrails: Toss AI never goes beyond these</legend>
+            <legend className="mb-2 text-xs font-medium text-secondary"><Tr>{"Guardrails: Toss AI never goes beyond these"}</Tr></legend>
             <Field label="Max discount (%)">
               <input name="maxDiscount" type="number" min={1} max={50} step={1} required defaultValue={ap.maxDiscount} className={fieldClass} />
             </Field>
@@ -488,7 +488,7 @@ export default async function TossAi() {
       </Card>
       <Card title="Activity">
         {log.length === 0 ? (
-          <EmptyState>Everything Toss AI (or you) does from the action plan shows up here.</EmptyState>
+          <EmptyState><Tr>{"Everything Toss AI (or you) does from the action plan shows up here."}</Tr></EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {log.map((a) => (
@@ -499,8 +499,8 @@ export default async function TossAi() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2 text-xs text-muted">
                   {a.status === "EXECUTED" && <Badge tone="good" icon="✓">{a.auto ? "Autopilot" : "You"}</Badge>}
-                  {a.status === "FAILED" && <Badge tone="critical" icon="!">Failed</Badge>}
-                  {a.status === "DISMISSED" && <Badge tone="neutral">Skipped</Badge>}
+                  {a.status === "FAILED" && <Badge tone="critical" icon="!"><Tr>{"Failed"}</Tr></Badge>}
+                  {a.status === "DISMISSED" && <Badge tone="neutral"><Tr>{"Skipped"}</Tr></Badge>}
                   {a.decidedAt && <span>{timeAgo(a.decidedAt, current)}</span>}
                 </div>
               </li>

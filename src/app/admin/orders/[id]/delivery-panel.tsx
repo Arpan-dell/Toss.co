@@ -7,6 +7,7 @@ import { DELIVERY_LABEL } from "@/lib/dispatch/delivery";
 import type { Driver, Order } from "@/lib/types";
 import { myFormat } from "@/lib/my-format";
 
+import { Tr } from "@/components/locale";
 // Order page: getting a picked-up order back to the customer. Send it to a driver (or choose one), follow it, or
 // close it by hand when the customer collected it at the store.
 export async function DeliveryPanel({ order, drivers }: { order: Order; drivers: Driver[] }) {
@@ -19,20 +20,20 @@ export async function DeliveryPanel({ order, drivers }: { order: Order; drivers:
   return (
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium text-fg">Back to the customer</span>
+        <span className="font-medium text-fg"><Tr>{"Back to the customer"}</Tr></span>
         {d ? (
           <Badge tone={closed ? "good" : d === "WAITING" ? "warn" : "info"}>{DELIVERY_LABEL[d]}</Badge>
         ) : order.readyAt ? (
           <Badge tone="neutral">{order.deliveryCode ? "Waiting to be collected" : "Ready"}</Badge>
         ) : (
-          <Badge tone="neutral">Being washed</Badge>
+          <Badge tone="neutral"><Tr>{"Being washed"}</Tr></Badge>
         )}
       </div>
 
       <dl className="grid grid-cols-[110px_1fr] gap-y-1.5">
         {order.deliveryDriverId && (
           <>
-            <dt className="text-muted">Driver</dt>
+            <dt className="text-muted"><Tr>{"Driver"}</Tr></dt>
             <dd>
               {name(order.deliveryDriverId)}
               {(d === "ASSIGNED" || d === "OUT") && (
@@ -50,13 +51,13 @@ export async function DeliveryPanel({ order, drivers }: { order: Order; drivers:
         )}
         {order.deliveryCode && !closed && (
           <>
-            <dt className="text-muted">Customer code</dt>
+            <dt className="text-muted"><Tr>{"Customer code"}</Tr></dt>
             <dd className="font-mono tracking-[0.2em]">{order.deliveryCode}</dd>
           </>
         )}
         {(order.deliveryAttempts ?? 0) > 0 && (
           <>
-            <dt className="text-muted">Attempts</dt>
+            <dt className="text-muted"><Tr>{"Attempts"}</Tr></dt>
             <dd className="text-warn">{order.deliveryAttempts} failed: customer not home</dd>
           </>
         )}
@@ -65,8 +66,8 @@ export async function DeliveryPanel({ order, drivers }: { order: Order; drivers:
             <dt className="text-muted">{d === "COLLECTED" ? "Collected" : "Delivered"}</dt>
             <dd>
               {fmt.dateTime(order.deliveredAt)}
-              {d === "DELIVERED" && order.deliveryVerified === true && <span className="ml-2 text-good">code checked ✓</span>}
-              {d === "DELIVERED" && order.deliveryVerified === false && <span className="ml-2 text-warn">without the code</span>}
+              {d === "DELIVERED" && order.deliveryVerified === true && <span className="ml-2 text-good"><Tr>{"code checked ✓"}</Tr></span>}
+              {d === "DELIVERED" && order.deliveryVerified === false && <span className="ml-2 text-warn"><Tr>{"without the code"}</Tr></span>}
             </dd>
           </>
         )}
@@ -104,7 +105,7 @@ export async function DeliveryPanel({ order, drivers }: { order: Order; drivers:
                 defaultValue={order.deliveryDriverId ?? ""}
                 className="w-full rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm"
               >
-                <option value="">— No driver —</option>
+                <option value="">{"— No driver —"}</option>
                 {drivers
                   .filter((x) => x.telegramChatId)
                   .map((x) => (

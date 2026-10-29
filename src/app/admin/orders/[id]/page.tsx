@@ -25,12 +25,13 @@ import { myFormat } from "@/lib/my-format";
 import { hasCents } from "@/lib/regions";
 import { prefsSummary } from "@/lib/prefs";
 
+import { Tr } from "@/components/locale";
 // Where the billed weight came from, as a tag (never color-only).
 function weightTag(source: Order["weightSource"]) {
-  if (source === "driver") return <Badge tone="good">Weighed by driver</Badge>;
-  if (source === "manager") return <Badge tone="info">Confirmed by you</Badge>;
-  if (source === "basket") return <Badge tone="warn">Not weighed</Badge>;
-  return <Badge tone="neutral">Basket reading</Badge>;
+  if (source === "driver") return <Badge tone="good"><Tr>{"Weighed by driver"}</Tr></Badge>;
+  if (source === "manager") return <Badge tone="info"><Tr>{"Confirmed by you"}</Tr></Badge>;
+  if (source === "basket") return <Badge tone="warn"><Tr>{"Not weighed"}</Tr></Badge>;
+  return <Badge tone="neutral"><Tr>{"Basket reading"}</Tr></Badge>;
 }
 
 export const metadata: Metadata = { title: "Order" };
@@ -81,18 +82,18 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
         </div>
       </div>
       <Link href="/admin/orders" className="text-sm text-accent hover:text-accent-2">
-        ← All orders
+        <Tr>{"← All orders"}</Tr>
       </Link>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Pickup">
           <StatusTimeline order={order} />
           <dl className="mt-5 grid grid-cols-[110px_1fr] gap-y-2 border-t border-border pt-4 text-sm">
-            <dt className="text-muted">Customer</dt>
+            <dt className="text-muted"><Tr>{"Customer"}</Tr></dt>
             <dd>{customer ? `${customer.name ?? customer.email} · ${customer.customerCode}` : "Not linked yet"}</dd>
             {(wishes.length > 0 || notes) && (
               <>
-                <dt className="text-muted">Wash</dt>
+                <dt className="text-muted"><Tr>{"Wash"}</Tr></dt>
                 <dd>
                   <span className="flex flex-wrap gap-1.5">
                     {wishes.map((w) => (
@@ -105,15 +106,15 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                 </dd>
               </>
             )}
-            <dt className="text-muted">Basket</dt>
+            <dt className="text-muted"><Tr>{"Basket"}</Tr></dt>
             <dd>{deviceLabel(device) ?? order.deviceId}</dd>
-            <dt className="text-muted">Address</dt>
+            <dt className="text-muted"><Tr>{"Address"}</Tr></dt>
             <dd>{order.address || "—"}</dd>
-            <dt className="text-muted">Weight</dt>
+            <dt className="text-muted"><Tr>{"Weight"}</Tr></dt>
             <dd className="tabular-nums">{fmt.weight(order.weightKg)}</dd>
             {sorted && (
               <>
-                <dt className="text-muted">Bags</dt>
+                <dt className="text-muted"><Tr>{"Bags"}</Tr></dt>
                 <dd className="space-y-0.5 tabular-nums">
                   {(order.whitesKg ?? 0) > 0 && (
                     <span className="block">
@@ -129,7 +130,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                 </dd>
               </>
             )}
-            <dt className="text-muted">Driver</dt>
+            <dt className="text-muted"><Tr>{"Driver"}</Tr></dt>
             <dd>
               {driver?.name ?? (order.driverId ? `Telegram ${order.driverId}` : "—")}
               {order.driverId && order.status === "ACCEPTED" && (
@@ -138,7 +139,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
             </dd>
             {order.status === "COMPLETED" && (
               <>
-                <dt className="text-muted">Ready</dt>
+                <dt className="text-muted"><Tr>{"Ready"}</Tr></dt>
                 <dd className="flex flex-wrap items-center gap-2">
                   {order.readyAt ? (
                     <span>{fmt.dateTime(order.readyAt)}</span>
@@ -153,7 +154,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
             )}
             {order.pickupPhotoAt && (
               <>
-                <dt className="text-muted">Photo</dt>
+                <dt className="text-muted"><Tr>{"Photo"}</Tr></dt>
                 <dd>
                   <a href={`/admin/orders/${encodeURIComponent(order.id)}/photo`} target="_blank" rel="noopener" className="group inline-block">
                     {/* eslint-disable-next-line @next/next/no-img-element -- private, per-order image streamed from Telegram */}
@@ -170,7 +171,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
             )}
             {order.rating && (
               <>
-                <dt className="text-muted">Rating</dt>
+                <dt className="text-muted"><Tr>{"Rating"}</Tr></dt>
                 <dd>
                   <span className="text-warn" aria-label={`${order.rating} out of 5`}>
                     {"★".repeat(order.rating)}
@@ -184,7 +185,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
           {order.status === "COMPLETED" && !order.readyAt && (
             <form action={markReady} className="mt-4">
               <input type="hidden" name="orderId" value={order.id} />
-              <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium">Mark ready · tell the customer</button>
+              <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium"><Tr>{"Mark ready · tell the customer"}</Tr></button>
             </form>
           )}
         </Card>
@@ -209,7 +210,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                   defaultValue={order.driverId ?? ""}
                   className="w-full rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm"
                 >
-                  <option value="">— No driver —</option>
+                  <option value="">{"— No driver —"}</option>
                   {drivers
                     .filter((d) => d.telegramChatId)
                     .map((d) => (
@@ -222,7 +223,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                   <p className="text-xs text-muted">
                     Add drivers on the{" "}
                     <Link href="/admin/fleet" className="underline">
-                      Fleet
+                      <Tr>{"Fleet"}</Tr>
                     </Link>{" "}
                     page first.
                   </p>
@@ -244,13 +245,13 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                   <form action={setOrderStatus}>
                     <input type="hidden" name="orderId" value={order.id} />
                     <input type="hidden" name="status" value="ACCEPTED" />
-                    <button className="btn-ghost rounded-full px-4 py-1.5 text-sm">Mark accepted</button>
+                    <button className="btn-ghost rounded-full px-4 py-1.5 text-sm"><Tr>{"Mark accepted"}</Tr></button>
                   </form>
                 )}
                 <form action={setOrderStatus}>
                   <input type="hidden" name="orderId" value={order.id} />
                   <input type="hidden" name="status" value="COMPLETED" />
-                  <button className="btn-ghost rounded-full px-4 py-1.5 text-sm">Mark picked up</button>
+                  <button className="btn-ghost rounded-full px-4 py-1.5 text-sm"><Tr>{"Mark picked up"}</Tr></button>
                 </form>
                 <ConfirmButton
                   action={setOrderStatus}
@@ -259,12 +260,12 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                   confirm="Cancel this pickup? The customer won't be charged for it."
                 />
               </div>
-              <p className="text-xs text-muted">Use these if a driver forgot to tap Accept or Complete in the bot.</p>
+              <p className="text-xs text-muted"><Tr>{"Use these if a driver forgot to tap Accept or Complete in the bot."}</Tr></p>
             </div>
           ) : order.status === "COMPLETED" ? (
             <DeliveryPanel order={order} drivers={drivers} />
           ) : (
-            <p className="text-sm text-secondary">This pickup was cancelled.</p>
+            <p className="text-sm text-secondary"><Tr>{"This pickup was cancelled."}</Tr></p>
           )}
         </Card>
       </div>
@@ -309,11 +310,11 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                 <>
                   <form action={confirmPayment}>
                     <input type="hidden" name="orderId" value={order.id} />
-                    <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">✓ Received</button>
+                    <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium"><Tr>{"✓ Received"}</Tr></button>
                   </form>
                   <form action={rejectPayment}>
                     <input type="hidden" name="orderId" value={order.id} />
-                    <button className="btn-ghost rounded-full px-4 py-1.5 text-sm text-critical">Not received</button>
+                    <button className="btn-ghost rounded-full px-4 py-1.5 text-sm text-critical"><Tr>{"Not received"}</Tr></button>
                   </form>
                 </>
               )}
@@ -322,7 +323,7 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
                   <AmountForm orderId={order.id} amount={order.amountDue} symbol={fmt.symbol} cents={hasCents(fmt.region.currency)} />
                   <form action={markPaidCash}>
                     <input type="hidden" name="orderId" value={order.id} />
-                    <button className="btn-ghost rounded-full px-4 py-1.5 text-sm">Mark paid (cash)</button>
+                    <button className="btn-ghost rounded-full px-4 py-1.5 text-sm"><Tr>{"Mark paid (cash)"}</Tr></button>
                   </form>
                 </>
               )}
@@ -334,28 +335,27 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
       <Card title="Weight" action={weightTag(order.weightSource)}>
         <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="border-t-2 border-fg pt-3">
-            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Basket said</dt>
+            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase"><Tr>{"Basket said"}</Tr></dt>
             <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.weight(order.reportedWeightKg ?? order.weightKg)}</dd>
           </div>
           <div className="border-t-2 border-fg pt-3">
-            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Weighed</dt>
+            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase"><Tr>{"Weighed"}</Tr></dt>
             <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{order.weighedKg != null ? fmt.weight(order.weighedKg) : "—"}</dd>
           </div>
           <div className="border-t-2 border-fg pt-3">
-            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Difference</dt>
+            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase"><Tr>{"Difference"}</Tr></dt>
             <dd className={`mt-1.5 font-mono text-xl font-semibold tabular-nums ${gap !== null && Math.abs(gap) > 15 ? "text-warn" : ""}`}>
               {gap === null ? "—" : `${gap > 0 ? "+" : ""}${gap}%`}
             </dd>
           </div>
           <div className="border-t-2 border-fg pt-3">
-            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">Billed</dt>
+            <dt className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase"><Tr>{"Billed"}</Tr></dt>
             <dd className="mt-1.5 font-mono text-xl font-semibold tabular-nums">{fmt.money(order.amountDue)}</dd>
           </div>
         </dl>
         {gap !== null && Math.abs(gap) > 15 && (
           <p className="mt-4 text-sm text-warn">
-            The scale and the basket disagree by more than 15%. If this keeps happening for the same basket, its sensor may need recalibrating, or it
-            may be under-reporting.
+            <Tr>{"The scale and the basket disagree by more than 15%. If this keeps happening for the same basket, its sensor may need recalibrating, or it may be under-reporting."}</Tr>
           </p>
         )}
         {order.paymentStatus === "UNPAID" ? (
@@ -368,13 +368,13 @@ export default async function OrderDetail({ params }: PageProps<"/admin/orders/[
             />
           </div>
         ) : (
-          <p className="mt-4 text-xs text-muted">The weight is locked once the customer has paid or reported a payment.</p>
+          <p className="mt-4 text-xs text-muted"><Tr>{"The weight is locked once the customer has paid or reported a payment."}</Tr></p>
         )}
       </Card>
 
       <Card title="Basket log">
         {events.length === 0 ? (
-          <p className="text-sm text-muted">No messages from the basket recorded for this order.</p>
+          <p className="text-sm text-muted"><Tr>{"No messages from the basket recorded for this order."}</Tr></p>
         ) : (
           <ol className="space-y-2 text-sm">
             {events.map((e) => (

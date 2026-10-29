@@ -4,6 +4,7 @@ import { planState, tierOf, type Tier } from "@/lib/plan";
 import { getSession } from "@/lib/session";
 import { Card } from "./ui";
 
+import { Tr } from "@/components/locale";
 // Manager pages call these first. planGate(): only a suspended business (or an account with no business) gets a
 // lock screen; Free keeps the everyday pages. proGate(): Pro tools show an upgrade card on Free instead. Baskets
 // keep sending orders and customers keep being served either way; nothing is lost.
@@ -25,7 +26,7 @@ function NoBusiness() {
 function Suspended() {
   return (
     <Card title="Business suspended">
-      <p className="text-sm text-secondary">Toss has suspended this business. Orders from your customers are still being recorded. Contact Toss.</p>
+      <p className="text-sm text-secondary"><Tr>{"Toss has suspended this business. Orders from your customers are still being recorded. Contact Toss."}</Tr></p>
     </Card>
   );
 }
@@ -47,11 +48,11 @@ export async function proGate(feature: string, pitch: string): Promise<React.Rea
       <div className="space-y-4 text-sm text-secondary">
         <p>{pitch}</p>
         <p>
-          You&apos;re on <span className="font-medium text-fg">Toss Free</span>: pickups, dispatch, payments, orders, customers and fleet keep
+          You&apos;re on <span className="font-medium text-fg"><Tr>{"Toss Free"}</Tr></span>: pickups, dispatch, payments, orders, customers and fleet keep
           working. Pro turns on the tools that grow the business.
         </p>
         <Link href="/admin/billing" className="btn-primary inline-flex rounded-full px-5 py-2.5 text-sm font-medium">
-          Upgrade to Pro →
+          <Tr>{"Upgrade to Pro →"}</Tr>
         </Link>
       </div>
     </Card>

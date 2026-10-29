@@ -6,6 +6,7 @@ import { fieldClass } from "@/components/action-form";
 import { askToss, runAiNow } from "@/lib/actions/ai";
 import type { FormState } from "@/lib/actions/shared";
 
+import { Tr } from "@/components/locale";
 export function PendingButton({ children, pendingText, className }: { children: React.ReactNode; pendingText: string; className: string }) {
   const { pending } = useFormStatus();
   return (
@@ -41,7 +42,7 @@ export function AskToss() {
       <form action={action} className="flex gap-2">
         <input ref={input} name="question" maxLength={500} placeholder="Ask anything about your business…" className={`${fieldClass} flex-1`} />
         <PendingButton pendingText="Thinking…" className="btn-primary rounded-full px-5 text-sm font-medium">
-          Ask
+          <Tr>{"Ask"}</Tr>
         </PendingButton>
       </form>
       <div className="flex flex-wrap gap-1.5">

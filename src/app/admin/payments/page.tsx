@@ -15,6 +15,7 @@ import { after } from "next/server";
 import { reconcileFor } from "@/lib/gateway-payments";
 import { getSession } from "@/lib/session";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Payments" };
 
 function who(o: Order, customers: Map<string, Customer>) {
@@ -43,7 +44,7 @@ export default async function Payments() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Money in">Payments</PageTitle>
+      <PageTitle kicker="Money in"><Tr>{"Payments"}</Tr></PageTitle>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatTile label="To verify" value={String(toVerify.length)} hint="Customer says they paid" />
@@ -53,7 +54,7 @@ export default async function Payments() {
 
       <Card title={fmt.region.currency === "INR" ? "Check these in your UPI app" : "Check these in your payment app or bank"} action={toVerify.length > 0 ? <Badge tone="warn" live>{toVerify.length} waiting</Badge> : undefined}>
         {toVerify.length === 0 ? (
-          <EmptyState>No payments waiting for confirmation.</EmptyState>
+          <EmptyState><Tr>{"No payments waiting for confirmation."}</Tr></EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {toVerify.map((o) => (
@@ -65,7 +66,7 @@ export default async function Payments() {
                   <p className="text-secondary">{who(o, customers)}</p>
                   <p className="text-xs text-muted">
                     {o.paymentMethod === "CASH" ? (
-                      <span className="text-fg">Cash collected by the driver at delivery</span>
+                      <span className="text-fg"><Tr>{"Cash collected by the driver at delivery"}</Tr></span>
                     ) : (
                       <>
                         {methodName(o.paymentMethod ?? "UPI")} ref <span className="font-mono text-fg">{o.paymentRef}</span>
@@ -78,11 +79,11 @@ export default async function Payments() {
                 <div className="flex gap-2">
                   <OptimisticForm action={confirmPayment} hide>
                     <input type="hidden" name="orderId" value={o.id} />
-                    <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">Received</button>
+                    <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium"><Tr>{"Received"}</Tr></button>
                   </OptimisticForm>
                   <OptimisticForm action={rejectPayment} hide>
                     <input type="hidden" name="orderId" value={o.id} />
-                    <button className="btn-ghost rounded-full px-4 py-1.5 text-sm text-critical">Not received</button>
+                    <button className="btn-ghost rounded-full px-4 py-1.5 text-sm text-critical"><Tr>{"Not received"}</Tr></button>
                   </OptimisticForm>
                 </div>
               </OptimisticRow>
@@ -90,14 +91,13 @@ export default async function Payments() {
           </ul>
         )}
         <p className="mt-4 text-xs text-muted">
-          Older payments a customer reported by reference. Match it with your bank or UPI app before confirming. With online
-          payments connected (Settings → Online payments), payments confirm themselves and nothing lands here.
+          <Tr>{"Older payments a customer reported by reference. Match it with your bank or UPI app before confirming. With online payments connected (Settings → Online payments), payments confirm themselves and nothing lands here."}</Tr>
         </p>
       </Card>
 
       <Card title="Unpaid pickups">
         {unpaid.length === 0 ? (
-          <EmptyState>Nothing outstanding.</EmptyState>
+          <EmptyState><Tr>{"Nothing outstanding."}</Tr></EmptyState>
         ) : (
           <ul className="divide-y divide-border">
             {unpaid.map((o) => (
@@ -115,11 +115,11 @@ export default async function Payments() {
                 {/* the money is in your UPI app / bank: one tap (with online payments connected, this happens by itself) */}
                 <OptimisticForm action={markPaidReceived} hide>
                   <input type="hidden" name="orderId" value={o.id} />
-                  <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">Received</button>
+                  <button className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium"><Tr>{"Received"}</Tr></button>
                 </OptimisticForm>
                 <OptimisticForm action={markPaidCash} hide>
                   <input type="hidden" name="orderId" value={o.id} />
-                  <button className="btn-ghost rounded-full px-4 py-1.5 text-sm">Paid in cash</button>
+                  <button className="btn-ghost rounded-full px-4 py-1.5 text-sm"><Tr>{"Paid in cash"}</Tr></button>
                 </OptimisticForm>
               </OptimisticRow>
             ))}
@@ -129,7 +129,7 @@ export default async function Payments() {
 
       <Card title="Recently paid">
         {paid.length === 0 ? (
-          <EmptyState>No confirmed payments yet.</EmptyState>
+          <EmptyState><Tr>{"No confirmed payments yet."}</Tr></EmptyState>
         ) : (
           <ul className="divide-y divide-border text-sm">
             {paid.map((o) => (
@@ -141,7 +141,7 @@ export default async function Payments() {
                 <span className="flex items-center gap-2 text-xs text-muted">
                   {o.paymentMethod ?? "—"}
                   {o.paymentRef ? ` · ${o.paymentRef}` : ""}
-                  <Badge tone="good" icon="✓">Paid</Badge>
+                  <Badge tone="good" icon="✓"><Tr>{"Paid"}</Tr></Badge>
                 </span>
               </li>
             ))}

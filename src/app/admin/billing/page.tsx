@@ -15,6 +15,7 @@ import { requireRole } from "@/lib/session";
 import { PlanCompare } from "./plan-compare";
 import { AutoRenew } from "./auto-renew";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "My plan" };
 
 const MONTH_OPTIONS = [1, 3, 6, 12];
@@ -66,7 +67,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
 
   return (
     <div className="stagger mx-auto w-full max-w-3xl space-y-6">
-      <PageTitle kicker="Toss subscription">My plan</PageTitle>
+      <PageTitle kicker="Toss subscription"><Tr>{"My plan"}</Tr></PageTitle>
 
       <Card title="Your plan" action={<Badge tone={badge.tone} icon="●">{badge.label}</Badge>}>
         <p className="text-sm text-secondary">
@@ -124,7 +125,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
               </div>
               {credit > 0 && (
                 <p className="rounded-[8px] border border-accent/30 bg-accent/[0.07] px-3 py-2 text-sm text-secondary">
-                  Basket credit from Toss: <span className="font-semibold text-fg">−{sub.money(credit)}</span>. Toss pays back{" "}
+                  <Tr>{"Basket credit from Toss:"}</Tr> <span className="font-semibold text-fg">−{sub.money(credit)}</span>. Toss pays back{" "}
                   {platform.creditTossSharePct}% of the basket credit your customers use, off your subscription.
                 </p>
               )}
@@ -175,7 +176,7 @@ export default async function Billing({ searchParams }: PageProps<"/admin/billin
 
       <Card title="Payment history">
         {history.length === 0 ? (
-          <EmptyState>No subscription payments yet.</EmptyState>
+          <EmptyState><Tr>{"No subscription payments yet."}</Tr></EmptyState>
         ) : (
           <ul className="divide-y divide-border text-sm">
             {history.map((p) => (

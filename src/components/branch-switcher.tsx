@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 
+import { Tr } from "@/components/locale";
 // Manager header: which branch the dashboard shows. Picking another one switches the whole portal to it.
 export function BranchSwitcher({
   action,
@@ -15,7 +16,7 @@ export function BranchSwitcher({
   const [pending, start] = useTransition();
   return (
     <label className="flex items-center gap-2 text-xs text-muted">
-      <span>Branch</span>
+      <span><Tr>{"Branch"}</Tr></span>
       <select
         defaultValue={current}
         disabled={pending}

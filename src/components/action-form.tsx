@@ -35,7 +35,7 @@ export function ActionForm({
         </p>
       )}
       <button disabled={pending} className={submitClassName}>
-        {pending ? t("Saving…") : submitLabel}
+        {pending ? t("Saving…") : t(submitLabel)}
       </button>
     </form>
   );
@@ -45,11 +45,12 @@ export const fieldClass =
   "w-full rounded-[8px] border border-border bg-ink/[0.03] px-4 py-2.5 text-sm transition-shadow placeholder:text-muted focus:border-accent/60 focus:shadow-[0_0_0_3px_rgb(var(--accent-rgb)/0.2)] focus:outline-none";
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  const t = useT();
   return (
     <label className="block space-y-1.5">
-      <span className="text-xs font-medium text-secondary">{label}</span>
+      <span className="text-xs font-medium text-secondary">{t(label)}</span>
       {children}
-      {hint && <span className="block text-xs text-muted">{hint}</span>}
+      {hint && <span className="block text-xs text-muted">{t(hint)}</span>}
     </label>
   );
 }

@@ -12,6 +12,7 @@ import { planState } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { myFormat } from "@/lib/my-format";
+import { getT } from "@/lib/i18n/server";
 
 // Private portal: keep it out of search results.
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -38,7 +39,7 @@ const nav: PortalNavItem[] = [
 ];
 
 export default async function ManagerLayout({ children }: LayoutProps<"/admin">) {
-  const fmt = await myFormat();
+  const [fmt, t] = await Promise.all([myFormat(), getT()]);
   const session = await requireRole("MANAGER");
   const [tenant, branches] = await Promise.all([getTenantById(session.tenantId), listMyBranches(session.userId)]);
   const plan = tenant ? planState(tenant) : undefined;
@@ -62,13 +63,13 @@ export default async function ManagerLayout({ children }: LayoutProps<"/admin">)
         >
           <span>
             {plan.state === "TRIAL" &&
-              `Free trial: ${plan.daysLeft} day${plan.daysLeft === 1 ? "" : "s"} left (until ${fmt.date(plan.until!)}).`}
-            {plan.state === "EXPIRED" && "You're on Toss Free: pickups, payments and orders keep working. Pro adds auto-tools, Toss AI, analytics and more."}
-            {plan.state === "SUSPENDED" && "This business has been suspended by Toss. Contact support."}
+              t("Free trial: {n} days left (until {date}).", { n: plan.daysLeft ?? 0, date: fmt.date(plan.until!) })}
+            {plan.state === "EXPIRED" && t("You're on Toss Free: pickups, payments and orders keep working. Pro adds auto-tools, Toss AI, analytics and more.")}
+            {plan.state === "SUSPENDED" && t("This business has been suspended by Toss. Contact support.")}
           </span>
           {plan.state !== "SUSPENDED" && (
             <Link href="/admin/billing" className="btn-ghost rounded-full px-3.5 py-1 text-xs text-fg">
-              {plan.state === "TRIAL" ? "Subscribe" : "Upgrade to Pro"} →
+              {t(plan.state === "TRIAL" ? "Subscribe" : "Upgrade to Pro")} →
             </Link>
           )}
         </div>

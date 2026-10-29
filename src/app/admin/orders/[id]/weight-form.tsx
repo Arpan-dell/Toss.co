@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { confirmOrderWeight } from "@/lib/actions/manager";
 import type { FormState } from "@/lib/actions/shared";
 
+import { Tr } from "@/components/locale";
 const input =
   "w-28 rounded-[8px] border border-border bg-ink/[0.03] px-3 py-2 font-mono text-sm tabular-nums focus:border-accent/60 focus:outline-none";
 
@@ -17,18 +18,18 @@ export function WeightForm({ orderId, current, bags }: { orderId: string; curren
       {bags ? (
         <>
           <label className="space-y-1 text-xs text-secondary">
-            <span className="block">Whites (kg)</span>
+            <span className="block"><Tr>{"Whites (kg)"}</Tr></span>
             <input name="whites" inputMode="decimal" defaultValue={bags.whites} className={input} />
           </label>
           <label className="space-y-1 text-xs text-secondary">
-            <span className="block">Coloured (kg)</span>
+            <span className="block"><Tr>{"Coloured (kg)"}</Tr></span>
             <input name="coloured" inputMode="decimal" defaultValue={bags.coloured} className={input} />
           </label>
         </>
       ) : (
         <>
           <label className="sr-only" htmlFor={`kg-${orderId}`}>
-            Weight in kg
+            <Tr>{"Weight in kg"}</Tr>
           </label>
           <input id={`kg-${orderId}`} name="kg" inputMode="decimal" defaultValue={current || ""} placeholder="kg" required className={input} />
         </>

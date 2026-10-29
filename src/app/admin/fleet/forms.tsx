@@ -43,9 +43,9 @@ export function DriverStatusControl({ driverId, name, status }: { driverId: stri
         }}
         className="rounded-[6px] border border-border bg-surface-solid px-2 py-1 text-xs"
       >
-        <option value="AVAILABLE">Available</option>
-        <option value="ON_JOB">On a job</option>
-        <option value="OFFLINE">Offline</option>
+        <option value="AVAILABLE">{"Available"}</option>
+        <option value="ON_JOB">{"On a job"}</option>
+        <option value="OFFLINE">{"Offline"}</option>
       </select>
       {error && <span role="alert" className="text-xs text-critical">{error}</span>}
     </div>

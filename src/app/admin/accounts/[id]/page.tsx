@@ -17,6 +17,7 @@ import { isVirtualDevice } from "@/lib/rounds";
 import { listActiveOrders } from "@/lib/data";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Business account" };
 
 // One business account: its details and price, its baskets, and its monthly bills (download, send on WhatsApp,
@@ -55,20 +56,19 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
     <div className="stagger mx-auto w-full max-w-5xl space-y-6">
       <PageTitle kicker={`Business account · ${account.id}`}>{account.name}</PageTitle>
       <Link href="/admin/accounts" className="text-sm text-accent hover:text-accent-2">
-        ← All accounts
+        <Tr>{"← All accounts"}</Tr>
       </Link>
 
       <Card title="Collection rounds" action={round?.everyDays ? <Badge tone="good">Every {round.everyDays === 1 ? "day" : `${round.everyDays} days`}</Badge> : undefined}>
         {!round ? (
-          <EmptyState>Run the 0042 database update (Supabase → SQL Editor) to set up collection rounds.</EmptyState>
+          <EmptyState><Tr>{"Run the 0042 database update (Supabase → SQL Editor) to set up collection rounds."}</Tr></EmptyState>
         ) : (
           <div className="grid gap-6 lg:grid-cols-2">
             <ActionForm action={saveRoundSettings} submitLabel="Save rounds">
               <input type="hidden" name="accountId" value={account.id} />
               <p className="text-sm text-secondary">
-                A driver comes every few days at a set time. Residents tap <b className="text-fg">I have clothes this time</b> in Toss before it;
-                the driver collects every bag as one stop and weighs each one. Hostels with a round at the <b className="text-fg">same time</b> go to
-                one driver as a single trip, nearest next, while the bags fit (up to 20).
+                <Tr>{"A driver comes every few days at a set time. Residents tap"}</Tr> <b className="text-fg"><Tr>{"I have clothes this time"}</Tr></b> in Toss before it;
+                the driver collects every bag as one stop and weighs each one. Hostels with a round at the <b className="text-fg"><Tr>{"same time"}</Tr></b> <Tr>{"go to one driver as a single trip, nearest next, while the bags fit (up to 20)."}</Tr>
               </p>
               <Field label="Address of the hostel or PG">
                 <input name="address" defaultValue={round.address === account.name ? "" : round.address} maxLength={300} className={fieldClass} />
@@ -76,7 +76,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
               <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="How often">
                   <select name="everyDays" defaultValue={String(round.everyDays)} className={fieldClass}>
-                    <option value="0">Off</option>
+                    <option value="0">{"Off"}</option>
                     {[1, 2, 3, 4, 5, 6, 7, 10, 14].map((n) => (
                       <option key={n} value={n}>
                         {n === 1 ? "Every day" : `Every ${n} days`}
@@ -107,7 +107,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
               <Field label="Who pays">
                 <select name="billing" defaultValue={round.billing} className={fieldClass}>
                   <option value="account">The hostel: on this account&apos;s monthly bill</option>
-                  <option value="resident">Each resident pays for their own bag</option>
+                  <option value="resident">{"Each resident pays for their own bag"}</option>
                 </select>
               </Field>
             </ActionForm>
@@ -125,7 +125,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
               <div>
                 <p className="mb-1.5 font-medium">Bags signed up ({nextBags.length})</p>
                 {nextBags.length === 0 ? (
-                  <p className="text-muted">None yet.</p>
+                  <p className="text-muted"><Tr>{"None yet."}</Tr></p>
                 ) : (
                   <ul className="divide-y divide-border">
                     {nextBags.map((o) => (
@@ -172,7 +172,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
                   <form action={setBasketAccount}>
                     <input type="hidden" name="deviceId" value={d.deviceId} />
                     <input type="hidden" name="accountId" value="" />
-                    <button className="text-xs text-muted underline hover:text-critical">Remove</button>
+                    <button className="text-xs text-muted underline hover:text-critical"><Tr>{"Remove"}</Tr></button>
                   </form>
                 </li>
               ))}
@@ -182,7 +182,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
             <form action={setBasketAccount} className="mt-4 flex gap-2 border-t border-border pt-4">
               <input type="hidden" name="accountId" value={account.id} />
               <label className="sr-only" htmlFor="deviceId">
-                Basket to add
+                <Tr>{"Basket to add"}</Tr>
               </label>
               <select id="deviceId" name="deviceId" required className="flex-1 rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm">
                 {free.map((d) => (
@@ -191,7 +191,7 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
                   </option>
                 ))}
               </select>
-              <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium">Add basket</button>
+              <button className="btn-primary rounded-full px-4 py-2 text-sm font-medium"><Tr>{"Add basket"}</Tr></button>
             </form>
           )}
           <p className="mt-3 text-xs text-muted">Pickups from these baskets are priced at {fmt.money(price)}/kg and billed monthly; customers aren&apos;t asked to pay each pickup.</p>
@@ -241,18 +241,18 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium text-fg">{monthLabel(b.month)}</span>
-                      {b.unpaid > 0 ? <Badge tone="warn">{fmt.money(b.unpaid)} due</Badge> : <Badge tone="good">Paid</Badge>}
+                      {b.unpaid > 0 ? <Badge tone="warn">{fmt.money(b.unpaid)} due</Badge> : <Badge tone="good"><Tr>{"Paid"}</Tr></Badge>}
                     </div>
                     <p className="mt-1 text-sm text-muted tabular-nums">
                       {b.pickups} pickup{b.pickups === 1 ? "" : "s"} · {fmt.weight(b.kg)} · <span className="text-fg">{fmt.money(b.amount)}</span>
                     </p>
                     <div className="mt-2 flex flex-wrap gap-3 text-sm">
                       <a href={`/admin/accounts/${encodeURIComponent(account.id)}/statement?month=${b.month}`} className="text-accent hover:text-accent-2">
-                        Download Excel
+                        <Tr>{"Download Excel"}</Tr>
                       </a>
                       {wa && (
                         <a href={wa} target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-2">
-                          Send on WhatsApp
+                          <Tr>{"Send on WhatsApp"}</Tr>
                         </a>
                       )}
                     </div>
@@ -262,15 +262,15 @@ export default async function Account({ params }: PageProps<"/admin/accounts/[id
                       <input type="hidden" name="accountId" value={account.id} />
                       <input type="hidden" name="month" value={b.month} />
                       <label className="sr-only" htmlFor={`method-${b.month}`}>
-                        Paid by
+                        <Tr>{"Paid by"}</Tr>
                       </label>
                       <select id={`method-${b.month}`} name="method" defaultValue="UPI" className="rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm">
-                        <option value="UPI">UPI</option>
-                        <option value="CASH">Cash</option>
-                        <option value="OTHER">Bank / other</option>
+                        <option value="UPI">{"UPI"}</option>
+                        <option value="CASH">{"Cash"}</option>
+                        <option value="OTHER">{"Bank / other"}</option>
                       </select>
                       <label className="sr-only" htmlFor={`ref-${b.month}`}>
-                        Reference
+                        <Tr>{"Reference"}</Tr>
                       </label>
                       <input id={`ref-${b.month}`} name="ref" placeholder="UPI reference" maxLength={40} className="w-40 rounded-[8px] border border-border bg-ink/[0.03] px-3 py-2 text-sm" />
                     </ActionForm>

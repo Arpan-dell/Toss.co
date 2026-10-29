@@ -9,6 +9,7 @@ import { getTenantById } from "@/lib/data";
 import { requireRole } from "@/lib/session";
 import { myFormat } from "@/lib/my-format";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Account & security" };
 
 // Settings → Account & security: the sign-in email, the password, and closing the business (password needed).
@@ -26,7 +27,7 @@ export default async function AccountSettings() {
       <Card title="Signed in as">
         <p className="font-mono text-sm text-fg">{session.email}</p>
         <p className="mt-2 text-sm text-secondary">
-          Your password protects important settings too: changing your price, your UPI ID, or closing the business asks for it again.
+          <Tr>{"Your password protects important settings too: changing your price, your UPI ID, or closing the business asks for it again."}</Tr>
         </p>
       </Card>
 
@@ -51,8 +52,7 @@ export default async function AccountSettings() {
                 <textarea name="reason" maxLength={500} rows={3} className={fieldClass} />
               </Field>
               <label className="flex items-start gap-2 text-sm text-secondary">
-                <input type="checkbox" name="confirm" className="mt-0.5 size-4 accent-[var(--color-critical)]" />I want to close my business. Toss will
-                contact me to complete it.
+                <input type="checkbox" name="confirm" className="mt-0.5 size-4 accent-[var(--color-critical)]" /><Tr>{"I want to close my business. Toss will contact me to complete it."}</Tr>
               </label>
               <PasswordField hint="Closing the business needs your password." />
             </ActionForm>

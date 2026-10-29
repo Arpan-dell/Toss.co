@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import type { Renewal } from "@/lib/gateway-payments";
 
+import { Tr } from "@/components/locale";
 // "Renew automatically": approve a monthly subscription once on Toss's gateway, and the plan extends itself
 // every month. The usual way to pay for software abroad; in India it uses a card or UPI Autopay.
 export function AutoRenew({
@@ -44,7 +45,7 @@ export function AutoRenew({
           </p>
         ) : (
           <p className="text-sm text-secondary">
-            <span className="text-good">On.</span> {priceLabel} is charged every month and your plan extends by itself
+            <span className="text-good"><Tr>{"On."}</Tr></span> {priceLabel} is charged every month and your plan extends by itself
             {status.lastChargedAt ? `; last charged ${new Date(status.lastChargedAt).toLocaleDateString()}` : firstCharge ? `, starting ${firstCharge}` : ""}.
           </p>
         )}
@@ -67,7 +68,7 @@ export function AutoRenew({
         {pending ? "Opening…" : "Turn on automatic renewal →"}
       </button>
       <p className="text-xs text-muted">Secured by {gatewayName}. Cancel anytime here.</p>
-      {status?.status === "created" && <p className="text-xs text-warn">Not finished yet: open the page again to approve it.</p>}
+      {status?.status === "created" && <p className="text-xs text-warn"><Tr>{"Not finished yet: open the page again to approve it."}</Tr></p>}
       {error && (
         <p role="alert" className="text-sm text-critical">
           {error}

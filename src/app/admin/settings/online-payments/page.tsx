@@ -10,6 +10,7 @@ import { requireRole } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { GatewayForm } from "./gateway-form";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Customer payments" };
 
 // Settings → Online payments: the laundry connects its own Razorpay or Stripe account. Customers then pay on the
@@ -32,19 +33,19 @@ export default async function OnlinePayments() {
 
   return (
     <div className="stagger mx-auto w-full max-w-2xl space-y-6">
-      <PageTitle kicker="Settings · protected">Customer payments</PageTitle>
+      <PageTitle kicker="Settings · protected"><Tr>{"Customer payments"}</Tr></PageTitle>
       <BackLink />
 
       <p className="rounded-[8px] border border-border bg-ink/[0.03] px-4 py-3 text-sm text-secondary">
-        This is optional, and only for <b className="text-fg">your customers&apos; laundry bills</b>, paid into your own Razorpay or Stripe
-        account. Your Toss plan is paid on <a href="/admin/billing" className="text-accent hover:text-accent-2">Billing</a>, with no setup.
+        <Tr>{"This is optional, and only for"}</Tr> <b className="text-fg">your customers&apos; laundry bills</b>, paid into your own Razorpay or Stripe
+        account. Your Toss plan is paid on <a href="/admin/billing" className="text-accent hover:text-accent-2"><Tr>{"Billing"}</Tr></a>, with no setup.
       </p>
 
       <Card title="How it works">
         <ul className="space-y-1.5 text-sm text-secondary">
-          <li>✓ Customers tap <b className="text-fg">Pay</b> and pay on your gateway&apos;s page: UPI, cards, netbanking, wallets, Apple Pay…</li>
-          <li>✓ The gateway tells Toss the moment the money arrives, with a signed message. The bill turns paid and the invoice goes out by itself.</li>
-          <li>✓ Nobody types a reference, and nothing a customer does in their browser can mark a bill paid.</li>
+          <li><Tr>{"✓ Customers tap"}</Tr> <b className="text-fg"><Tr>{"Pay"}</Tr></b> and pay on your gateway&apos;s page: UPI, cards, netbanking, wallets, Apple Pay…</li>
+          <li><Tr>{"✓ The gateway tells Toss the moment the money arrives, with a signed message. The bill turns paid and the invoice goes out by itself."}</Tr></li>
+          <li><Tr>{"✓ Nobody types a reference, and nothing a customer does in their browser can mark a bill paid."}</Tr></li>
           <li>✓ The money goes straight to your account. The gateway charges its own fee per payment; Toss charges nothing.</li>
           <li>
             You choose: online only, or online plus your {tenant.currency === "INR" ? "UPI ID" : "payment details"} for customers who prefer paying
@@ -57,12 +58,10 @@ export default async function OnlinePayments() {
         <Card title="What customers expect where you are">
           <ul className="space-y-1.5 text-sm text-secondary">
             <li>
-              ✓ <b className="text-fg">Use Stripe.</b> In the US, Canada, the UK and Europe, laundry pickup apps charge a saved card after the
-              clothes are weighed: no paying at the door, no checkout each time.
+              ✓ <b className="text-fg"><Tr>{"Use Stripe."}</Tr></b> <Tr>{"In the US, Canada, the UK and Europe, laundry pickup apps charge a saved card after the clothes are weighed: no paying at the door, no checkout each time."}</Tr>
             </li>
             <li>
-              ✓ With Stripe connected, your customers can <b className="text-fg">save a card, Apple Pay or Google Pay once</b> and choose a tip
-              (10–20% is usual in the US). Each bill is charged automatically when you mark the order ready, with a receipt.
+              <Tr>{"✓ With Stripe connected, your customers can"}</Tr> <b className="text-fg"><Tr>{"save a card, Apple Pay or Google Pay once"}</Tr></b> <Tr>{"and choose a tip (10–20% is usual in the US). Each bill is charged automatically when you mark the order ready, with a receipt."}</Tr>
             </li>
             <li>
               ✓ Stripe&apos;s payment page also shows the methods people use locally: iDEAL in the Netherlands, Bancontact in Belgium, SEPA
@@ -75,7 +74,7 @@ export default async function OnlinePayments() {
 
       {!ready ? (
         <Card>
-          <p className="text-sm text-secondary">Online payments switch on after the next database update.</p>
+          <p className="text-sm text-secondary"><Tr>{"Online payments switch on after the next database update."}</Tr></p>
         </Card>
       ) : connected ? (
         <Card
@@ -87,14 +86,14 @@ export default async function OnlinePayments() {
           }
         >
           <dl className="grid grid-cols-[130px_1fr] gap-y-2 text-sm">
-            <dt className="text-muted">Gateway</dt>
+            <dt className="text-muted"><Tr>{"Gateway"}</Tr></dt>
             <dd>
               {name(connected.provider as string)}
               {connected.key_id ? <span className="ml-2 font-mono text-xs text-muted">{connected.key_id as string}</span> : null}
             </dd>
-            <dt className="text-muted">Connected</dt>
+            <dt className="text-muted"><Tr>{"Connected"}</Tr></dt>
             <dd>{fmt.dateTime(connected.connected_at as string)}</dd>
-            <dt className="text-muted">Last message</dt>
+            <dt className="text-muted"><Tr>{"Last message"}</Tr></dt>
             <dd>{connected.last_event_at ? fmt.dateTime(connected.last_event_at as string) : "None yet. It appears after the first payment."}</dd>
           </dl>
           <form action={setAlsoDirect} className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-border px-4 py-3">
@@ -115,12 +114,12 @@ export default async function OnlinePayments() {
           </form>
           {!connected.live && (
             <p className="mt-4 rounded-[8px] border border-warn/30 bg-warn-bg px-3 py-2 text-sm text-warn">
-              Test mode: payments are pretend. Try one from a customer account, then connect your live keys.
+              <Tr>{"Test mode: payments are pretend. Try one from a customer account, then connect your live keys."}</Tr>
             </p>
           )}
           {noHook && (
             <details className="mt-5 rounded-[8px] border border-border px-4 py-3">
-              <summary className="cursor-pointer text-sm font-medium text-fg">Add a webhook (optional)</summary>
+              <summary className="cursor-pointer text-sm font-medium text-fg"><Tr>{"Add a webhook (optional)"}</Tr></summary>
               <p className="mt-2 mb-4 text-xs text-muted">
                 Optional, makes it instant: without a webhook, Toss asks Razorpay about each payment when the customer comes back
                   or the dashboard is opened. With one, it&apos;s confirmed the second it&apos;s paid.
@@ -130,7 +129,7 @@ export default async function OnlinePayments() {
           )}
           <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4">
             <details className="text-sm">
-              <summary className="cursor-pointer text-accent">Change keys</summary>
+              <summary className="cursor-pointer text-accent"><Tr>{"Change keys"}</Tr></summary>
               <div className="mt-4">
                 <GatewayForm suggested={connected.provider as "razorpay" | "stripe"} />
               </div>

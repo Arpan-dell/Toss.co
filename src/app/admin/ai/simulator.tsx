@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { Tr } from "@/components/locale";
 // What-if simulator. Plain arithmetic on the business's own forecast; every assumption is a visible
 // control, so the manager can see exactly where a number comes from.
 
@@ -68,10 +69,10 @@ export function Simulator({ base }: { base: SimBase }) {
     <div className="grid gap-6 lg:grid-cols-5">
       <div className="space-y-5 lg:col-span-3">
         <div className="space-y-3 rounded-[10px] border border-border bg-ink/[0.02] p-4">
-          <p className="text-sm font-medium">Change your price</p>
+          <p className="text-sm font-medium"><Tr>{"Change your price"}</Tr></p>
           <Slider label={`Price per kg (now ₹${base.price})`} value={price} min={-20} max={20} suffix="%" onChange={setPrice} />
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-muted">How price-sensitive are your customers?</span>
+            <span className="text-muted"><Tr>{"How price-sensitive are your customers?"}</Tr></span>
             {(Object.keys(SENSITIVITY) as (keyof typeof SENSITIVITY)[]).map((k) => (
               <button
                 key={k}
@@ -101,11 +102,11 @@ export function Simulator({ base }: { base: SimBase }) {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="space-y-3 rounded-[10px] border border-border bg-ink/[0.02] p-4">
-            <p className="text-sm font-medium">Collect unpaid invoices</p>
+            <p className="text-sm font-medium"><Tr>{"Collect unpaid invoices"}</Tr></p>
             <Slider label={`Of ${inr(base.outstanding)} outstanding`} value={collect} min={0} max={100} step={5} suffix="%" onChange={setCollect} />
           </div>
           <div className="space-y-3 rounded-[10px] border border-border bg-ink/[0.02] p-4">
-            <p className="text-sm font-medium">Add drivers</p>
+            <p className="text-sm font-medium"><Tr>{"Add drivers"}</Tr></p>
             <Slider label={`Now ${base.connected} connected`} value={extraDrivers} min={0} max={5} suffix="" onChange={setExtraDrivers} />
           </div>
         </div>
@@ -114,18 +115,18 @@ export function Simulator({ base }: { base: SimBase }) {
       <div className="lg:col-span-2">
         <div className="sticky top-24 space-y-4 rounded-[10px] border border-t-2 border-border border-t-accent bg-surface-solid p-5">
           <div>
-            <p className="text-xs tracking-[0.14em] text-muted uppercase">Next 30 days, projected</p>
+            <p className="text-xs tracking-[0.14em] text-muted uppercase"><Tr>{"Next 30 days, projected"}</Tr></p>
             <p className="mt-1 text-4xl font-semibold tabular-nums">{inr(total)}</p>
             <p className={`text-sm tabular-nums ${delta >= 0 ? "text-good" : "text-critical"}`}>
               {delta >= 0 ? "▲" : "▼"} {inr(Math.abs(delta))} ({base.revenue30 ? `${delta >= 0 ? "+" : "−"}${Math.abs(Math.round((delta / base.revenue30) * 100))}%` : "—"}) vs forecast {inr(base.revenue30)}
             </p>
           </div>
           <dl className="space-y-2 border-t border-border pt-3 text-sm">
-            <div className="flex justify-between"><dt className="text-secondary">From price change</dt><dd className="tabular-nums">{priceDelta >= 0 ? "+" : "−"}{inr(Math.abs(priceDelta))}</dd></div>
-            <div className="flex justify-between"><dt className="text-secondary">From win-backs</dt><dd className="tabular-nums">{winbackDelta >= 0 ? "+" : "−"}{inr(Math.abs(winbackDelta))}</dd></div>
-            <div className="flex justify-between"><dt className="text-secondary">One-time cash collected</dt><dd className="tabular-nums">+{inr(cash)}</dd></div>
+            <div className="flex justify-between"><dt className="text-secondary"><Tr>{"From price change"}</Tr></dt><dd className="tabular-nums">{priceDelta >= 0 ? "+" : "−"}{inr(Math.abs(priceDelta))}</dd></div>
+            <div className="flex justify-between"><dt className="text-secondary"><Tr>{"From win-backs"}</Tr></dt><dd className="tabular-nums">{winbackDelta >= 0 ? "+" : "−"}{inr(Math.abs(winbackDelta))}</dd></div>
+            <div className="flex justify-between"><dt className="text-secondary"><Tr>{"One-time cash collected"}</Tr></dt><dd className="tabular-nums">+{inr(cash)}</dd></div>
             <div className="flex justify-between">
-              <dt className="text-secondary">Busy days fully staffed</dt>
+              <dt className="text-secondary"><Tr>{"Busy days fully staffed"}</Tr></dt>
               <dd className={`tabular-nums ${covered === busy.length ? "text-good" : "text-warn"}`}>{busy.length ? `${covered} of ${busy.length}` : "—"}</dd>
             </div>
           </dl>

@@ -8,6 +8,7 @@ import { getTenantById, listCustomers, listOrders } from "@/lib/data";
 import { getSession } from "@/lib/session";
 import { myFormat } from "@/lib/my-format";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Ratings" };
 
 // Ratings (Pro): customers rate each paid pickup from the link in their invoice. Low ratings come first so the
@@ -29,7 +30,7 @@ export default async function Ratings() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Pro">Ratings</PageTitle>
+      <PageTitle kicker="Pro"><Tr>{"Ratings"}</Tr></PageTitle>
       <BackLink />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -43,7 +44,7 @@ export default async function Ratings() {
         <p className="rounded-[10px] border border-warn/30 bg-warn-bg px-4 py-3 text-sm text-warn">
           Add your Google review link under{" "}
           <Link href="/admin/settings/operations" className="underline">
-            Settings → How you work
+            <Tr>{"Settings → How you work"}</Tr>
           </Link>{" "}
           so customers who rate you 4–5 stars are asked to post a review.
         </p>
@@ -66,7 +67,7 @@ export default async function Ratings() {
 
         <Card title={low.length ? `Follow up (${low.length})` : "Recent ratings"}>
           {rated.length === 0 ? (
-            <EmptyState>Ratings arrive after customers pay: their invoice has a one-tap link.</EmptyState>
+            <EmptyState><Tr>{"Ratings arrive after customers pay: their invoice has a one-tap link."}</Tr></EmptyState>
           ) : (
             <ul className="divide-y divide-border text-sm">
               {(low.length ? low : rated).slice(0, 12).map((o) => (

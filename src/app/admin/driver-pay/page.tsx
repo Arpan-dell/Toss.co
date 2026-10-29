@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { myFormat } from "@/lib/my-format";
 import { driverRouteKm } from "@/lib/driver-routes";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Driver pay" };
 
 const trips = (n: number) => `${n} trip${n === 1 ? "" : "s"}`;
@@ -88,11 +89,11 @@ export default async function DriverPay() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Pro">Driver pay</PageTitle>
+      <PageTitle kicker="Pro"><Tr>{"Driver pay"}</Tr></PageTitle>
 
       {noRates && (
         <p role="status" className="rounded-[10px] border border-warn/30 bg-warn-bg px-4 py-3 text-sm text-warn">
-          Some drivers are paid per trip, but no rate is set yet. Set it under <b>Per-trip rate</b> below; until then they show ₹0.
+          <Tr>{"Some drivers are paid per trip, but no rate is set yet. Set it under"}</Tr> <b><Tr>{"Per-trip rate"}</Tr></b> below; until then they show ₹0.
         </p>
       )}
 
@@ -104,17 +105,17 @@ export default async function DriverPay() {
 
       <Card title="By driver">
         {rows.length === 0 ? (
-          <EmptyState>Drivers appear here once they connect to the driver bot (Fleet page).</EmptyState>
+          <EmptyState><Tr>{"Drivers appear here once they connect to the driver bot (Fleet page)."}</Tr></EmptyState>
         ) : (
           <div className="-mx-2 overflow-x-auto">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left font-mono text-[11px] tracking-[0.1em] text-muted uppercase">
-                  <th className="px-2 py-2 font-normal">Driver</th>
-                  <th className="px-2 py-2 text-right font-normal">This week</th>
-                  <th className="px-2 py-2 text-right font-normal">Last week</th>
-                  <th className="px-2 py-2 text-right font-normal">This month</th>
-                  <th className="px-2 py-2 text-right font-normal">Photo proof</th>
+                  <th className="px-2 py-2 font-normal"><Tr>{"Driver"}</Tr></th>
+                  <th className="px-2 py-2 text-right font-normal"><Tr>{"This week"}</Tr></th>
+                  <th className="px-2 py-2 text-right font-normal"><Tr>{"Last week"}</Tr></th>
+                  <th className="px-2 py-2 text-right font-normal"><Tr>{"This month"}</Tr></th>
+                  <th className="px-2 py-2 text-right font-normal"><Tr>{"Photo proof"}</Tr></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -150,13 +151,13 @@ export default async function DriverPay() {
             </table>
           </div>
         )}
-        <p className="mt-3 text-xs text-muted">A trip is a pickup or a delivery. Distance is store to basket in a straight line, for baskets and a store on the map.</p>
+        <p className="mt-3 text-xs text-muted"><Tr>{"A trip is a pickup or a delivery. Distance is store to basket in a straight line, for baskets and a store on the map."}</Tr></p>
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="How each driver is paid">
           {drivers.length === 0 ? (
-            <EmptyState>Add drivers on the Fleet page first.</EmptyState>
+            <EmptyState><Tr>{"Add drivers on the Fleet page first."}</Tr></EmptyState>
           ) : (
             <ul className="divide-y divide-border">
               {drivers.map((d) => (
@@ -167,8 +168,8 @@ export default async function DriverPay() {
                     <label className="text-xs text-secondary">
                       <span className="sr-only">Pay type for {d.name}</span>
                       <select name="payType" defaultValue={d.payType} className="rounded-[8px] border border-border bg-surface-solid px-3 py-2 text-sm text-fg">
-                        <option value="TRIP">Per trip</option>
-                        <option value="SALARY">Monthly salary</option>
+                        <option value="TRIP">{"Per trip"}</option>
+                        <option value="SALARY">{"Monthly salary"}</option>
                       </select>
                     </label>
                     <label className="text-xs text-secondary">
@@ -188,7 +189,7 @@ export default async function DriverPay() {
               ))}
             </ul>
           )}
-          <p className="mt-3 text-xs text-muted">The salary only counts for drivers set to Monthly salary.</p>
+          <p className="mt-3 text-xs text-muted"><Tr>{"The salary only counts for drivers set to Monthly salary."}</Tr></p>
         </Card>
 
         <Card title="Per-trip rate">
@@ -201,7 +202,7 @@ export default async function DriverPay() {
               <input name="driverPayPerKm" type="number" min={0} step="any" defaultValue={tenant.driverPayPerKm} className={fieldClass} />
             </Field>
           </ActionForm>
-          <p className="mt-3 text-xs text-muted">Drivers see their own pay with 💰 My earnings in the driver bot. Driver pay also counts as a cost on the Profit page.</p>
+          <p className="mt-3 text-xs text-muted"><Tr>{"Drivers see their own pay with 💰 My earnings in the driver bot. Driver pay also counts as a cost on the Profit page."}</Tr></p>
         </Card>
       </div>
     </div>

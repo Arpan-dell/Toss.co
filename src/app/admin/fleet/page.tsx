@@ -14,6 +14,7 @@ import { startOfDay } from "@/lib/route-distance";
 import { realBaskets } from "@/lib/rounds";
 import type { Order } from "@/lib/types";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Drivers" };
 
 function signalLabel(rssi: number) {
@@ -53,7 +54,7 @@ export default async function Fleet() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Drivers & baskets">Drivers</PageTitle>
+      <PageTitle kicker="Drivers & baskets"><Tr>{"Drivers"}</Tr></PageTitle>
 
       <Card title={`Drivers (${drivers.length})`}>
         <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-start">
@@ -66,7 +67,7 @@ export default async function Fleet() {
                   <a href={`https://t.me/${botUsername}`} target="_blank" rel="noreferrer" className="font-mono text-fg underline">
                     @{botUsername}
                   </a>{" "}
-                  and tap <span className="text-fg">📱 Share my phone number</span>. Telegram confirms the number and they&apos;re connected.
+                  and tap <span className="text-fg"><Tr>{"📱 Share my phone number"}</Tr></span>. Telegram confirms the number and they&apos;re connected.
                   Then they tap 🟢 Online and share their live location, and new pickups go to the nearest one automatically.
                 </>
               ) : (
@@ -77,7 +78,7 @@ export default async function Fleet() {
           {botUsername && <DriverBotQr username={botUsername} />}
         </div>
         {drivers.length === 0 ? (
-          <EmptyState>No drivers yet. Add your first one above.</EmptyState>
+          <EmptyState><Tr>{"No drivers yet. Add your first one above."}</Tr></EmptyState>
         ) : (
           <>
             <div className="grid gap-4 lg:grid-cols-2">
@@ -106,7 +107,7 @@ export default async function Fleet() {
                           <p className="font-mono text-xs text-muted">{chat}</p>
                         )}
                       </div>
-                      {!chat ? <Badge tone="warn">Not connected to Telegram yet</Badge> : <DriverStatusControl driverId={drv.id} name={drv.name} status={drv.status} />}
+                      {!chat ? <Badge tone="warn"><Tr>{"Not connected to Telegram yet"}</Tr></Badge> : <DriverStatusControl driverId={drv.id} name={drv.name} status={drv.status} />}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -122,9 +123,9 @@ export default async function Fleet() {
                           📍 {live ? "Live" : `Last seen ${timeAgo(drv.locationAt!, current)}`} · See on map ↗
                         </a>
                       ) : (
-                        <span className="rounded-full border border-border px-3 py-1.5 text-muted">📍 Location not shared yet</span>
+                        <span className="rounded-full border border-border px-3 py-1.5 text-muted"><Tr>{"📍 Location not shared yet"}</Tr></span>
                       )}
-                      {!live && chat && drv.status !== "OFFLINE" && <span className="text-xs text-warn">Old location: the bot is reminding them to share live location.</span>}
+                      {!live && chat && drv.status !== "OFFLINE" && <span className="text-xs text-warn"><Tr>{"Old location: the bot is reminding them to share live location."}</Tr></span>}
                     </div>
 
                     <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -142,20 +143,20 @@ export default async function Fleet() {
                     </dl>
 
                     <p className="text-sm text-secondary">
-                      <span className="text-muted">Now: </span>
+                      <span className="text-muted"><Tr>{"Now:"}</Tr> </span>
                       {job ? `${orderLabel(job)} · ${job.address}` : "no job"}
                     </p>
 
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
                       <form action={setDriverMaxJobs} className="flex items-center gap-2 text-sm">
                         <input type="hidden" name="driverId" value={drv.id} />
-                        <label htmlFor={`max-${drv.id}`} className="text-secondary">Jobs at once</label>
+                        <label htmlFor={`max-${drv.id}`} className="text-secondary"><Tr>{"Jobs at once"}</Tr></label>
                         <select id={`max-${drv.id}`} name="maxJobs" defaultValue={drv.maxJobs} className="rounded-lg border border-border bg-surface-solid px-2 py-1 text-sm">
                           {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
                             <option key={n} value={n}>{n}</option>
                           ))}
                         </select>
-                        <button className="text-sm text-accent hover:text-accent-2">Save</button>
+                        <button className="text-sm text-accent hover:text-accent-2"><Tr>{"Save"}</Tr></button>
                       </form>
                       <ConfirmButton
                         action={deleteDriver}

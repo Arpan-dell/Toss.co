@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { Tr } from "@/components/locale";
 const KEY = "toss-route-location";
 const EVERY_MS = 60_000;
 
@@ -57,12 +58,12 @@ export function LiveLocation({ token }: { token: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (state === "on") return <p className="text-xs text-good">📍 Your location updates by itself while this page is open.</p>;
-  if (state === "denied") return <p className="text-xs text-muted">📍 Location is blocked for this site. Turn on live location in Toss Handy instead.</p>;
+  if (state === "on") return <p className="text-xs text-good"><Tr>{"📍 Your location updates by itself while this page is open."}</Tr></p>;
+  if (state === "denied") return <p className="text-xs text-muted"><Tr>{"📍 Location is blocked for this site. Turn on live location in Toss Handy instead."}</Tr></p>;
   if (state === "unsupported") return null;
   return (
     <button type="button" onClick={start} className="btn-ghost w-full rounded-full px-4 py-2 text-sm">
-      📍 Keep my location updated from this page
+      <Tr>{"📍 Keep my location updated from this page"}</Tr>
     </button>
   );
 }

@@ -1,16 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { languageRequest, translator } from ".";
 import { HI } from "./hi";
+import { HI_MANAGER } from "./hi-manager";
 
 const holes = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort();
 
 describe("Hindi", () => {
   it("keeps every {placeholder} of the English", () => {
-    for (const [en, hi] of Object.entries(HI)) expect(holes(hi), en).toEqual(holes(en));
+    for (const [en, hi] of Object.entries({ ...HI, ...HI_MANAGER })) expect(holes(hi), en).toEqual(holes(en));
   });
 
   it("has no empty lines", () => {
-    for (const [en, hi] of Object.entries(HI)) expect(hi.trim(), en).not.toBe("");
+    for (const [en, hi] of Object.entries({ ...HI, ...HI_MANAGER })) expect(hi.trim(), en).not.toBe("");
   });
 
   it("translates, fills placeholders, and falls back to English", () => {

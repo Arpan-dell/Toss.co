@@ -6,6 +6,7 @@ import { AreaMap } from "@/components/area-map";
 import { updateServiceArea } from "@/lib/actions/manager";
 import type { FormState } from "@/lib/actions/shared";
 
+import { Tr } from "@/components/locale";
 const WORLD: [number, number] = [20, 0];
 
 // Where the business works: the store pin (click the map or use this device's location) and a pickup radius
@@ -71,7 +72,7 @@ export function ServiceAreaEditor({ lat, lng, radiusKm, listed }: { lat?: number
 
           <label className="block">
             <span className="flex items-baseline justify-between">
-              <span className="font-mono text-[11px] tracking-[0.12em] text-secondary uppercase">Pickup radius</span>
+              <span className="font-mono text-[11px] tracking-[0.12em] text-secondary uppercase"><Tr>{"Pickup radius"}</Tr></span>
               <span className="font-mono text-2xl font-semibold tabular-nums">{radius} km</span>
             </span>
             <input
@@ -90,7 +91,7 @@ export function ServiceAreaEditor({ lat, lng, radiusKm, listed }: { lat?: number
               <span>5</span>
               <span>10</span>
               <span>15</span>
-              <span>20 km</span>
+              <span><Tr>{"20 km"}</Tr></span>
             </span>
             <span className="mt-2 block text-xs text-muted">About {Math.round(Math.PI * radius * radius)} km² around your store.</span>
           </label>
@@ -98,8 +99,8 @@ export function ServiceAreaEditor({ lat, lng, radiusKm, listed }: { lat?: number
           <label className="flex items-start gap-2.5 text-sm">
             <input name="listed" type="checkbox" defaultChecked={listed} className="mt-0.5 size-4 accent-[var(--accent)]" />
             <span>
-              Show my business in <span className="text-fg">Find a laundry</span>
-              <span className="block text-xs text-muted">Customers in your radius can compare you and connect without a Business ID.</span>
+              <Tr>{"Show my business in"}</Tr> <span className="text-fg"><Tr>{"Find a laundry"}</Tr></span>
+              <span className="block text-xs text-muted"><Tr>{"Customers in your radius can compare you and connect without a Business ID."}</Tr></span>
             </span>
           </label>
         </div>

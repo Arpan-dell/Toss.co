@@ -8,6 +8,7 @@ import { computeAggregates } from "@/lib/analytics";
 import { listOrders } from "@/lib/data";
 import { myFormat } from "@/lib/my-format";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Analytics" };
 
 export default async function Analytics() {
@@ -26,7 +27,7 @@ export default async function Analytics() {
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="Insights">Analytics</PageTitle>
+      <PageTitle kicker="Insights"><Tr>{"Analytics"}</Tr></PageTitle>
       <BackLink />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -40,35 +41,35 @@ export default async function Analytics() {
         href="/admin/ai"
         className="group block rounded-[10px] border border-l-4 border-border border-l-accent bg-surface-solid p-5 transition-colors hover:border-accent/60"
       >
-        <p className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase">Toss AI</p>
-        <p className="mt-1 text-lg font-semibold">Forecasts, a daily action plan and an autopilot for your business</p>
+        <p className="font-mono text-[11px] tracking-[0.14em] text-accent uppercase"><Tr>{"Toss AI"}</Tr></p>
+        <p className="mt-1 text-lg font-semibold"><Tr>{"Forecasts, a daily action plan and an autopilot for your business"}</Tr></p>
         <p className="text-sm text-secondary">
-          Busy-day driver alerts, win-back offers, payment reminders and pricing, done for you. <span className="text-accent group-hover:underline">Open Toss AI →</span>
+          <Tr>{"Busy-day driver alerts, win-back offers, payment reminders and pricing, done for you."}</Tr> <span className="text-accent group-hover:underline"><Tr>{"Open Toss AI →"}</Tr></span>
         </p>
       </Link>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Laundry by day of week (kg)">
-          {agg.totalOrders > 0 ? <ColumnChart data={weekday} unit="kg" /> : <EmptyState>No orders yet.</EmptyState>}
+          {agg.totalOrders > 0 ? <ColumnChart data={weekday} unit="kg" /> : <EmptyState><Tr>{"No orders yet."}</Tr></EmptyState>}
         </Card>
         <Card title="Weekly laundry volume (kg, complete weeks)">
           {weekly.length >= 2 ? (
             <LineChart data={weekly} unit="kg" />
           ) : (
-            <EmptyState>Needs at least two complete weeks of orders.</EmptyState>
+            <EmptyState><Tr>{"Needs at least two complete weeks of orders."}</Tr></EmptyState>
           )}
         </Card>
       </div>
 
       <Card>
         <details>
-          <summary className="cursor-pointer text-sm font-medium">Show data table</summary>
+          <summary className="cursor-pointer text-sm font-medium"><Tr>{"Show data table"}</Tr></summary>
           <table className="mt-4 w-full max-w-md text-sm">
             <thead>
               <tr className="border-b border-border text-left text-[11px] tracking-[0.12em] text-muted uppercase">
-                <th className="py-2 font-medium">Week starting</th>
-                <th className="py-2 text-right font-medium">Pickups</th>
-                <th className="py-2 text-right font-medium">kg</th>
+                <th className="py-2 font-medium"><Tr>{"Week starting"}</Tr></th>
+                <th className="py-2 text-right font-medium"><Tr>{"Pickups"}</Tr></th>
+                <th className="py-2 text-right font-medium"><Tr>{"kg"}</Tr></th>
               </tr>
             </thead>
             <tbody>

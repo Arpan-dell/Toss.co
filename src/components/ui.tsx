@@ -8,6 +8,10 @@ import { Tr } from "./locale";
 // with a dotted leader like a laundry ticket, figures in mono on a heavy top rule, and square-cornered status
 // tags. Shape rule: panels 10px, inputs 8px, tags 4px; only buttons are pills. No glass, glow or gradients.
 
+// Plain text handed to these building blocks shows in the page's language (see components/locale.tsx), so pages
+// can keep passing English: title="Payments" shows as "पेमेंट" in Hindi.
+const tx = (node: React.ReactNode) => (typeof node === "string" ? <Tr>{node}</Tr> : node);
+
 export function Card({ title, action, children, className = "", id }: {
   title?: string;
   action?: React.ReactNode;
@@ -19,7 +23,7 @@ export function Card({ title, action, children, className = "", id }: {
     <section id={id} className={`scroll-mt-6 rounded-[10px] border border-border bg-surface-solid p-5 ${className}`}>
       {(title || action) && (
         <header className="mb-4 flex items-center gap-3">
-          {title && <h2 className="shrink-0 font-mono text-[11px] font-medium tracking-[0.12em] text-secondary uppercase">{title}</h2>}
+          {title && <h2 className="shrink-0 font-mono text-[11px] font-medium tracking-[0.12em] text-secondary uppercase">{tx(title)}</h2>}
           <span aria-hidden className="h-px flex-1 border-t border-dotted border-[rgb(var(--accent-3-rgb)/0.4)]" />
           {action}
         </header>
@@ -33,11 +37,11 @@ export function StatTile({ label, value, hint }: { label: string; value: string;
   return (
     <div className="relative pt-3.5">
       <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-[linear-gradient(90deg,var(--text)_55%,var(--accent-3))]" />
-      <p className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">{label}</p>
+      <p className="font-mono text-[11px] tracking-[0.12em] text-muted uppercase">{tx(label)}</p>
       <p className="mt-1.5 font-mono text-[1.75rem] leading-none font-semibold tracking-tight tabular-nums text-fg">
         <CountUp value={value} />
       </p>
-      {hint && <p className="mt-1.5 text-xs text-muted">{hint}</p>}
+      {hint && <p className="mt-1.5 text-xs text-muted">{tx(hint)}</p>}
     </div>
   );
 }
@@ -64,7 +68,7 @@ export function Badge({ tone, live = false, children }: {
       className={`inline-flex items-center gap-1.5 rounded-[4px] border px-1.5 py-0.5 font-mono text-[11px] font-medium tracking-wide whitespace-nowrap uppercase ${toneClass[tone]}`}
     >
       <span aria-hidden className={`size-1.5 shrink-0 bg-current ${live ? "tag-live" : ""}`} />
-      {children}
+      {tx(children)}
     </span>
   );
 }
@@ -86,7 +90,7 @@ export function Tip({ label, children, side = "bottom" }: { label: string; child
           side === "top" ? "bottom-full mb-2 translate-y-1 group-hover/tip:translate-y-0" : "top-full mt-2 -translate-y-1 group-hover/tip:translate-y-0"
         }`}
       >
-        {label}
+        {tx(label)}
       </span>
     </span>
   );
@@ -156,7 +160,7 @@ export function FillBar({ weightKg, targetKg }: { weightKg?: number; targetKg?: 
 }
 
 export function EmptyState({ children }: { children: React.ReactNode }) {
-  return <p className="py-8 text-center text-sm text-muted">{children}</p>;
+  return <p className="py-8 text-center text-sm text-muted">{tx(children)}</p>;
 }
 
 export function PageTitle({ children, kicker }: { children: React.ReactNode; kicker?: string }) {
@@ -165,10 +169,10 @@ export function PageTitle({ children, kicker }: { children: React.ReactNode; kic
       {kicker && (
         <p className="flex items-center gap-2 font-mono text-[11px] tracking-[0.14em] text-muted uppercase">
           <span aria-hidden className="size-1.5 bg-accent-3" />
-          {kicker}
+          {tx(kicker)}
         </p>
       )}
-      <h1 className="mt-2 text-[2.1rem] leading-tight font-bold tracking-tight">{children}</h1>
+      <h1 className="mt-2 text-[2.1rem] leading-tight font-bold tracking-tight">{tx(children)}</h1>
     </div>
   );
 }

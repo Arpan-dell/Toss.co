@@ -9,6 +9,7 @@ import { orderStage, STAGE_FILTERS } from "@/lib/order-stage";
 import { bookForCustomer } from "@/lib/actions/bookings";
 import { NewPickup } from "./new-pickup";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Orders" };
 
 const FREE_HISTORY_DAYS = 60;
@@ -46,11 +47,11 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
 
   return (
     <div className="stagger space-y-6">
-      <PageTitle kicker="All baskets">Orders</PageTitle>
+      <PageTitle kicker="All baskets"><Tr>{"Orders"}</Tr></PageTitle>
 
       <Card id="new-pickup" title="New pickup">
         <details>
-          <summary className="cursor-pointer text-sm font-medium text-accent">Book a pickup for a customer who phoned or messaged you</summary>
+          <summary className="cursor-pointer text-sm font-medium text-accent"><Tr>{"Book a pickup for a customer who phoned or messaged you"}</Tr></summary>
           <div className="mt-4">
             <NewPickup action={bookForCustomer} />
           </div>
@@ -90,7 +91,7 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
         >
           <MicrosoftExcelLogo size={16} weight="fill" className="text-good" aria-hidden />
           Download Excel
-          {!pro && <span className="rounded-[4px] bg-accent/15 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.08em] text-accent">PRO</span>}
+          {!pro && <span className="rounded-[4px] bg-accent/15 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.08em] text-accent"><Tr>{"PRO"}</Tr></span>}
         </a>
       </div>
 
@@ -101,7 +102,7 @@ export default async function AdminOrders({ searchParams }: PageProps<"/admin/or
             history.
           </span>
           <Link href="/admin/billing" className="btn-primary rounded-full px-4 py-1.5 text-sm font-medium">
-            Unlock history →
+            <Tr>{"Unlock history →"}</Tr>
           </Link>
         </p>
       )}

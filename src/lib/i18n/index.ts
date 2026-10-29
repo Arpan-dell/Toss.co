@@ -1,4 +1,7 @@
 import { HI } from "./hi";
+import { HI_MANAGER } from "./hi-manager";
+
+const DICT: Record<string, string> = { ...HI, ...HI_MANAGER };
 
 // Toss in English and Hindi. The English text in the code is the key: t("Order history") gives "ऑर्डर हिस्ट्री" in
 // Hindi, and any text without a Hindi line yet simply stays in English, so nothing ever shows blank.
@@ -21,7 +24,15 @@ const fill = (s: string, vars?: Vars) => (vars ? s.replace(/\{(\w+)\}/g, (m, k: 
 
 /** The translate function for one language. */
 export function translator(locale: Locale): T {
-  return (text, vars) => fill(locale === "hi" ? (HI[text] ?? text) : text, vars);
+  return (text, vars) => fill(locale === "hi" ? hindi(text) : text, vars);
+}
+
+// A count after a label, like "Drivers (3)", uses the label's own line.
+function hindi(text: string): string {
+  const exact = DICT[text];
+  if (exact !== undefined) return exact;
+  const counted = text.match(/^(.+?) \((\d+)\)$/);
+  return counted && DICT[counted[1]] ? `${DICT[counted[1]]} (${counted[2]})` : text;
 }
 
 /** "hi-IN" or "en-IN", for dates and numbers. */

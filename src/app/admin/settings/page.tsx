@@ -18,6 +18,7 @@ import {
 import { currentTier } from "@/components/plan-gate";
 import { PageTitle } from "@/components/ui";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "Settings" };
 
 // locked: needs the account password to change
@@ -64,7 +65,7 @@ export default async function Settings() {
 
   return (
     <div className="stagger mx-auto w-full max-w-4xl space-y-8">
-      <PageTitle kicker="Set up once, check now and then">Settings</PageTitle>
+      <PageTitle kicker="Set up once, check now and then"><Tr>{"Settings"}</Tr></PageTitle>
       {GROUPS.map((g) => (
         <section key={g.title} className="space-y-3">
           <h2 className="font-mono text-[11px] tracking-[0.14em] text-muted uppercase">{g.title}</h2>
@@ -87,7 +88,7 @@ export default async function Settings() {
                       {t.locked && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-warn-bg px-1.5 py-0.5 font-mono text-[10px] text-warn" title="Changes need your password">
                           <LockSimple size={10} weight="bold" aria-hidden />
-                          PASSWORD
+                          <Tr>{"PASSWORD"}</Tr>
                         </span>
                       )}
                       {t.pro && (

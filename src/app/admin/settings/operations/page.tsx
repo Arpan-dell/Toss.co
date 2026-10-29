@@ -10,6 +10,7 @@ import { getTenantById } from "@/lib/data";
 import { planState, tierOf } from "@/lib/plan";
 import { requireRole } from "@/lib/session";
 
+import { Tr } from "@/components/locale";
 export const metadata: Metadata = { title: "How you work" };
 
 // Settings → How you work: weighing and sorting at pickup, delivery back, and the turnaround you promise.
@@ -21,13 +22,13 @@ export default async function Operations() {
 
   return (
     <div className="stagger mx-auto w-full max-w-3xl space-y-6">
-      <PageTitle kicker="Settings">How you work</PageTitle>
+      <PageTitle kicker="Settings"><Tr>{"How you work"}</Tr></PageTitle>
       <BackLink />
 
       <Card title="Where clothes are weighed">
         <ActionForm action={updateWeighing} submitLabel="Save">
           <fieldset className="space-y-3">
-            <legend className="sr-only">Where clothes are weighed</legend>
+            <legend className="sr-only"><Tr>{"Where clothes are weighed"}</Tr></legend>
             {[
               {
                 value: "door",
@@ -58,9 +59,9 @@ export default async function Operations() {
           <label className="flex items-start gap-2.5 border-t border-dotted border-border-strong pt-3 text-sm">
             <input name="sortWhites" type="checkbox" defaultChecked={tenant.sortWhites} className="mt-0.5 size-4 accent-[var(--accent)]" />
             <span>
-              <span className="font-medium text-fg">Keep whites and coloured clothes apart</span><span className="ml-1.5 rounded-[4px] bg-accent/15 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.08em] text-accent">PRO</span>
+              <span className="font-medium text-fg"><Tr>{"Keep whites and coloured clothes apart"}</Tr></span><span className="ml-1.5 rounded-[4px] bg-accent/15 px-1.5 py-0.5 font-mono text-[10px] tracking-[0.08em] text-accent"><Tr>{"PRO"}</Tr></span>
               <span className="mt-0.5 block text-secondary">
-                At pickup the driver packs <b>whites</b> and <b>coloured clothes</b> in two bags, tags them (like <code>#104-W</code> and{" "}
+                <Tr>{"At pickup the driver packs"}</Tr> <b><Tr>{"whites"}</Tr></b> <Tr>{"and"}</Tr> <b><Tr>{"coloured clothes"}</Tr></b> <Tr>{"in two bags, tags them (like"}</Tr> <code>#104-W</code> and{" "}
                 <code>#104-C</code>) and weighs each one. Your live board then shows how many kg of each are waiting to be washed, and supplies like
                 bleach can come off the whites only.
               </span>
@@ -78,21 +79,21 @@ export default async function Operations() {
           <label className="flex items-start gap-2.5 text-sm">
             <input name="delivers" type="checkbox" defaultChecked={tenant.delivers} className="mt-0.5 size-4 accent-[var(--accent)]" />
             <span>
-              <span className="font-medium text-fg">Deliver clean clothes back with our drivers</span>
+              <span className="font-medium text-fg"><Tr>{"Deliver clean clothes back with our drivers"}</Tr></span>
               <span className="mt-0.5 block text-secondary">
-                When you tap <b>Mark ready</b>, the order goes to the nearest online driver: they collect the bags from the store and take them back.
+                <Tr>{"When you tap"}</Tr> <b><Tr>{"Mark ready"}</Tr></b>, the order goes to the nearest online driver: they collect the bags from the store and take them back.
               </span>
               <span className="mt-1 block text-secondary">
-                <span className="font-medium text-fg">With Pro</span>
+                <span className="font-medium text-fg"><Tr>{"With Pro"}</Tr></span>
                 {" "}the customer gets a 4-digit code and reads it to the driver at the door, so you know it reached the right person, and
                 drivers can record cash collected for unpaid orders.
                 {!pro && (
                   <Link href="/admin/billing" className="ml-1 text-accent hover:text-accent-2">
-                    Upgrade →
+                    <Tr>{"Upgrade →"}</Tr>
                   </Link>
                 )}
               </span>
-              <span className="mt-1 block text-xs text-muted">Off: customers are told to collect ready orders at your store.</span>
+              <span className="mt-1 block text-xs text-muted"><Tr>{"Off: customers are told to collect ready orders at your store."}</Tr></span>
             </span>
           </label>
         </ActionForm>

@@ -6,6 +6,7 @@ import { PasswordField } from "@/components/password-field";
 import { connectGateway } from "@/lib/actions/gateway";
 import type { FormState } from "@/lib/actions/shared";
 
+import { Tr } from "@/components/locale";
 type Gateway = "razorpay" | "stripe" | "dodo";
 const LABEL: Record<Gateway, string> = {
   razorpay: "Razorpay (India: UPI, cards, netbanking)",
@@ -38,11 +39,10 @@ export function GatewayForm({ suggested, pendingRazorpay, action = connectGatewa
       <div className="space-y-4">
         <ol className="list-decimal space-y-2 pl-5 text-sm text-secondary">
           <li>
-            In the Razorpay Dashboard ({pendingRazorpay.live ? "Live" : "Test"} mode), open <b className="text-fg">Account &amp; Settings → Webhooks</b> and
-            choose <b className="text-fg">Add New Webhook</b>.
+            In the Razorpay Dashboard ({pendingRazorpay.live ? "Live" : "Test"} mode), open <b className="text-fg">Account &amp; Settings → Webhooks</b> <Tr>{"and choose"}</Tr> <b className="text-fg"><Tr>{"Add New Webhook"}</Tr></b>.
           </li>
           <li>
-            Webhook URL:
+            <Tr>{"Webhook URL:"}</Tr>
             <span className="mt-1.5 flex flex-wrap items-center gap-2">
               <code className="rounded-[6px] border border-border bg-ink/[0.04] px-2 py-1 text-xs break-all text-fg">{pendingRazorpay.webhookUrl}</code>
               <button
@@ -61,12 +61,12 @@ export function GatewayForm({ suggested, pendingRazorpay, action = connectGatewa
             </span>
           </li>
           <li>
-            Type a secret of your own (any long password) and tick the events <b className="text-fg">payment_link.paid</b>,{" "}
-            <b className="text-fg">payment_link.expired</b> and <b className="text-fg">payment_link.cancelled</b>. For automatic payments also tick{" "}
-            <b className="text-fg">payment.captured</b>, <b className="text-fg">payment.failed</b>, <b className="text-fg">invoice.paid</b> and every{" "}
-            <b className="text-fg">subscription.*</b> event. Save.
+            <Tr>{"Type a secret of your own (any long password) and tick the events"}</Tr> <b className="text-fg"><Tr>{"payment_link.paid"}</Tr></b>,{" "}
+            <b className="text-fg"><Tr>{"payment_link.expired"}</Tr></b> <Tr>{"and"}</Tr> <b className="text-fg"><Tr>{"payment_link.cancelled"}</Tr></b>. For automatic payments also tick{" "}
+            <b className="text-fg"><Tr>{"payment.captured"}</Tr></b>, <b className="text-fg"><Tr>{"payment.failed"}</Tr></b>, <b className="text-fg"><Tr>{"invoice.paid"}</Tr></b> and every{" "}
+            <b className="text-fg"><Tr>{"subscription.*"}</Tr></b> <Tr>{"event. Save."}</Tr>
           </li>
-          <li>Paste that same secret below.</li>
+          <li><Tr>{"Paste that same secret below."}</Tr></li>
         </ol>
         <ActionForm action={action} submitLabel="Add webhook">
           {extra}
@@ -84,7 +84,7 @@ export function GatewayForm({ suggested, pendingRazorpay, action = connectGatewa
     <ActionForm action={action} submitLabel="Check and connect">
       {extra}
       <fieldset>
-        <legend className="mb-1.5 text-sm text-secondary">Gateway</legend>
+        <legend className="mb-1.5 text-sm text-secondary"><Tr>{"Gateway"}</Tr></legend>
         <div className="flex flex-wrap gap-2">
           {providers.map((p) => (
             <label
@@ -101,23 +101,20 @@ export function GatewayForm({ suggested, pendingRazorpay, action = connectGatewa
         <>
           <ol className="list-decimal space-y-2 pl-5 text-sm text-secondary">
             <li>
-              In the Dodo dashboard, open <b className="text-fg">Products</b> and create a <b className="text-fg">one-time</b> product called
-              &ldquo;Toss Pro&rdquo; in <b className="text-fg">USD</b> with <b className="text-fg">Pay What You Want</b> turned on (minimum $1). Toss
-              sets the amount for 1, 3, 6 or 12 months.
+              <Tr>{"In the Dodo dashboard, open"}</Tr> <b className="text-fg"><Tr>{"Products"}</Tr></b> <Tr>{"and create a"}</Tr> <b className="text-fg"><Tr>{"one-time"}</Tr></b> product called
+              &ldquo;Toss Pro&rdquo; in <b className="text-fg"><Tr>{"USD"}</Tr></b> <Tr>{"with"}</Tr> <b className="text-fg"><Tr>{"Pay What You Want"}</Tr></b> <Tr>{"turned on (minimum $1). Toss sets the amount for 1, 3, 6 or 12 months."}</Tr>
             </li>
             <li>
-              For automatic renewal (optional), create a <b className="text-fg">subscription</b> product billed <b className="text-fg">monthly</b> at
-              exactly <b className="text-fg">{dodo.monthlyPrice}</b>, your plan price.
+              <Tr>{"For automatic renewal (optional), create a"}</Tr> <b className="text-fg"><Tr>{"subscription"}</Tr></b> <Tr>{"product billed"}</Tr> <b className="text-fg"><Tr>{"monthly"}</Tr></b> <Tr>{"at exactly"}</Tr> <b className="text-fg">{dodo.monthlyPrice}</b>, your plan price.
             </li>
             <li>
-              Open <b className="text-fg">Developer → Webhooks</b>, add this URL, and tick <b className="text-fg">payment.succeeded</b>,{" "}
-              <b className="text-fg">payment.failed</b> and every <b className="text-fg">subscription.*</b> event:
+              <Tr>{"Open"}</Tr> <b className="text-fg"><Tr>{"Developer → Webhooks"}</Tr></b>, add this URL, and tick <b className="text-fg"><Tr>{"payment.succeeded"}</Tr></b>,{" "}
+              <b className="text-fg"><Tr>{"payment.failed"}</Tr></b> <Tr>{"and every"}</Tr> <b className="text-fg"><Tr>{"subscription.*"}</Tr></b> <Tr>{"event:"}</Tr>
               <CopyUrl url={dodo.webhookUrl} />
-              Then copy the webhook&apos;s <b className="text-fg">signing secret</b> (it starts with whsec_).
+              Then copy the webhook&apos;s <b className="text-fg"><Tr>{"signing secret"}</Tr></b> (it starts with whsec_).
             </li>
             <li>
-              Open <b className="text-fg">Developer → API Keys</b> and create a key. Use <b className="text-fg">Test mode</b> first to try it without
-              real money.
+              <Tr>{"Open"}</Tr> <b className="text-fg"><Tr>{"Developer → API Keys"}</Tr></b> <Tr>{"and create a key. Use"}</Tr> <b className="text-fg"><Tr>{"Test mode"}</Tr></b> <Tr>{"first to try it without real money."}</Tr>
             </li>
           </ol>
           <Field label="API key" hint="Stored encrypted. Toss finds out by itself whether it's a test or live key.">
@@ -136,8 +133,8 @@ export function GatewayForm({ suggested, pendingRazorpay, action = connectGatewa
       ) : provider === "razorpay" ? (
         <>
           <p className="text-sm text-secondary">
-            In the Razorpay Dashboard, open <b className="text-fg">Account &amp; Settings → API Keys</b> and generate a key. Use{" "}
-            <b className="text-fg">Test mode</b> first to try it without real money.
+            <Tr>{"In the Razorpay Dashboard, open"}</Tr> <b className="text-fg">Account &amp; Settings → API Keys</b> and generate a key. Use{" "}
+            <b className="text-fg"><Tr>{"Test mode"}</Tr></b> <Tr>{"first to try it without real money."}</Tr>
           </p>
           <Field label="Key ID">
             <input name="keyId" required autoComplete="off" placeholder="rzp_live_…" className={`${fieldClass} font-mono`} />
@@ -149,7 +146,7 @@ export function GatewayForm({ suggested, pendingRazorpay, action = connectGatewa
       ) : (
         <>
           <p className="text-sm text-secondary">
-            In the Stripe Dashboard, open <b className="text-fg">Developers → API keys</b> and copy the <b className="text-fg">secret key</b> (or create a
+            <Tr>{"In the Stripe Dashboard, open"}</Tr> <b className="text-fg"><Tr>{"Developers → API keys"}</Tr></b> <Tr>{"and copy the"}</Tr> <b className="text-fg"><Tr>{"secret key"}</Tr></b> (or create a
             restricted key with write access to Checkout Sessions and Webhook Endpoints). Toss sets up its webhook on your account itself.
           </p>
           <Field label="Secret key" hint="Stored encrypted. Use a test key (sk_test_…) first to try it without real money.">
